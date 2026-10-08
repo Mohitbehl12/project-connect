@@ -47,6 +47,14 @@ export const INTERESTS: Record<string, string> = {
   podcasts: "Podcasts", fashion: "Fashion", spirituality: "Spirituality", anime: "Anime",
 };
 
+export const INTEREST_EMOJI: Record<string, string> = {
+  travel: "✈️", trekking: "🥾", cooking: "🍳", reading: "📚", films: "🎬", music_live: "🎵", indie_music: "🎧",
+  classical: "🎻", dance: "💃", cricket: "🏏", football: "⚽", running: "🏃", yoga: "🧘", gym: "🏋️",
+  photography: "📸", art: "🖼️", theatre: "🎭", standup: "🎤", gaming: "🎮", board_games: "🎲", coffee: "☕",
+  food_trails: "🍜", startups: "🚀", tech: "💻", writing: "✍️", poetry: "📝", volunteering: "🤝", dogs: "🐶",
+  cats: "🐱", gardening: "🌱", cycling: "🚴", swimming: "🏊", podcasts: "🎙️", fashion: "👗", spirituality: "🕉️", anime: "🌸",
+};
+
 // Original personality bank. Each question is a 1–5 scale between two poles.
 export const PERSONALITY_QUESTIONS = [
   { key: "energy", prompt: "A free Saturday evening, ideally:", left: "Quiet night in", right: "Out with a crowd" },

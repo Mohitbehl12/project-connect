@@ -72,6 +72,7 @@ export const preferences = sqliteTable("preferences", {
   notifyMessages: bool("notify_messages").notNull().default(true),
   notifyLikes: bool("notify_likes").notNull().default(true),
   notifyEmail: bool("notify_email").notNull().default(false),
+  theme: text("theme").notNull().default("SYSTEM"), // SYSTEM | LIGHT | DARK
 });
 
 export const personalityAnswers = sqliteTable("personality_answers", {
@@ -263,3 +264,45 @@ export const appConfig = sqliteTable("app_config", {
 export type User = typeof users.$inferSelect;
 export type Profile = typeof profiles.$inferSelect;
 export type Preferences = typeof preferences.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// Mobile additions
+// ---------------------------------------------------------------------------
+
+/** Ordered, moderated profile photos. position 0 = primary. */
+export const photos = sqliteTable("photos", {
+  id: id(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  storageKey: text("storage_key").notNull(), // driver-relative key of the processed image
+  position: integer("position").notNull().default(0),
+  width: integer("width").notNull(),
+  height: integer("height").notNull(),
+  blurhash: text("blurhash").notNull(),
+  status: text("status").notNull().default("LIVE"), // PENDING | LIVE | REJECTED
+  quality: text("quality").notNull().default("GOOD"), // GOOD | DARK | BLURRY | SMALL
+  createdAt: now("created_at"),
+}, (t) => [index("photos_user_pos").on(t.userId, t.position)]);
+
+/** Native-app sessions: rotating refresh tokens (stored hashed). */
+export const sessions = sqliteTable("sessions", {
+  id: id(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  family: text("family").notNull(), // all rotations of one login share a family; reuse revokes it
+  refreshHash: text("refresh_hash").notNull().unique(),
+  deviceName: text("device_name"),
+  platform: text("platform"),
+  createdAt: now("created_at"),
+  lastUsedAt: now("last_used_at"),
+  expiresAt: ts("expires_at").notNull(),
+  revokedAt: ts("revoked_at"),
+}, (t) => [index("sessions_user").on(t.userId), index("sessions_family").on(t.family)]);
+
+/** Push notification targets. */
+export const devices = sqliteTable("devices", {
+  id: id(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  pushToken: text("push_token").notNull().unique(),
+  platform: text("platform").notNull(), // ios | android
+  appVersion: text("app_version"),
+  updatedAt: now("updated_at"),
+}, (t) => [index("devices_user").on(t.userId)]);

@@ -8,6 +8,7 @@ import { ROLE_PERMISSIONS } from "@/lib/rbac";
 import type { Role } from "@/lib/constants";
 import { destroySession, verifyPassword } from "@/lib/auth";
 import { audit } from "@/lib/audit";
+import { storage } from "@/lib/storage";
 
 /** The signed-in user's own data. This is the only endpoint that returns private fields, and only to their owner. */
 export const GET = route(async ({ user }) => {
@@ -41,6 +42,8 @@ export const DELETE = route(async ({ req, user }) => {
   const { password } = await parseBody(req, z.object({ password: z.string().min(1) }));
   if (!(await verifyPassword(password, user.passwordHash))) throw new ApiError(401, "That password isn't right.", "bad_credentials");
   await audit(user.id, "user.delete_account", "user", user.id);
+  const files = await db.select({ key: schema.photos.storageKey }).from(schema.photos).where(eq(schema.photos.userId, user.id));
+  for (const f of files) await storage().delete(f.key).catch(() => {});
   await db.delete(schema.users).where(eq(schema.users.id, user.id));
   await destroySession();
   return ok({ deleted: true });

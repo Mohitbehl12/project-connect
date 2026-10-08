@@ -214,3 +214,56 @@ export function profileCompleteness(p: {
   ];
   return Math.round((checks.filter(Boolean).length / checks.length) * 100);
 }
+
+// ---------------------------------------------------------------------------
+// Per-factor breakdown shown on the compatibility screen.
+// Values are rounded to the nearest 5% and weights are never exposed.
+// ---------------------------------------------------------------------------
+const COMMUNICATION_KEYS = ["sharing", "conflict", "texting", "affection"];
+
+export type Bar = { key: "goals" | "interests" | "personality" | "communication" | "lifestyle"; label: string; value: number };
+
+export function compatibilityBreakdown(a: MatchPerson, b: MatchPerson, w: Weights = DEFAULT_WEIGHTS): { overall: number; bars: Bar[]; reasons: string[] } {
+  const s = mutualScore(a, b, w);
+  const split = (keys: (k: string) => boolean) => {
+    const pa = Object.fromEntries(Object.entries(a.answers).filter(([k]) => keys(k)));
+    const pb = Object.fromEntries(Object.entries(b.answers).filter(([k]) => keys(k)));
+    const shared = Object.keys(pa).filter((k) => k in pb);
+    if (shared.length < 2) return 0.5;
+    return 1 - shared.reduce((sum, k) => sum + Math.abs(pa[k] - pb[k]), 0) / (shared.length * 4);
+  };
+  const pct = (x: number) => Math.max(5, Math.min(100, Math.round((x * 100) / 5) * 5));
+  const bars: Bar[] = [
+    { key: "goals", label: "Relationship goals", value: pct(s.factors.intent) },
+    { key: "interests", label: "Interests", value: pct(s.factors.interests) },
+    { key: "personality", label: "Personality", value: pct(split((k) => !COMMUNICATION_KEYS.includes(k))) },
+    { key: "communication", label: "Communication", value: pct(split((k) => COMMUNICATION_KEYS.includes(k))) },
+    { key: "lifestyle", label: "Lifestyle & location", value: pct((s.factors.lifestyle * 2 + s.factors.distance) / 3) },
+  ];
+  return { overall: s.score, bars, reasons: s.reasons };
+}
+
+/** Traits both people lean the same way on — the only personality detail ever shown to the other person. */
+const ALIGNED_TRAIT: Record<string, [string, string]> = {
+  energy: ["You both love a quiet night in", "You both like a lively night out"],
+  planning: ["You're both planners", "You both like to wing it"],
+  sharing: ["You both process things privately first", "You both talk things through"],
+  conflict: ["You both take space before resolving things", "You both like to sort things out right away"],
+  pace: ["You both like to take things slow", "You both like to go all in"],
+  texting: ["You both prefer occasional check-ins", "You both love to chat all day"],
+  ambition: ["You both prioritise life outside work", "You're both career-focused right now"],
+  novelty: ["You both love your familiar favourites", "You both chase new experiences"],
+  family: ["You both keep relationships private", "Family matters to you both"],
+  affection: ["You both show care through actions", "You both say how you feel"],
+};
+export function alignedTraits(a: MatchPerson, b: MatchPerson, max = 3): string[] {
+  const out: string[] = [];
+  for (const [k, [low, high]] of Object.entries(ALIGNED_TRAIT)) {
+    const x = a.answers[k], y = b.answers[k];
+    if (x === undefined || y === undefined || x === 3 || y === 3) continue;
+    if (x < 3 && y < 3) out.push(low);
+    else if (x > 3 && y > 3) out.push(high);
+    if (out.length >= max) break;
+  }
+  return out;
+}

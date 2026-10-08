@@ -9,4 +9,5 @@ if (!url.startsWith("file:")) {
 }
 const path = url.replace(/^file:/, "");
 for (const suffix of ["", "-journal", "-wal", "-shm"]) rmSync(path + suffix, { force: true });
+rmSync("data/uploads", { recursive: true, force: true });
 console.log("Removed", path);

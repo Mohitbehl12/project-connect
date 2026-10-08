@@ -3,7 +3,8 @@ import { db, schema } from "@/db";
 import { ApiError, ok, route } from "@/lib/http";
 import { getConfig } from "@/lib/config";
 import { blockedIds, loadAnswers, loadPerson, publicCard, toMatchPerson } from "@/lib/people";
-import { eligibility, scorePair } from "@/lib/matching";
+import { alignedTraits, eligibility, scorePair } from "@/lib/matching";
+import { photosFor } from "@/lib/photos";
 
 const MODES = ["recommended", "nearby", "compatibility", "interests", "intent"] as const;
 type Mode = (typeof MODES)[number];
@@ -87,6 +88,12 @@ export const GET = route(async ({ req, user }) => {
       scored.sort((a, b) => b.s.score + recentBoost(b.r.user.lastActiveAt) - (a.s.score + recentBoost(a.r.user.lastActiveAt)));
   }
 
-  const cards = scored.slice(0, batch).map((x) => publicCard(viewer, x.r, { score: x.s.score, reasons: x.s.reasons }));
+  const page = scored.slice(0, batch);
+  const photoMap = await photosFor(page.map((x) => x.r.user.id));
+  const cards = page.map((x) => ({
+    ...publicCard(viewer, x.r, { score: x.s.score, reasons: x.s.reasons, photos: photoMap.get(x.r.user.id) }),
+    // One personality line for the card front (only traits both people share; never raw answers).
+    trait: alignedTraits(viewer, x.person, 1)[0] ?? null,
+  }));
   return ok({ mode, cards, totalAvailable: scored.length });
 });

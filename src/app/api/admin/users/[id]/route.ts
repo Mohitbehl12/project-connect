@@ -3,6 +3,7 @@ import { and, count, desc, eq, or } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ApiError, ok, parseBody, route } from "@/lib/http";
 import { audit } from "@/lib/audit";
+import { revokeAllSessions } from "@/lib/auth";
 import { notify } from "@/lib/notify";
 import { can } from "@/lib/rbac";
 import { ROLES } from "@/lib/constants";
@@ -90,6 +91,7 @@ export const POST = route<{ id: string }>(async ({ req, user, params }) => {
       break;
   }
 
+  if (["BAN", "SET_ROLE", "REVOKE_SESSIONS"].includes(b.action)) await revokeAllSessions(target.id);
   await db.insert(schema.moderationActions).values({ actorId: user.id, targetUserId: target.id, action: b.action, reason: b.reason, reportId: b.reportId });
   await audit(user.id, `moderation.${b.action.toLowerCase()}`, "user", target.id, { reason: b.reason, reportId: b.reportId, role: b.role });
   return ok({ done: true });

@@ -1,3 +1,4 @@
+import { syncOnboardingStep } from "@/lib/photos";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
@@ -24,6 +25,7 @@ const Body = z.object({
   notifyMessages: z.boolean().optional(),
   notifyLikes: z.boolean().optional(),
   notifyEmail: z.boolean().optional(),
+  theme: z.enum(["SYSTEM", "LIGHT", "DARK"]).optional(),
 });
 
 export const PUT = route(async ({ req, user }) => {
@@ -47,6 +49,6 @@ export const PUT = route(async ({ req, user }) => {
   };
   await db.insert(schema.preferences).values({ userId: user.id, interestedIn: interestedIn?.join(",") ?? "", ...values })
     .onConflictDoUpdate({ target: schema.preferences.userId, set: values });
-  if (user.onboardingStep === 1) await db.update(schema.users).set({ onboardingStep: 2 }).where(eq(schema.users.id, user.id));
-  return ok({ saved: true });
+  const onboardingStep = await syncOnboardingStep(user.id);
+  return ok({ saved: true, onboardingStep });
 });

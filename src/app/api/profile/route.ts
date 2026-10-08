@@ -1,9 +1,11 @@
+import { syncOnboardingStep } from "@/lib/photos";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ApiError, ok, parseBody, route } from "@/lib/http";
 import { CITIES, GENDERS, INTENTS, INTERESTS, LIFESTYLE } from "@/lib/constants";
-import { profileCompleteness } from "@/lib/matching";
+import { refreshCompleteness } from "@/lib/photos";
+import type { User } from "@/db/schema";
 import { screenMessage } from "@/lib/moderation";
 
 const keysOf = <T extends object>(o: T) => Object.keys(o) as [string, ...string[]];
@@ -28,8 +30,9 @@ const Body = z.object({
   prompts: z.array(z.object({ q: z.string().trim().min(1).max(80), a: z.string().trim().min(1).max(200) })).max(3).default([]),
 });
 
-export const PUT = route(async ({ req, user }) => {
-  const b = await parseBody(req, Body);
+type ProfileInput = z.infer<typeof Body>;
+
+async function saveProfile(user: User, b: ProfileInput) {
   if (!user.dob) throw new ApiError(400, "Your date of birth is missing. Contact support.", "no_dob");
 
   // Block contact details and links in public profile text.
@@ -41,9 +44,6 @@ export const PUT = route(async ({ req, user }) => {
 
   const c = CITIES[b.city];
   const existing = await db.query.profiles.findFirst({ where: eq(schema.profiles.userId, user.id) });
-  const answerCount = (await db.select().from(schema.personalityAnswers).where(eq(schema.personalityAnswers.userId, user.id))).length;
-  let photos: string[] = [];
-  try { photos = existing ? JSON.parse(existing.photos) : []; } catch { /* ignore */ }
 
   // Store the city centre with a stable per-user jitter (~±3 km). Device GPS is never collected.
   const cityChanged = !existing || existing.city !== b.city;
@@ -55,11 +55,38 @@ export const PUT = route(async ({ req, user }) => {
     firstName: b.firstName, dob: user.dob, gender: b.gender, bio: b.bio, country: c.country, city: b.city, lat, lng,
     education: b.education ?? null, profession: b.profession ?? null, industry: b.industry ?? null, heightCm: b.heightCm ?? null,
     drinking: b.drinking ?? null, smoking: b.smoking ?? null, food: b.food ?? null, exercise: b.exercise ?? null, pets: b.pets ?? null,
-    intent: b.intent, interests: b.interests.join(","), prompts: JSON.stringify(b.prompts),
-    completeness: profileCompleteness({ ...b, photos, answerCount }), updatedAt: new Date(),
+    intent: b.intent, interests: b.interests.join(","), prompts: JSON.stringify(b.prompts), updatedAt: new Date(),
   };
   await db.insert(schema.profiles).values({ userId: user.id, ...values })
     .onConflictDoUpdate({ target: schema.profiles.userId, set: values });
-  if (user.onboardingStep < 1) await db.update(schema.users).set({ onboardingStep: 1 }).where(eq(schema.users.id, user.id));
-  return ok({ saved: true, completeness: values.completeness });
+  const onboardingStep = await syncOnboardingStep(user.id);
+  void onboardingStep;
+  return refreshCompleteness(user.id);
+}
+
+/** Full save (web profile form). */
+export const PUT = route(async ({ req, user }) => {
+  const completeness = await saveProfile(user, await parseBody(req, Body));
+  return ok({ saved: true, completeness });
+});
+
+/**
+ * Partial save (app onboarding, one step at a time). The first call must include the basics
+ * (firstName, gender, city, intent); later calls send only the fields that changed.
+ */
+export const PATCH = route(async ({ req, user }) => {
+  const partial = await parseBody(req, Body.partial());
+  const existing = await db.query.profiles.findFirst({ where: eq(schema.profiles.userId, user.id) });
+  let prompts: { q: string; a: string }[] = [];
+  try { prompts = existing ? JSON.parse(existing.prompts) : []; } catch { /* ignore */ }
+  const merged = Body.parse({
+    firstName: existing?.firstName, gender: existing?.gender, city: existing?.city, intent: existing?.intent,
+    bio: existing?.bio ?? "", education: existing?.education, profession: existing?.profession, industry: existing?.industry,
+    heightCm: existing?.heightCm, drinking: existing?.drinking, smoking: existing?.smoking, food: existing?.food,
+    exercise: existing?.exercise, pets: existing?.pets,
+    interests: existing?.interests ? existing.interests.split(",").filter(Boolean) : [], prompts,
+    ...Object.fromEntries(Object.entries(partial).filter(([, v]) => v !== undefined)),
+  });
+  const completeness = await saveProfile(user, merged);
+  return ok({ saved: true, completeness });
 });

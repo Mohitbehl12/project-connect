@@ -19,4 +19,31 @@ export async function notify(userId: string, type: NotifType, title: string, bod
     if (prefs && prefs[gate] === false) return;
   }
   await db.insert(schema.notifications).values({ userId, type, title, body, link });
+  void sendPush(userId, title, body, link);
+}
+
+/**
+ * Push through the Expo Push service (one API for APNs and FCM). Enabled with PUSH_ENABLED=true.
+ * Payloads never include message text or names beyond what the in-app notification already shows.
+ * Fire-and-forget: a push failure must never fail the request that caused it.
+ */
+async function sendPush(userId: string, title: string, body: string, link?: string) {
+  if (process.env.PUSH_ENABLED !== "true") return;
+  try {
+    const targets = await db.select().from(schema.devices).where(eq(schema.devices.userId, userId));
+    if (!targets.length) return;
+    const res = await fetch("https://exp.host/--/api/v2/push/send", {
+      method: "POST",
+      headers: { "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify(targets.map((d) => ({ to: d.pushToken, title, body, sound: "default", data: { link } }))),
+      signal: AbortSignal.timeout(5000),
+    });
+    const json = (await res.json().catch(() => null)) as { data?: { status: string; details?: { error?: string } }[] } | null;
+    // Drop tokens Expo reports as no longer registered.
+    for (const [i, r] of (json?.data ?? []).entries())
+      if (r.status === "error" && r.details?.error === "DeviceNotRegistered")
+        await db.delete(schema.devices).where(eq(schema.devices.pushToken, targets[i].pushToken));
+  } catch (e) {
+    console.warn("[push] send failed", (e as Error).message);
+  }
 }

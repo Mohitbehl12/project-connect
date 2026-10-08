@@ -7,6 +7,7 @@ import { scorePair } from "@/lib/matching";
 import { rateLimit } from "@/lib/ratelimit";
 import { blockedIds, isBlockedBetween, loadAnswers, loadPerson, publicCard, toMatchPerson } from "@/lib/people";
 import { matchIfMutual } from "@/lib/matches";
+import { photosFor } from "@/lib/photos";
 import { notify } from "@/lib/notify";
 import { screenMessage } from "@/lib/moderation";
 
@@ -86,12 +87,17 @@ export const GET = route(async ({ user }) => {
 
   // Priority likes always reveal who sent them; regular likes need the seeWhoLiked entitlement.
   const visible = rows.filter((r) => f.seeWhoLiked || byId.get(r.user.id)?.kind === "PRIORITY");
+  const photoMap = await photosFor(visible.map((r) => r.user.id));
+  // Locked (free plan) likes expose only a blurhash so the grid can show a soft placeholder — never the photo itself.
+  const lockedRows = rows.filter((r) => !visible.includes(r));
+  const lockedPhotos = await photosFor(lockedRows.map((r) => r.user.id));
+  const locked = lockedRows.map((r) => ({ blurhash: lockedPhotos.get(r.user.id)?.[0]?.blurhash ?? null }));
   const cards = visible
     .map((r) => {
       const like = byId.get(r.user.id)!;
       const s = scorePair(me.person, toMatchPerson(r, answers.get(r.user.id) ?? {}), weights);
-      return { ...publicCard(me.person, r, { score: s.score, reasons: s.reasons }), likeKind: like.kind, likeNote: like.note, likedAt: like.createdAt };
+      return { ...publicCard(me.person, r, { score: s.score, reasons: s.reasons, photos: photoMap.get(r.user.id) }), likeKind: like.kind, likeNote: like.note, likedAt: like.createdAt };
     })
     .sort((a, b) => (a.likeKind === "PRIORITY" ? -1 : 0) - (b.likeKind === "PRIORITY" ? -1 : 0) || +b.likedAt - +a.likedAt);
-  return ok({ total: rows.length, cards, hidden: rows.length - cards.length, canSeeAll: f.seeWhoLiked });
+  return ok({ total: rows.length, cards, hidden: rows.length - cards.length, locked, canSeeAll: f.seeWhoLiked });
 });

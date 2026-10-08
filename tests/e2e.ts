@@ -244,6 +244,79 @@ async function main() {
   const inc = await A.put("/api/preferences", { incognito: true });
   check("incognito needs Premium Plus", inc.status === 402, inc.data);
 
+  section("Mobile: token auth, photos, partial profile, compatibility");
+  const appEmail = `app-${run}@test.local`;
+  const reg = await anon.post("/api/auth/register", { email: appEmail, password: "Testing123", dob: "1995-02-02", acceptLegal: true, confirmAdult: true, safetyAcknowledged: true, client: "app", platform: "ios" });
+  check("app registration returns tokens", reg.status === 201 && reg.data.accessToken && reg.data.refreshToken, reg.data);
+  const bearer = async (method: string, path: string, body?: unknown, token = reg.data.accessToken, form?: FormData) => {
+    const res = await fetch(BASE + path, { method, headers: { authorization: `Bearer ${token}`, ...(form ? {} : { "content-type": "application/json" }), "x-forwarded-for": "10.0.9.9" }, body: form ?? (body === undefined ? undefined : JSON.stringify(body)) });
+    let data: any = null; try { data = await res.json(); } catch { /* */ }
+    return { status: res.status, data };
+  };
+  check("bearer token authenticates /api/me", (await bearer("GET", "/api/me")).status === 200);
+  check("refresh token is rejected as a bearer token", (await bearer("GET", "/api/me", undefined, reg.data.refreshToken)).status === 401);
+  const r1 = await anon.post("/api/auth/refresh", { refreshToken: reg.data.refreshToken });
+  check("refresh rotates tokens", r1.status === 200 && r1.data.refreshToken !== reg.data.refreshToken, r1.data);
+  const reuse = await anon.post("/api/auth/refresh", { refreshToken: reg.data.refreshToken });
+  check("reusing an old refresh token is refused", reuse.status === 401);
+  const afterReuse = await anon.post("/api/auth/refresh", { refreshToken: r1.data.refreshToken });
+  check("reuse revokes the whole session family", afterReuse.status === 401);
+  const login = await anon.post("/api/auth/token", { email: appEmail, password: "Testing123", platform: "android" });
+  check("token sign-in works", login.status === 200 && !!login.data.accessToken, login.data);
+  const tok = login.data.accessToken;
+
+  const p1 = await bearer("PATCH", "/api/profile", { firstName: "Noor", gender: "WOMAN", city: "Pune", intent: "LONG_TERM" }, tok);
+  check("partial profile: basics create the profile", p1.status === 200, p1.data);
+  const p2 = await bearer("PATCH", "/api/profile", { interests: ["coffee", "trekking", "dogs"] }, tok);
+  check("partial profile: later step keeps earlier fields", p2.status === 200, p2.data);
+  const meP = await bearer("GET", "/api/me", undefined, tok);
+  check("profile has both steps saved", meP.data?.profile?.firstName === "Noor" && meP.data?.profile?.interests === "coffee,trekking,dogs", meP.data?.profile);
+  const pers = await bearer("PUT", "/api/personality", { answers: answersA }, tok);
+  check("personality before preferences does not finish onboarding", pers.data?.onboardingStep === 1, pers.data);
+  const prefs = await bearer("PUT", "/api/preferences", { interestedIn: ["MAN"], ageMin: 24, ageMax: 40, maxDistanceKm: 50 }, tok);
+  check("preferences complete onboarding in any order", prefs.data?.onboardingStep === 3, prefs.data);
+
+  const sharp = (await import("sharp")).default;
+  const jpeg = await sharp({ create: { width: 900, height: 1200, channels: 3, background: { r: 200, g: 140, b: 90 } } })
+    .composite([{ input: Buffer.from('<svg width="900" height="1200"><circle cx="450" cy="500" r="200" fill="#2E2A6E"/><rect x="100" y="800" width="700" height="60" fill="#fff"/></svg>') }]).jpeg().toBuffer();
+  const form = new FormData(); form.append("file", new Blob([new Uint8Array(jpeg)], { type: "image/jpeg" }), "me.jpg");
+  const up = await bearer("POST", "/api/photos", undefined, tok, form);
+  check("photo upload is processed", up.status === 201 && up.data.photo?.blurhash && up.data.photo.width <= 1080, up.data);
+  check("photo gets a quality hint", typeof up.data?.photo?.hint === "string", up.data?.photo);
+  const dark = await sharp({ create: { width: 900, height: 1200, channels: 3, background: { r: 10, g: 10, b: 15 } } }).jpeg().toBuffer();
+  const form2 = new FormData(); form2.append("file", new Blob([new Uint8Array(dark)], { type: "image/jpeg" }), "dark.jpg");
+  const up2 = await bearer("POST", "/api/photos", undefined, tok, form2);
+  check("dark photo is flagged as DARK (not rejected)", up2.status === 201 && up2.data.photo?.quality === "DARK", up2.data?.photo);
+  const notImg = new FormData(); notImg.append("file", new Blob([new TextEncoder().encode("hello")], { type: "image/jpeg" }), "x.jpg");
+  check("non-image upload is refused", (await bearer("POST", "/api/photos", undefined, tok, notImg)).status === 422);
+  const media = await fetch(BASE + up.data.photo.url);
+  check("signed media link serves the image", media.status === 200 && media.headers.get("content-type") === "image/webp");
+  const tampered = await fetch(BASE + up.data.photo.url.replace(/sig=[^&]+/, "sig=bad"));
+  check("tampered media link is refused", tampered.status === 403);
+  const exifCheck = await sharp(Buffer.from(await (await fetch(BASE + up.data.photo.url)).arrayBuffer())).metadata();
+  check("stored photo has no EXIF metadata", !exifCheck.exif);
+  const reorder = await bearer("PATCH", "/api/photos", { order: [up2.data.photo.id, up.data.photo.id] }, tok);
+  check("photos reorder (primary changes)", reorder.data?.photos?.[0]?.id === up2.data.photo.id, reorder.data);
+  const delp = await bearer("DELETE", `/api/photos/${up2.data.photo.id}`, undefined, tok);
+  check("photo delete renumbers the rest", delp.status === 200 && (await bearer("GET", "/api/photos", undefined, tok)).data.photos[0].position === 0);
+
+  const disc2 = await bearer("GET", "/api/discovery?mode=recommended", undefined, tok);
+  const c0 = disc2.data?.cards?.[0];
+  check("discovery cards carry photos with blurhash", c0?.photos?.length > 0 && !!c0.photos[0].blurhash, c0?.photos);
+  check("discovery cards carry shared interests", Array.isArray(c0?.shared), c0?.shared);
+  const comp = await bearer("GET", `/api/compatibility/${c0?.id}`, undefined, tok);
+  check("compatibility breakdown has five bars rounded to 5", comp.status === 200 && comp.data.bars.length === 5 && comp.data.bars.every((b: any) => b.value % 5 === 0), comp.data);
+  check("compatibility hides weights", !("weights" in (comp.data ?? {})) && !("factors" in (comp.data ?? {})));
+  check("compatibility for an unrelated hidden profile is refused", (await bearer("GET", `/api/compatibility/${aId}`, undefined, tok)).status === 404);
+  const pass = await bearer("POST", "/api/likes", { toId: c0.id, kind: "PASS" }, tok);
+  const undo = await bearer("POST", "/api/likes/undo", undefined, tok);
+  check("undo restores the last pass", pass.status === 200 && undo.status === 200 && undo.data.restoredUserId === c0.id, undo.data);
+  const dev = await bearer("POST", "/api/devices", { pushToken: "ExponentPushToken[e2e-test-token]", platform: "ios" }, tok);
+  check("push token registers", dev.status === 201, dev.data);
+  check("bad push token is refused", (await bearer("POST", "/api/devices", { pushToken: "not-a-token", platform: "ios" }, tok)).status === 422);
+  const out = await anon.post("/api/auth/logout", { refreshToken: login.data.refreshToken });
+  check("app sign-out revokes the refresh token", out.status === 200 && (await anon.post("/api/auth/refresh", { refreshToken: login.data.refreshToken })).status === 401);
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) {
     console.log("Failed:\n - " + failures.join("\n - "));

@@ -2,6 +2,7 @@ import { and, desc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ok, route } from "@/lib/http";
 import { ageFromDob } from "@/lib/matching";
+import { photosFor } from "@/lib/photos";
 
 export const GET = route(async ({ user }) => {
   const ms = await db.select().from(schema.matches)
@@ -20,6 +21,7 @@ export const GET = route(async ({ user }) => {
   const unread = await db.select().from(schema.messages)
     .where(and(inArray(schema.messages.matchId, ids), ne(schema.messages.senderId, user.id), isNull(schema.messages.readAt)));
 
+  const photoMap = await photosFor(otherIds);
   const list = ms.flatMap((m) => {
     const otherId = m.userAId === user.id ? m.userBId : m.userAId;
     const o = byId.get(otherId);
@@ -29,7 +31,7 @@ export const GET = route(async ({ user }) => {
       id: m.id,
       score: m.score,
       createdAt: m.createdAt,
-      other: { firstName: o.p.firstName, age: ageFromDob(o.p.dob), city: o.p.city, verified: o.u.selfieStatus === "VERIFIED" },
+      other: { id: otherId, firstName: o.p.firstName, age: ageFromDob(o.p.dob), city: o.p.city, verified: o.u.selfieStatus === "VERIFIED", photo: photoMap.get(otherId)?.[0] ?? null },
       lastMessage: last ? { body: last.deletedAt ? "Message deleted" : last.body.slice(0, 80), mine: last.senderId === user.id, at: last.createdAt } : null,
       unread: unread.filter((x) => x.matchId === m.id).length,
     }];

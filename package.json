@@ -10,23 +10,28 @@
     "lint": "next lint",
     "db:push": "drizzle-kit push --force",
     "db:seed": "tsx scripts/seed.ts",
-    "db:reset": "tsx scripts/reset.ts && drizzle-kit push --force && tsx scripts/seed.ts",
+    "db:reset": "tsx scripts/reset.ts && drizzle-kit push --force && tsx scripts/seed.ts && tsx scripts/seed-photos.ts",
     "test": "vitest run",
     "test:e2e": "tsx tests/e2e.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:seed-photos": "tsx scripts/seed-photos.ts"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1147.0",
+    "@aws-sdk/s3-request-presigner": "^3.1147.0",
     "@libsql/client": "^0.18.0",
     "bcryptjs": "^3.0.3",
+    "blurhash": "^2.0.5",
     "drizzle-orm": "^0.45.4",
     "jose": "^6.2.12",
     "next": "^15.5.27",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "server-only": "^0.0.1",
+    "sharp": "^0.35.5",
     "zod": "^4.6.5"
   },
   "devDependencies": {

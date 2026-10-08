@@ -3,7 +3,7 @@ import { and, eq, inArray, or } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { MatchPerson } from "./matching";
 import { ageFromDob, distanceLabel, haversineKm } from "./matching";
-import { GENDERS, INTENTS, INTERESTS, LIFESTYLE, type LifestyleKey } from "./constants";
+import { GENDERS, INTENTS, INTEREST_EMOJI, INTERESTS, LIFESTYLE, type LifestyleKey } from "./constants";
 
 type Row = { user: typeof schema.users.$inferSelect; profile: typeof schema.profiles.$inferSelect; prefs: typeof schema.preferences.$inferSelect | null };
 
@@ -81,16 +81,18 @@ export async function isBlockedBetween(a: string, b: string) {
  * The ONLY shape of another user's profile that leaves the server.
  * No email, phone, coordinates, DOB, internal flags or plan data.
  */
-export function publicCard(viewer: MatchPerson, r: Row, extra: { score?: number; reasons?: string[] } = {}) {
+type CardPhoto = { id: string; url: string; blurhash: string; width: number; height: number };
+
+export function publicCard(viewer: MatchPerson, r: Row, extra: { score?: number; reasons?: string[]; photos?: CardPhoto[] } = {}) {
   const p = r.profile;
   const km = haversineKm(viewer.lat, viewer.lng, p.lat, p.lng);
   const lifestyle = (Object.keys(LIFESTYLE) as LifestyleKey[])
     .map((k) => (p[k] ? (LIFESTYLE[k] as Record<string, string>)[p[k] as string] : null))
     .filter(Boolean) as string[];
   let prompts: { q: string; a: string }[] = [];
-  let photos: string[] = [];
   try { prompts = JSON.parse(p.prompts); } catch { /* ignore */ }
-  try { photos = JSON.parse(p.photos); } catch { /* ignore */ }
+  const theirInterests = csv(p.interests);
+  const viewerInterests = new Set(viewer.interests);
   return {
     id: r.user.id,
     firstName: p.firstName,
@@ -104,11 +106,14 @@ export function publicCard(viewer: MatchPerson, r: Row, extra: { score?: number;
     education: p.education,
     heightCm: p.heightCm,
     lifestyle,
-    interests: csv(p.interests).map((k) => INTERESTS[k] ?? k),
+    interests: theirInterests.map((k) => INTERESTS[k] ?? k),
+    // Shared interests first; emoji are decorative and come from a fixed list.
+    shared: theirInterests.filter((k) => viewerInterests.has(k)).map((k) => ({ key: k, label: INTERESTS[k] ?? k, emoji: INTEREST_EMOJI[k] ?? "" })),
     prompts,
-    photos,
+    photos: extra.photos ?? [],
     verified: r.user.selfieStatus === "VERIFIED",
-    ...extra,
+    score: extra.score,
+    reasons: extra.reasons,
   };
 }
 export type PublicCard = ReturnType<typeof publicCard>;

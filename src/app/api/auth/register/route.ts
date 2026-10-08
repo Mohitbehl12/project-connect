@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { createSession, hashPassword, passwordOk, PASSWORD_RULES } from "@/lib/auth";
+import { createSession, hashPassword, issueTokens, passwordOk, PASSWORD_RULES } from "@/lib/auth";
 import { ApiError, clientIp, ok, parseBody, publicRoute } from "@/lib/http";
 import { rateLimit } from "@/lib/ratelimit";
 import { ageFromDob } from "@/lib/matching";
@@ -17,6 +17,8 @@ const Body = z.object({
   acceptLegal: z.literal(true, { message: "You need to accept the terms to create an account" }),
   confirmAdult: z.literal(true, { message: "You must confirm you are 18 or older" }),
   safetyAcknowledged: z.literal(true, { message: "Please acknowledge the safety guidelines" }),
+  client: z.enum(["web", "app"]).default("web"), // "app" → tokens in the body instead of a cookie
+  platform: z.enum(["ios", "android", "web"]).optional(),
 });
 
 export const POST = publicRoute(async ({ req }) => {
@@ -44,6 +46,10 @@ export const POST = publicRoute(async ({ req }) => {
   await audit(user.id, "user.register", "user", user.id, { legal: legal.map((l) => `${l.slug}@v${l.version}`) });
 
   const devCode = await issueOtp(user.id, "EMAIL", user.email);
+  if (body.client === "app") {
+    const tokens = await issueTokens(user, { platform: body.platform });
+    return ok({ id: user.id, next: "/onboarding", devOtp: devCode, ...tokens }, 201);
+  }
   await createSession(user);
   return ok({ id: user.id, next: "/onboarding", devOtp: devCode }, 201);
 });
