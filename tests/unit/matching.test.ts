@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ageFromDob, distanceLabel, eligibility, haversineKm, mutualScore, profileCompleteness, scorePair, DEFAULT_WEIGHTS, type MatchPerson } from "../../src/lib/matching";
+import { ageFromDob, compatibilityBreakdown, distanceLabel, eligibility, haversineKm, mutualScore, profileCompleteness, scorePair, DEFAULT_WEIGHTS, type MatchPerson } from "../../src/lib/matching";
 
 const base = (over: Partial<MatchPerson> = {}): MatchPerson => ({
   id: "a", gender: "WOMAN", age: 28, lat: 28.61, lng: 77.21, city: "Delhi", country: "IN", intent: "LONG_TERM",
@@ -36,7 +36,7 @@ describe("eligibility", () => {
 describe("scorePair", () => {
   it("returns a bounded score and readable reasons", () => {
     const r = scorePair(base(), man());
-    expect(r.score).toBeGreaterThanOrEqual(40);
+    expect(r.score).toBeGreaterThanOrEqual(1);
     expect(r.score).toBeLessThanOrEqual(99);
     expect(r.reasons).toContain("Looking for the same kind of relationship");
     expect(r.reasons.some((x) => x.startsWith("You both enjoy"))).toBe(true);
@@ -49,12 +49,17 @@ describe("scorePair", () => {
       lifestyle: { drinking: "REGULAR", smoking: "REGULAR", food: "NONVEG", exercise: "RARELY", pets: "ALLERGIC" },
       answers: { energy: 5, planning: 1, sharing: 1, conflict: 1, pace: 5, texting: 1 },
     }));
-    expect(strong.score).toBeGreaterThan(weak.score + 15);
+    expect(strong.score).toBeGreaterThan(weak.score + 25);
   });
   it("responds to admin weight changes", () => {
     const noIntent = { ...DEFAULT_WEIGHTS, intent: 0 };
     const casual = man({ intent: "CASUAL" });
     expect(scorePair(base(), casual, noIntent).score).toBeGreaterThan(scorePair(base(), casual).score);
+  });
+  it("overall score agrees with the per-factor bars", () => {
+    const b = compatibilityBreakdown(base(), man({ intent: "CASUAL", interests: ["gaming"] }));
+    const avg = b.bars.reduce((s: number, x: { value: number }) => s + x.value, 0) / b.bars.length;
+    expect(Math.abs(b.overall - avg)).toBeLessThan(25);
   });
   it("never shows 100%", () => {
     const twin = man({ ...base(), id: "b", gender: "MAN", prefs: man().prefs });

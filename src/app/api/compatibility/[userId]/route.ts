@@ -2,7 +2,7 @@ import { and, eq, or } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ApiError, ok, route } from "@/lib/http";
 import { getConfig } from "@/lib/config";
-import { alignedTraits, compatibilityBreakdown, eligibility } from "@/lib/matching";
+import { PERSONALITY_REASON, alignedTraits, compatibilityBreakdown, eligibility } from "@/lib/matching";
 import { isBlockedBetween, loadPerson } from "@/lib/people";
 import { orderedPair } from "@/lib/matches";
 
@@ -24,5 +24,9 @@ export const GET = route<{ userId: string }>(async ({ user, params }) => {
 
   const weights = await getConfig("matching.weights");
   const b2 = compatibilityBreakdown(me.person, other.person, weights);
-  return ok({ ...b2, connect: alignedTraits(me.person, other.person, 3) });
+  const connect = alignedTraits(me.person, other.person, 3);
+  // The personality line in "reasons" says the same as "connect" — keep the more specific one.
+  const personalityLines = new Set(Object.values(PERSONALITY_REASON));
+  const reasons = connect.length ? b2.reasons.filter((r) => !personalityLines.has(r)) : b2.reasons;
+  return ok({ ...b2, reasons, connect });
 });

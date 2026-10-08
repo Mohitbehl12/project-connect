@@ -113,7 +113,7 @@ async function main() {
   const cardB = disc.data?.cards?.find((c: any) => c.id === bId);
   check("A discovers B in intent mode", !!cardB, { count: disc.data?.cards?.length });
   if (cardB) {
-    check("card shows a compatibility score", cardB.score >= 40 && cardB.score <= 99, cardB.score);
+    check("card shows a compatibility score", cardB.score >= 1 && cardB.score <= 99, cardB.score);
     check("card explains the score", Array.isArray(cardB.reasons) && cardB.reasons.length > 0, cardB.reasons);
     check("card hides email, phone, coordinates and DOB", !("email" in cardB) && !("lat" in cardB) && !("dob" in cardB) && !("phone" in cardB), Object.keys(cardB));
     check("card shows coarse distance only", /km|area/.test(cardB.distance), cardB.distance);

@@ -141,7 +141,7 @@ function personalityScore(a: Record<string, number>, b: Record<string, number>):
   return { score, closest };
 }
 
-const PERSONALITY_REASON: Record<string, string> = {
+export const PERSONALITY_REASON: Record<string, string> = {
   energy: "Similar idea of a good evening",
   planning: "Same approach to planning",
   sharing: "Similar way of opening up",
@@ -169,8 +169,9 @@ export function scorePair(a: MatchPerson, b: MatchPerson, w: Weights = DEFAULT_W
   const factors = { intent, interests: ints.score, personality: pers.score, lifestyle: life.score, distance, age, quality };
   const totalW = Object.values(w).reduce((s, x) => s + x, 0) || 1;
   const raw = (Object.keys(factors) as (keyof Weights)[]).reduce((s, k) => s + factors[k] * w[k], 0) / totalW;
-  // Spread scores into a readable 40–99 band; never show 100% — no pair is a guaranteed fit.
-  const score = Math.round(40 + raw * 59);
+  // The weighted average on the same 0–100 scale as the per-factor bars, so the numbers always add up.
+  // Capped at 99 — no pair is a guaranteed fit.
+  const score = Math.max(1, Math.min(99, Math.round(raw * 100)));
 
   const reasons: string[] = [];
   if (a.intent === b.intent) reasons.push("Looking for the same kind of relationship");

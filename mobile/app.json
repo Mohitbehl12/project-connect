@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "Project Connect",
+    "slug": "project-connect",
+    "version": "0.1.0",
+    "scheme": "projectconnect",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#F7F6FB",
+    "ios": {
+      "bundleIdentifier": "com.projectconnect.app",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Choose photos for your profile.",
+        "NSCameraUsageDescription": "Take a profile photo or a verification selfie."
+      }
+    },
+    "android": {
+      "package": "com.projectconnect.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "monochromeImage": "./assets/adaptive-icon-mono.png",
+        "backgroundColor": "#2E2A6E"
+      },
+      "predictiveBackGestureEnabled": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-secure-store",
+      "expo-image",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#F7F6FB",
+          "dark": { "image": "./assets/splash-icon.png", "backgroundColor": "#12112A" }
+        }
+      ],
+      [
+        "expo-image-picker",
+        { "photosPermission": "Choose photos for your profile.", "cameraPermission": "Take a profile photo or a verification selfie." }
+      ],
+      [
+        "expo-notifications",
+        { "icon": "./assets/notification-icon.png", "color": "#2E2A6E" }
+      ]
+    ],
+    "experiments": { "typedRoutes": true }
+  }
+}

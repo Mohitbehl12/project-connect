@@ -2,7 +2,8 @@
 
 An original dating platform built around **intent, explained compatibility and safety**. Working name — the brand lives in a handful of strings and Tailwind tokens, so it can be renamed later.
 
-Web app (responsive: phone, tablet, desktop) + REST API + admin panel, in one Next.js codebase.
+- `mobile/` — the **iOS and Android app** (Expo / React Native). Start with `mobile/README.md`.
+- Root — Next.js: the REST API the app uses, the web admin panel, and a responsive web version.
 
 ## Quick start
 

@@ -1,8 +1,23 @@
 # Status, testing report and next phases
 
-_Last updated: 8 October 2026_
+_Last updated: 9 October 2026_
 
-## Test results
+## Mobile app (October 2026)
+
+The iOS/Android app lives in `mobile/` (Expo SDK 57). Phases 0–3 of the mobile plan are built: backend for mobile, app shell and design system, onboarding and profile, discovery, match and chat. See `mobile/README.md` to run it on a phone with Expo Go.
+
+| Check | Result |
+|---|---|
+| API end-to-end, now including token refresh and reuse detection, photo upload/EXIF stripping/reorder/delete, partial profile, compatibility breakdown, undo, push registration | **126 / 126 pass** |
+| Unit tests (incl. overall score agreeing with the per-factor bars) | **22 / 22 pass** |
+| App typecheck | clean |
+| App journey in a phone-sized browser (390 × 844), light and dark: welcome → sign-in → discover → profile → likes → match moment → chat → matches → messages → profile → compatibility → premium → safety, plus sign-up and onboarding | no runtime errors |
+
+Not yet verified: real iPhone and Android devices (gestures, haptics and performance can only be judged there), VoiceOver/TalkBack passes, small and large phone sizes.
+
+**Changed during this phase:** the compatibility score is now the plain weighted average on the same scale as the five bars (previously stretched into a 40–99 band, which made "71% overall" sit above bars of 5–50%). Scores shown to people will be lower and more honest.
+
+## Test results (web build, 8 October)
 
 | Suite | Result |
 |---|---|
@@ -37,9 +52,11 @@ Not yet tested: Safari, Firefox and Edge rendering (only Chromium was available 
 | OTP delivery | Codes logged to the server console; returned in API responses when `DEV_SHOW_OTP=true` | SMS provider (MSG91 / Twilio — India needs DLT template registration) and email (Resend / SES) in `src/lib/otp.ts` |
 | Selfie verification | Request goes to a manual moderator queue; no image captured | Liveness + face-match vendor (e.g. HyperVerge, Onfido, AWS Rekognition); store only the result |
 | Payments | Mock checkout activates plans instantly | Razorpay (India) / Stripe (elsewhere) orders + signed webhooks; Apple/Google in-app purchase for native apps |
-| Photos | Not built; generated colour portraits instead | S3 or Cloudflare R2 signed uploads, image moderation (nudity/violence), EXIF stripping, 6-photo limit |
-| Push / email / SMS notifications | In-app only | FCM / APNs (or OneSignal), email provider; hooks are in `src/lib/notify.ts` |
-| Realtime chat | 4-second polling | Supabase Realtime, Pusher or Ably publishing from `POST /messages` |
+| Photo moderation | Upload, crop, EXIF stripping, resizing, quality hints and the 6-photo limit are built; photos go live without a nudity/violence check | Add Rekognition, Sightengine or Hive in `src/lib/photos.ts` and start photos as PENDING |
+| Photo storage in production | Local disk driver; S3-compatible driver written but untested | Create an R2 bucket and set `STORAGE_DRIVER=s3` and the `S3_*` variables |
+| Push notifications | App registers its Expo push token; server sends through the Expo Push service when `PUSH_ENABLED=true` | Run `eas init` so the app has a project ID, test on a real device |
+| Email / SMS | Not sent | Email provider and SMS provider (DLT templates in India) |
+| Realtime chat | 4-second polling, no typing indicator | Ably, Pusher or Supabase Realtime publishing from `POST /messages` (mobile Phase 4) |
 | Google / Apple sign-in | Not built | OAuth with Auth.js or direct provider SDKs |
 | Legal text | Placeholder documents | Lawyer-drafted per launch country, including the DPDP Act 2023 (India) and GDPR/UK GDPR |
 | Emergency numbers | Listed on Safety pages | Verify per country before launch |
