@@ -1,0 +1,73 @@
+import { z } from "zod";
+import { asc, eq } from "drizzle-orm";
+import { db, schema } from "@/db";
+import { ApiError, ok, parseBody, route } from "@/lib/http";
+import { CONFIG_DEFAULTS, getConfig, setConfig } from "@/lib/config";
+import { audit } from "@/lib/audit";
+import { can } from "@/lib/rbac";
+
+
+export const GET = route(async () => {
+  const plans = await db.select().from(schema.plans).orderBy(asc(schema.plans.sortOrder));
+  const prices = await db.select().from(schema.planPrices);
+  const config: Record<string, unknown> = {};
+  for (const k of Object.keys(CONFIG_DEFAULTS) as (keyof typeof CONFIG_DEFAULTS)[]) config[k] = await getConfig(k);
+  return ok({
+    config,
+    plans: plans.map((p) => ({ ...p, features: JSON.parse(p.features), prices: prices.filter((x) => x.planId === p.id) })),
+  });
+}, { permission: "admin.access" });
+
+const W = z.number().min(0).max(100);
+const Body = z.object({
+  config: z.object({
+    "matching.weights": z.object({ intent: W, interests: W, personality: W, lifestyle: W, distance: W, age: W, quality: W }).optional(),
+    "chat.maxUnansweredMessages": z.number().int().min(1).max(50).optional(),
+    "discovery.batchSize": z.number().int().min(5).max(100).optional(),
+    "safety.autoSuspendReportThreshold": z.number().int().min(2).max(100).optional(),
+  }).optional(),
+  plans: z.array(z.object({
+    id: z.string(),
+    name: z.string().trim().min(1).max(40).optional(),
+    active: z.boolean().optional(),
+    features: z.object({
+      dailyLikes: z.number().int().min(-1), dailyPriorityLikes: z.number().int().min(0), seeWhoLiked: z.boolean(),
+      advancedFilters: z.boolean(), incognito: z.boolean(), travelMode: z.boolean(), monthlyBoosts: z.number().int().min(0),
+    }).optional(),
+    prices: z.array(z.object({
+      id: z.string().optional(), country: z.string().regex(/^([A-Z]{2}|\*)$/), currency: z.string().regex(/^[A-Z]{3}$/),
+      amountMinor: z.number().int().min(0), promoMinor: z.number().int().min(0).nullable().optional(),
+      durationDays: z.number().int().min(1).max(366), active: z.boolean().default(true),
+    })).optional(),
+  })).optional(),
+});
+
+export const PUT = route(async ({ req, user }) => {
+  const b = await parseBody(req, Body);
+  if (b.config) {
+    if (!can(user.role, "config.edit")) throw new ApiError(403, "You don't have permission to change settings.", "forbidden");
+    for (const [k, v] of Object.entries(b.config)) {
+      if (v === undefined) continue;
+      const before = await getConfig(k as keyof typeof CONFIG_DEFAULTS);
+      await setConfig(k as keyof typeof CONFIG_DEFAULTS, v, user.id);
+      await audit(user.id, "config.update", "config", k, { before, after: v });
+    }
+  }
+  if (b.plans) {
+    if (!can(user.role, "plans.edit")) throw new ApiError(403, "You don't have permission to change plans.", "forbidden");
+    for (const p of b.plans) {
+      const set: Record<string, unknown> = {};
+      if (p.name) set.name = p.name;
+      if (p.active !== undefined) set.active = p.active;
+      if (p.features) set.features = JSON.stringify(p.features);
+      if (Object.keys(set).length) await db.update(schema.plans).set(set).where(eq(schema.plans.id, p.id));
+      for (const pr of p.prices ?? []) {
+        const vals = { country: pr.country, currency: pr.currency, amountMinor: pr.amountMinor, promoMinor: pr.promoMinor ?? null, durationDays: pr.durationDays, active: pr.active };
+        if (pr.id) await db.update(schema.planPrices).set(vals).where(eq(schema.planPrices.id, pr.id));
+        else await db.insert(schema.planPrices).values({ planId: p.id, ...vals });
+      }
+      await audit(user.id, "plans.update", "plan", p.id, p);
+    }
+  }
+  return ok({ saved: true });
+}, { permission: "admin.access" });

@@ -1,0 +1,80 @@
+# Status, testing report and next phases
+
+_Last updated: 8 October 2026_
+
+## Test results
+
+| Suite | Result |
+|---|---|
+| Unit tests (`npm test`) — matching engine, eligibility, distance labels, age gate, moderation rules, starters | **21 / 21 pass** |
+| End-to-end API journey (`npm run test:e2e`) against the **production build** | **96 / 96 pass** |
+| TypeScript (`npm run typecheck`) | clean |
+| Production build (`npm run build`) | passes |
+| Visual review | landing, register, onboarding, discover, likes, chat, settings, plans, admin dashboard, reports, report evidence, settings — desktop 1360px and mobile 390px, Chromium |
+
+The E2E journey covers: guards (401, under-18 blocked, terms required, weak password) → User A and B register, verify email + phone OTP, profile (rejects contact details), preferences, personality, selfie request → admin verifies both → A discovers B with score, reasons, verified badge and no private fields → like, duplicate rejected, B sees hidden like, B likes back → match + notifications → chat, read receipts, scam message flagged with recipient warning, unanswered cap, message delete permissions, stranger blocked → date planner (private place refused, past refused, confirm rules) → report + block + unmatch closes chat and hides profiles → admin stats, search, user detail, match list, report queue with priority, automated report, evidence, suspend, close, ban + session revocation + login refusal, audit trail → config and legal four-eyes → plans by country, mock subscription, entitlement gating.
+
+### Bugs found and fixed during testing
+
+| # | Severity | Bug | Fix |
+|---|---|---|---|
+| 1 | Medium | Compatibility reasons could crowd out "same city" and "verified" | Max one personality reason; concrete reasons first (caught by unit test) |
+| 2 | High | Session cookie marked Secure on plain-http localhost → login silently failed on `npm start` in Safari | Secure on all hosts except localhost |
+| 3 | Medium | Seeded users never accepted legal documents → every test login hit the policy gate | Seed records acceptances |
+| 4 | Low | Policy gate showed a close button that did nothing | Modal supports non-dismissable mode |
+| 5 | Low | Report page offered "Approve verification" regardless of status | API returns selfie status |
+| 6 | Medium | Mobile: discover action buttons overlapped profile text; chat header scrolled off-screen | Docked action bar; fixed-height chat panel |
+| 7 | Low | Interest names capitalised mid-sentence; prices showed ".00" | Formatting fixes |
+
+Open: **0 critical, 0 high.** Medium/low items are listed under known gaps.
+
+Not yet tested: Safari, Firefox and Edge rendering (only Chromium was available in the build environment); real Android/iOS devices; load testing.
+
+## Mocked — must be replaced before real users
+
+| Feature | Current state | To make it real |
+|---|---|---|
+| OTP delivery | Codes logged to the server console; returned in API responses when `DEV_SHOW_OTP=true` | SMS provider (MSG91 / Twilio — India needs DLT template registration) and email (Resend / SES) in `src/lib/otp.ts` |
+| Selfie verification | Request goes to a manual moderator queue; no image captured | Liveness + face-match vendor (e.g. HyperVerge, Onfido, AWS Rekognition); store only the result |
+| Payments | Mock checkout activates plans instantly | Razorpay (India) / Stripe (elsewhere) orders + signed webhooks; Apple/Google in-app purchase for native apps |
+| Photos | Not built; generated colour portraits instead | S3 or Cloudflare R2 signed uploads, image moderation (nudity/violence), EXIF stripping, 6-photo limit |
+| Push / email / SMS notifications | In-app only | FCM / APNs (or OneSignal), email provider; hooks are in `src/lib/notify.ts` |
+| Realtime chat | 4-second polling | Supabase Realtime, Pusher or Ably publishing from `POST /messages` |
+| Google / Apple sign-in | Not built | OAuth with Auth.js or direct provider SDKs |
+| Legal text | Placeholder documents | Lawyer-drafted per launch country, including the DPDP Act 2023 (India) and GDPR/UK GDPR |
+| Emergency numbers | Listed on Safety pages | Verify per country before launch |
+
+## Not built yet (from the original brief)
+
+Voice/video calls, voice messages, image and GIF sharing in chat, typing indicators, AI profile assistant, AI conversation suggestions and photo-quality help, ML fake-profile detection, travel mode and boosts (entitlements exist; the features don't), PDF export of legal documents (use the browser's Save as PDF on the public page), multi-language UI, native mobile apps.
+
+## Known gaps (medium / low)
+
+- Rate limiter is in-memory per server instance → move to Redis/Upstash before running several instances.
+- CSRF protection relies on SameSite=Lax cookies plus JSON-only API bodies; add an Origin check middleware for defence in depth.
+- Deleted messages are kept for safety review; a scheduled purge after 90 days still needs adding (and must match the Privacy Policy).
+- No date reminders yet (needs a scheduled job).
+- No password reset flow yet (needs email delivery).
+- Discovery scores up to 1,000 candidates per request; see the scaling path in ARCHITECTURE.md.
+- Admin analytics are computed live; add caching once the user base grows.
+
+## Recommended next phases
+
+1. **Photos + moderation** — the biggest gap for a dating product.
+2. **Real OTP + password reset** (email/SMS providers).
+3. **Payments** — Razorpay first for India, then Stripe.
+4. **Realtime chat + push notifications.**
+5. **Selfie liveness vendor.**
+6. **AI features** — profile assistant and conversation suggestions using an LLM API, with safety review.
+7. **Native apps** — Expo/React Native against the same API.
+8. **Postgres migration** when nearing ~50k users.
+
+## Launch checklist
+
+- [ ] Lawyer-reviewed legal documents published via Admin → Legal
+- [ ] `DEV_SHOW_OTP=false`, `ENABLE_MOCK_PAYMENTS` removed
+- [ ] Seed test users removed; default staff passwords changed
+- [ ] Grievance officer named (India IT Rules) and contact pages updated
+- [ ] Error monitoring (Sentry) and uptime checks on
+- [ ] Data-retention purge job running
+- [ ] Backups enabled on the production database
