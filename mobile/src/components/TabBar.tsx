@@ -13,9 +13,9 @@ import { T } from "./Text";
 
 const TABS: Record<string, { label: string; icon: IconName }> = {
   discover: { label: "Discover", icon: "discover" },
-  likes: { label: "Likes", icon: "likes" },
   matches: { label: "Matches", icon: "matches" },
   messages: { label: "Messages", icon: "messages" },
+  explore: { label: "Explore", icon: "explore" },
   profile: { label: "Profile", icon: "profile" },
 };
 
@@ -30,6 +30,7 @@ export function TabBar({ state, navigation }: { state: any; navigation: any }) {
   const matches = useQuery({ queryKey: ["matches"], queryFn: () => api<{ matches: MatchRow[] }>("/api/matches"), staleTime: 30_000 });
   const unread = (matches.data?.matches ?? []).reduce((s, m) => s + m.unread, 0);
   const fresh = (matches.data?.matches ?? []).filter((m) => !m.lastMessage).length;
+  const likes = useQuery({ queryKey: ["likes"], queryFn: () => api<{ total: number }>("/api/likes"), staleTime: 60_000 });
   const routes = state.routes.filter((r: any) => TABS[r.name]);
   const tabW = w / Math.max(1, routes.length);
   const x = useSharedValue(0);
@@ -49,7 +50,7 @@ export function TabBar({ state, navigation }: { state: any; navigation: any }) {
             const i = state.routes.indexOf(route);
             const tab = TABS[route.name];
             const focused = state.index === i;
-            const badge = route.name === "messages" ? unread : route.name === "matches" ? fresh : 0;
+            const badge = route.name === "messages" ? unread : route.name === "matches" ? fresh + (likes.data?.total ?? 0) : 0;
             return (
               <Pressable key={route.key} accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={badge ? `${tab.label}, ${badge} new` : tab.label}
                 onPress={() => {
@@ -58,7 +59,7 @@ export function TabBar({ state, navigation }: { state: any; navigation: any }) {
                 }}
                 style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 2 }}>
                 <View>
-                  <Icon name={tab.icon} size={25} color={focused ? c.brand : c.faint} stroke={focused ? 2.2 : 1.75} filled={focused && tab.icon === "likes"} />
+                  <Icon name={tab.icon} size={25} color={focused ? c.brand : c.faint} stroke={focused ? 2.2 : 1.75} filled={false} />
                   {badge > 0 && (
                     <View style={{ position: "absolute", right: -10, top: -5, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: c.alert, paddingHorizontal: 4, alignItems: "center", justifyContent: "center", borderWidth: 2, borderColor: c.surface }}>
                       <T v="caption" style={{ color: "#FFF", fontSize: 10, lineHeight: 12, fontFamily: "Figtree_700Bold" }}>{badge > 9 ? "9+" : badge}</T>

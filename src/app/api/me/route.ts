@@ -1,3 +1,4 @@
+import { deleteAccount } from "@/lib/privacy";
 import { z } from "zod";
 import { and, count, eq, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
@@ -37,14 +38,11 @@ export const GET = route(async ({ user }) => {
   });
 }, { allowSuspended: true });
 
-/** Permanently deletes the account and all personal data (cascades). Requires password re-entry. */
+/** Deletes the account (see lib/privacy deleteAccount for what is removed and what the law makes us keep). Requires password re-entry. */
 export const DELETE = route(async ({ req, user }) => {
   const { password } = await parseBody(req, z.object({ password: z.string().min(1) }));
   if (!(await verifyPassword(password, user.passwordHash))) throw new ApiError(401, "That password isn't right.", "bad_credentials");
-  await audit(user.id, "user.delete_account", "user", user.id);
-  const files = await db.select({ key: schema.photos.storageKey }).from(schema.photos).where(eq(schema.photos.userId, user.id));
-  for (const f of files) await storage().delete(f.key).catch(() => {});
-  await db.delete(schema.users).where(eq(schema.users.id, user.id));
+  const result = await deleteAccount(user);
   await destroySession();
-  return ok({ deleted: true });
+  return ok(result);
 }, { allowSuspended: true });

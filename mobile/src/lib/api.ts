@@ -1,3 +1,4 @@
+import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
@@ -26,6 +27,20 @@ const store = {
     await SecureStore.deleteItemAsync(k);
   },
 };
+
+// A random id for this app install (not a hardware identifier). Lets the server spot many accounts
+// made on one install and show "new device" sign-in alerts. Reset by reinstalling the app.
+const INSTALL_KEY = "pc.install";
+let installId: string | null = null;
+export async function getInstallId() {
+  if (installId) return installId;
+  installId = (await store.get(INSTALL_KEY)) ?? Crypto.randomUUID();
+  await store.set(INSTALL_KEY, installId);
+  return installId;
+}
+export async function clientHeaders(): Promise<Record<string, string>> {
+  return { "x-install-id": await getInstallId(), "x-platform": Platform.OS };
+}
 
 let accessToken: string | null = null;
 let refreshing: Promise<boolean> | null = null;
@@ -60,7 +75,7 @@ async function refresh(): Promise<boolean> {
       try {
         const res = await fetch(`${API_URL}/api/auth/refresh`, {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", ...(await clientHeaders()) },
           body: JSON.stringify({ refreshToken: rt }),
         });
         if (!res.ok) return false;
@@ -77,10 +92,12 @@ async function refresh(): Promise<boolean> {
 type Opts = { method?: string; body?: unknown; form?: FormData; auth?: boolean };
 
 export async function api<T = any>(path: string, opts: Opts = {}): Promise<T> {
+  const extra = await clientHeaders();
   const doFetch = () =>
     fetch(`${API_URL}${path}`, {
       method: opts.method ?? (opts.body || opts.form ? "POST" : "GET"),
       headers: {
+        ...extra,
         ...(opts.form ? {} : { "content-type": "application/json" }),
         ...(accessToken && opts.auth !== false ? { authorization: `Bearer ${accessToken}` } : {}),
       },

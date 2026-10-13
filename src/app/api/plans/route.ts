@@ -1,21 +1,22 @@
-import { asc, eq } from "drizzle-orm";
-import { db, schema } from "@/db";
 import { ok, route } from "@/lib/http";
+import { catalogue } from "@/lib/billing";
 
-/** Plans with the price for the user's country (falls back to the "*" default price). */
+/**
+ * Plans with the price that applies to this person (country and price group), today's offer and
+ * the full renewal terms. Kept for the web Plans page; the app uses /api/billing/catalogue.
+ */
 export const GET = route(async ({ user }) => {
-  const profile = await db.query.profiles.findFirst({ where: eq(schema.profiles.userId, user.id) });
-  const country = profile?.country ?? "*";
-  const plans = await db.select().from(schema.plans).where(eq(schema.plans.active, true)).orderBy(asc(schema.plans.sortOrder));
-  const prices = await db.select().from(schema.planPrices).where(eq(schema.planPrices.active, true));
+  const c = await catalogue(user);
   return ok({
     current: { code: user.planCode, endsAt: user.planEndsAt },
-    plans: plans.map((p) => {
-      const price = prices.find((x) => x.planId === p.id && x.country === country) ?? prices.find((x) => x.planId === p.id && x.country === "*");
-      return {
-        code: p.code, name: p.name, features: JSON.parse(p.features),
-        price: price ? { id: price.id, currency: price.currency, amountMinor: price.promoMinor ?? price.amountMinor, listMinor: price.amountMinor, durationDays: price.durationDays } : null,
-      };
-    }),
+    subscription: c.subscription,
+    plans: [
+      { code: "FREE", name: "Free", features: null, price: null, quote: null },
+      ...c.plans.map((p) => ({
+        code: p.code, name: p.name, features: p.features, quote: p.quote,
+        price: { id: p.quote.priceId, currency: p.quote.currency, amountMinor: p.quote.todayMinor, listMinor: p.quote.regularMinor, durationDays: p.quote.periodDays },
+      })),
+    ],
+    passes: c.passes,
   });
 });

@@ -13,14 +13,17 @@ export default function SignIn() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [needCode, setNeedCode] = useState(false);
+  const [code, setCode] = useState("");
 
   async function submit() {
     setErr("");
     setBusy(true);
     try {
-      await signIn(email.trim(), password);
+      await signIn(email.trim(), password, needCode ? code : undefined);
       router.replace("/");
     } catch (e: any) {
+      if (e.code === "totp_required") { setNeedCode(true); setErr(""); setBusy(false); return; }
       setErr(e.message);
       setBusy(false);
     }
@@ -34,10 +37,14 @@ export default function SignIn() {
           <T v="display">Welcome back</T>
           <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" returnKeyType="next" />
           <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" textContentType="password" returnKeyType="go" onSubmitEditing={submit} />
+          {needCode && (
+            <Field label="6-digit code from your authenticator app" value={code} onChangeText={(t) => setCode(t.replace(/\D/g, "").slice(0, 6))}
+              keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" maxLength={6} autoFocus onSubmitEditing={submit} />
+          )}
           {err ? <Banner tone="alert">{err}</Banner> : null}
         </View>
         <View style={{ gap: 10, paddingBottom: 8 }}>
-          <Button title="Sign in" size="lg" full loading={busy} disabled={!email || !password} onPress={submit} />
+          <Button title="Sign in" size="lg" full loading={busy} disabled={!email || !password || (needCode && code.length !== 6)} onPress={submit} />
           <T v="caption" tone="faint" center>Test accounts: aanya@demo.local or rohan@demo.local · Demo!2026</T>
         </View>
       </KeyboardAvoidingView>

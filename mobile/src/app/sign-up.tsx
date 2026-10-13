@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
 import { KeyboardAvoidingView, Linking, Platform, Pressable, View } from "react-native";
 import Animated, { FadeInRight } from "react-native-reanimated";
@@ -39,6 +39,8 @@ export default function SignUp() {
   const [step, setStep] = useState(0);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const invite = useLocalSearchParams<{ ref?: string }>().ref;
+  const [referral, setReferral] = useState(typeof invite === "string" ? invite.toUpperCase() : "");
   const [dd, setDd] = useState(""); const [mm, setMm] = useState(""); const [yyyy, setYyyy] = useState("");
   const [agree, setAgree] = useState({ adult: false, legal: false, safety: false });
   const [busy, setBusy] = useState(false);
@@ -58,7 +60,7 @@ export default function SignUp() {
     if (!dob || "invalid" in dob) return;
     setErr(""); setBusy(true);
     try {
-      await signUp({ email: email.trim(), password, dob: dob.iso });
+      await signUp({ email: email.trim(), password, dob: dob.iso, referralCode: referral });
       router.replace("/onboarding");
     } catch (e: any) {
       setErr(e.message); setBusy(false);
@@ -85,6 +87,7 @@ export default function SignUp() {
               <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" textContentType="emailAddress" />
               <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" textContentType="newPassword"
                 hint="At least 8 characters with a letter and a number." error={password && !pwOk ? "Add a letter and a number, 8 characters or more." : undefined} />
+              <Field label="Invite code (optional)" value={referral} onChangeText={(t) => setReferral(t.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12))} autoCapitalize="characters" hint="From a friend? Add their code — they'll get Premium days once you're verified." />
             </>
           )}
           {step === 1 && (

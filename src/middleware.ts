@@ -12,7 +12,7 @@ function cors(res: NextResponse, origin: string) {
   res.headers.set("Access-Control-Allow-Origin", origin);
   res.headers.set("Vary", "Origin");
   res.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
-  res.headers.set("Access-Control-Allow-Headers", "authorization,content-type");
+  res.headers.set("Access-Control-Allow-Headers", "authorization,content-type,x-install-id,x-device-name,x-platform");
   res.headers.set("Access-Control-Max-Age", "600");
   return res;
 }
@@ -23,6 +23,13 @@ export function middleware(req: NextRequest) {
     const origin = req.headers.get("origin") ?? "";
     const allowed = origin && ALLOWED.includes(origin);
     if (req.method === "OPTIONS") return allowed ? cors(new NextResponse(null, { status: 204 }), origin) : new NextResponse(null, { status: 403 });
+    // CSRF defence in depth (on top of SameSite=Lax cookies and JSON-only bodies): a state-changing
+    // request that relies on the session cookie must come from our own origin.
+    const mutating = !["GET", "HEAD"].includes(req.method);
+    if (mutating && req.cookies.get("pc_session") && !req.headers.get("authorization") && origin) {
+      const self = req.nextUrl.origin;
+      if (origin !== self && !allowed) return NextResponse.json({ error: "Cross-site request blocked.", code: "csrf" }, { status: 403 });
+    }
     return allowed ? cors(NextResponse.next(), origin) : NextResponse.next();
   }
   if (PROTECTED.some((p) => pathname === p || pathname.startsWith(p + "/")) && !req.cookies.get("pc_session")) {

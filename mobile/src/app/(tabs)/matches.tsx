@@ -1,4 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import { Image } from "expo-image";
+import { useEffect } from "react";
+import { Icon } from "@/components/Icon";
+import { cardCache } from "@/lib/cardCache";
+import type { Card } from "@/lib/types";
 import { router } from "expo-router";
 import { FlatList, Pressable, RefreshControl, View, useWindowDimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -10,6 +15,37 @@ import { api } from "@/lib/api";
 import type { MatchRow } from "@/lib/types";
 import { useTheme } from "@/theme/ThemeProvider";
 
+type Likes = { total: number; cards: Card[]; hidden: number; locked: { blurhash: string | null }[]; canSeeAll: boolean };
+
+/** "Likes you" lives at the top of Matches: faces for Premium, soft blurs (with the count) on Free. */
+function LikesStrip() {
+  const { c } = useTheme();
+  const q = useQuery({ queryKey: ["likes"], queryFn: () => api<Likes>("/api/likes") });
+  useEffect(() => { if (q.data) cardCache.put(q.data.cards); }, [q.data]);
+  const total = q.data?.total ?? 0;
+  if (!q.data) return <Skeleton h={92} r={22} />;
+  const faces = [...q.data.cards.slice(0, 4).map((cd) => ({ key: cd.id, photo: cd.photos[0], blur: null as string | null })), ...q.data.locked.slice(0, Math.max(0, 4 - q.data.cards.length)).map((l, i) => ({ key: `l${i}`, photo: undefined, blur: l.blurhash }))];
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={total ? `${total} people like you. See all.` : "Likes you. Nobody yet."} onPress={() => router.push("/likes")}
+      style={{ borderRadius: 24, overflow: "hidden", marginBottom: 14 }}>
+      <LinearGradient colors={total ? ["#F7B54C", "#F0864A", "#E2557A"] : [c.surface, c.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 14 }}>
+        <View style={{ flexDirection: "row" }}>
+          {total ? faces.map((f, i) => (
+            <View key={f.key} style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 3, borderColor: "#FFF", marginLeft: i ? -16 : 0, overflow: "hidden", backgroundColor: c.raised }}>
+              {f.photo ? <PhotoView photo={f.photo} style={{ flex: 1 }} /> : f.blur ? <Image placeholder={{ blurhash: f.blur }} style={{ flex: 1 }} /> : null}
+            </View>
+          )) : <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: c.raised, alignItems: "center", justifyContent: "center" }}><Icon name="likes" color={c.faint} /></View>}
+        </View>
+        <View style={{ flex: 1 }}>
+          <T v="headline" tone={total ? "white" : undefined}>{total ? `${total} ${total === 1 ? "person likes" : "people like"} you` : "Likes you"}</T>
+          <T v="caption" tone={total ? "white" : "muted"} style={{ opacity: total ? 0.92 : 1 }}>{total ? (q.data.canSeeAll ? "Tap to see who" : "Like them back in Discover — or see who with Premium") : "When someone likes you, they'll show up here."}</T>
+        </View>
+        {total ? <Icon name="forward" color="#FFF" /> : null}
+      </LinearGradient>
+    </Pressable>
+  );
+}
+
 /** New matches you haven't talked to yet, with their compatibility, as a photo grid. */
 export default function MatchesTab() {
   const { c } = useTheme();
@@ -20,11 +56,12 @@ export default function MatchesTab() {
   const w = (width - 40 - 12) / 2;
 
   return (
-    <Screen>
+    <Screen ambient="top">
       <View style={{ paddingTop: 6, paddingBottom: 12 }}>
         <T v="title">Matches</T>
         <T v="caption" tone="muted">{fresh.length ? `${fresh.length} waiting for a hello` : "Everyone you've matched with"}</T>
       </View>
+      <LikesStrip />
       {q.isLoading && <Skeleton h={w * 1.3} r={22} />}
       {q.error && <ErrorState message={(q.error as Error).message} onRetry={() => q.refetch()} />}
       {q.data && !q.data.matches.length && (

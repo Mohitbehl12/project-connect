@@ -1,4 +1,6 @@
 import "server-only";
+import { getConfig } from "./config";
+import { notify } from "./notify";
 import sharp from "sharp";
 import { encode } from "blurhash";
 import { and, asc, eq, inArray } from "drizzle-orm";
@@ -95,6 +97,7 @@ export async function refreshCompleteness(userId: string) {
     ...p, interests: p.interests.split(",").filter(Boolean), photos: photoRows.map((x) => x.id), prompts, answerCount: answers.length,
   });
   await db.update(schema.profiles).set({ completeness }).where(eq(schema.profiles.userId, userId));
+  if (completeness >= 100) await completionReward(userId);
   return completeness;
 }
 
@@ -112,4 +115,13 @@ export async function syncOnboardingStep(userId: string) {
   const step = !p ? 0 : !prefs?.interestedIn ? 1 : answers.length < 6 ? 2 : 3;
   if (user && step > user.onboardingStep) await db.update(schema.users).set({ onboardingStep: step }).where(eq(schema.users.id, userId));
   return Math.max(step, user?.onboardingStep ?? 0);
+}
+
+/** One-time reward for a 100% profile: a short boost in Discover. Configurable in Admin → Settings. */
+async function completionReward(userId: string) {
+  const u = await db.query.users.findFirst({ where: eq(schema.users.id, userId) });
+  if (!u || u.completionRewardedAt) return;
+  const minutes = await getConfig("rewards.completeProfileBoostMinutes");
+  await db.update(schema.users).set({ completionRewardedAt: new Date(), boostUntil: minutes > 0 ? new Date(Date.now() + minutes * 60_000) : u.boostUntil }).where(eq(schema.users.id, userId));
+  if (minutes > 0) await notify(userId, "SUBSCRIPTION", "Your profile is 100% complete 🎉", `You've unlocked a ${minutes}-minute boost: more people will see you in Discover right now.`, "/discover");
 }

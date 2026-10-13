@@ -34,6 +34,11 @@ export const POST = route(async ({ req, user }) => {
     throw new ApiError(404, "This profile isn't available anymore.", "not_found");
   if (await isBlockedBetween(user.id, b.toId)) throw new ApiError(404, "This profile isn't available anymore.", "not_found");
 
+  if (b.kind !== "PASS" && user.selfieStatus !== "VERIFIED") {
+    const theirPrefs = await db.query.preferences.findFirst({ where: eq(schema.preferences.userId, b.toId) });
+    if (theirPrefs?.likesFrom === "VERIFIED") throw new ApiError(403, "This person only connects with verified profiles. Verify your profile to like them.", "verified_only");
+  }
+
   const already = await db.query.likes.findFirst({ where: and(eq(schema.likes.fromId, user.id), eq(schema.likes.toId, b.toId)) });
   if (already) throw new ApiError(409, "You've already responded to this profile.", "duplicate");
 

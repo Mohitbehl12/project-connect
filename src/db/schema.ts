@@ -25,6 +25,17 @@ export const users = sqliteTable("users", {
   onboardingStep: integer("onboarding_step").notNull().default(0), // 0 profile → 1 prefs → 2 personality → 3 done
   failedLogins: integer("failed_logins").notNull().default(0),
   lockedUntil: ts("locked_until"),
+  referralCode: text("referral_code").unique(), // shareable invite code
+  referredById: text("referred_by_id"),
+  riskLevel: text("risk_level").notNull().default("LOW"), // LOW | MEDIUM | HIGH — computed from risk_signals
+  totpSecret: text("totp_secret"), // encrypted; set only once 2-step verification is confirmed
+  totpPending: text("totp_pending"), // encrypted secret awaiting confirmation
+  totpLastStep: integer("totp_last_step"), // last accepted 30-second step — stops a code being replayed
+  deletedAt: ts("deleted_at"), // account deletion requested → anonymised
+  boostUntil: ts("boost_until"), // shown higher in Discover until then (rewards / boosts)
+  completionRewardedAt: ts("completion_rewarded_at"),
+  signupIp: text("signup_ip"),
+  signupInstallId: text("signup_install_id"),
   createdAt: now("created_at"),
   lastActiveAt: now("last_active_at"),
 }, (t) => [index("users_status_role").on(t.status, t.role)]);
@@ -68,6 +79,8 @@ export const preferences = sqliteTable("preferences", {
   showOnline: bool("show_online").notNull().default(true),
   readReceipts: bool("read_receipts").notNull().default(true),
   incognito: bool("incognito").notNull().default(false),
+  showDistance: bool("show_distance").notNull().default(true), // off → others see only the city
+  likesFrom: text("likes_from").notNull().default("EVERYONE"), // EVERYONE | VERIFIED — who can like (and so match with) me
   notifyMatches: bool("notify_matches").notNull().default(true),
   notifyMessages: bool("notify_messages").notNull().default(true),
   notifyLikes: bool("notify_likes").notNull().default(true),
@@ -211,6 +224,10 @@ export const planPrices = sqliteTable("plan_prices", {
   amountMinor: integer("amount_minor").notNull(),
   promoMinor: integer("promo_minor"),
   durationDays: integer("duration_days").notNull(),
+  // Price group. "*" = everyone; "gender:MAN" etc. Gender groups only apply in countries listed in
+  // config billing.genderPricingCountries (they're unlawful in some places, e.g. the EU).
+  segment: text("segment").notNull().default("*"),
+  providerPlanId: text("provider_plan_id"), // Razorpay plan id, created on first checkout
   active: bool("active").notNull().default(true),
 }, (t) => [index("price_plan_country").on(t.planId, t.country)]);
 
@@ -219,13 +236,180 @@ export const subscriptions = sqliteTable("subscriptions", {
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   planCode: text("plan_code").notNull(),
   priceId: text("price_id"),
-  provider: text("provider").notNull().default("MOCK"), // MOCK | RAZORPAY | STRIPE | APPLE | GOOGLE
+  provider: text("provider").notNull().default("MOCK"), // MOCK | RAZORPAY | APPLE | GOOGLE
+  // PENDING (awaiting first payment) | TRIALING (intro period) | ACTIVE | PAST_DUE | CANCELLED (no renewal; access until endsAt) | EXPIRED
   status: text("status").notNull().default("ACTIVE"),
-  amountMinor: integer("amount_minor").notNull().default(0),
+  kind: text("kind").notNull().default("RECURRING"), // RECURRING | PASS (one-off, never renews)
+  amountMinor: integer("amount_minor").notNull().default(0), // regular price per period
   currency: text("currency").notNull().default("INR"),
+  periodDays: integer("period_days").notNull().default(30),
+  offerId: text("offer_id"),
+  couponCode: text("coupon_code"),
+  introEndsAt: ts("intro_ends_at"),
+  nextChargeAt: ts("next_charge_at"),
+  nextChargeMinor: integer("next_charge_minor"),
+  pendingPlanCode: text("pending_plan_code"), // plan change scheduled for the next renewal
+  cancelAtPeriodEnd: bool("cancel_at_period_end").notNull().default(false),
+  providerRef: text("provider_ref"), // gateway subscription / order id
+  reminderSentFor: ts("reminder_sent_for"), // nextChargeAt we last sent a renewal reminder for
+  termsAcceptedAt: ts("terms_accepted_at"),
   startedAt: now("started_at"),
-  endsAt: ts("ends_at").notNull(),
-}, (t) => [index("subs_user").on(t.userId, t.status)]);
+  endsAt: ts("ends_at").notNull(), // access runs until here
+}, (t) => [index("subs_user").on(t.userId, t.status), index("subs_provider_ref").on(t.providerRef)]);
+
+/** Campaign engine: intro offers (₹1 trials), time-boxed discounts and one-off passes. Every number is editable in Admin. */
+export const offers = sqliteTable("offers", {
+  id: id(),
+  name: text("name").notNull(), // internal name, e.g. "Diwali 2026"
+  kind: text("kind").notNull(), // INTRO | DISCOUNT | PASS
+  headline: text("headline").notNull(), // shown to users, e.g. "Try Premium for ₹1"
+  badge: text("badge"), // short tag, e.g. "Festival offer"
+  planCode: text("plan_code").notNull(),
+  country: text("country").notNull().default("IN"),
+  genders: text("genders").notNull().default(""), // "" = everyone, else comma list e.g. "MAN"
+  audience: text("audience").notNull().default("ALL"), // ALL | NEW | RETURNING (had Premium before, not now)
+  priceMinor: integer("price_minor"), // INTRO: today's price; PASS: pass price
+  days: integer("days"), // INTRO: intro length; PASS: pass length
+  discountPct: integer("discount_pct"), // DISCOUNT: % off today's payment
+  oncePerUser: bool("once_per_user").notNull().default(true),
+  priority: integer("priority").notNull().default(0), // higher wins when several apply
+  startsAt: ts("starts_at"),
+  endsAt: ts("ends_at"), // shown to users only when real
+  active: bool("active").notNull().default(true),
+  createdById: text("created_by_id"),
+  createdAt: now("created_at"),
+}, (t) => [index("offers_lookup").on(t.country, t.planCode, t.active)]);
+
+export const coupons = sqliteTable("coupons", {
+  id: id(),
+  code: text("code").notNull().unique(), // stored upper-case
+  kind: text("kind").notNull(), // PERCENT | FIXED
+  value: integer("value").notNull(), // percent, or minor units for FIXED
+  currency: text("currency"), // required for FIXED
+  maxDiscountMinor: integer("max_discount_minor"),
+  minPurchaseMinor: integer("min_purchase_minor"),
+  audience: text("audience").notNull().default("ALL"), // ALL | NEW | EXISTING
+  countries: text("countries").notNull().default(""), // "" = any
+  plans: text("plans").notNull().default(""),
+  genders: text("genders").notNull().default(""), // only honoured where gender pricing is enabled
+  usageLimit: integer("usage_limit"), // total redemptions; null = unlimited
+  perUserLimit: integer("per_user_limit").notNull().default(1),
+  usedCount: integer("used_count").notNull().default(0),
+  startsAt: ts("starts_at"),
+  endsAt: ts("ends_at"),
+  active: bool("active").notNull().default(true),
+  createdById: text("created_by_id"),
+  createdAt: now("created_at"),
+});
+
+export const couponRedemptions = sqliteTable("coupon_redemptions", {
+  id: id(),
+  couponId: text("coupon_id").notNull().references(() => coupons.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  paymentId: text("payment_id").notNull().unique(),
+  discountMinor: integer("discount_minor").notNull(),
+  createdAt: now("created_at"),
+}, (t) => [index("coupon_red_user").on(t.couponId, t.userId)]);
+
+/**
+ * One row per charge attempt. Holds only what's needed for receipts, support and accounting —
+ * never card numbers, CVV, UPI PIN or bank credentials (the gateway keeps those).
+ */
+export const payments = sqliteTable("payments", {
+  id: id(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  subscriptionId: text("subscription_id").references(() => subscriptions.id, { onDelete: "set null" }),
+  provider: text("provider").notNull(),
+  purpose: text("purpose").notNull().default("INITIAL"), // INITIAL | RENEWAL | PASS
+  status: text("status").notNull().default("CREATED"), // CREATED | CAPTURED | FAILED | REFUNDED | PARTIALLY_REFUNDED
+  amountMinor: integer("amount_minor").notNull(),
+  currency: text("currency").notNull(),
+  planCode: text("plan_code").notNull(),
+  offerId: text("offer_id"),
+  couponCode: text("coupon_code"),
+  discountMinor: integer("discount_minor").notNull().default(0),
+  providerOrderId: text("provider_order_id"),
+  providerPaymentId: text("provider_payment_id").unique(),
+  method: text("method"), // upi | card | netbanking | wallet — category only
+  failureCode: text("failure_code"),
+  failureReason: text("failure_reason"), // user-safe wording
+  refundedMinor: integer("refunded_minor").notNull().default(0),
+  disputed: bool("disputed").notNull().default(false),
+  invoiceNo: text("invoice_no").unique(),
+  createdAt: now("created_at"),
+  paidAt: ts("paid_at"),
+}, (t) => [index("payments_user").on(t.userId, t.createdAt), index("payments_status").on(t.status, t.paidAt)]);
+
+/** Two-person refund workflow: a request, then a decision by someone else with refund rights. */
+export const refunds = sqliteTable("refunds", {
+  id: id(),
+  paymentId: text("payment_id").notNull().references(() => payments.id, { onDelete: "cascade" }),
+  amountMinor: integer("amount_minor").notNull(),
+  reason: text("reason").notNull(),
+  revokeAccess: bool("revoke_access").notNull().default(false),
+  status: text("status").notNull().default("REQUESTED"), // REQUESTED | APPROVED | REJECTED | PROCESSED | FAILED
+  requestedById: text("requested_by_id").notNull(),
+  decidedById: text("decided_by_id"),
+  decisionNote: text("decision_note"),
+  providerRefundId: text("provider_refund_id").unique(),
+  createdAt: now("created_at"),
+  decidedAt: ts("decided_at"),
+  processedAt: ts("processed_at"),
+}, (t) => [index("refunds_status").on(t.status)]);
+
+/** Every gateway webhook we've seen — makes processing idempotent and leaves an audit trail. */
+export const webhookEvents = sqliteTable("webhook_events", {
+  id: id(),
+  provider: text("provider").notNull(),
+  eventId: text("event_id").notNull(),
+  type: text("type").notNull(),
+  status: text("status").notNull().default("RECEIVED"), // RECEIVED | PROCESSED | IGNORED | FAILED
+  error: text("error"),
+  receivedAt: now("received_at"),
+  processedAt: ts("processed_at"),
+}, (t) => [uniqueIndex("webhook_unique").on(t.provider, t.eventId)]);
+
+/** Consecutive invoice numbers per financial year (GST invoices must be serial). */
+export const invoiceCounters = sqliteTable("invoice_counters", {
+  fy: text("fy").primaryKey(), // e.g. "2026-27"
+  last: integer("last").notNull().default(0),
+});
+
+export const referrals = sqliteTable("referrals", {
+  id: id(),
+  referrerId: text("referrer_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  refereeId: text("referee_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }),
+  status: text("status").notNull().default("PENDING"), // PENDING (joined) | REWARDED | REJECTED | HELD (needs review)
+  reason: text("reason"),
+  rewardDays: integer("reward_days"),
+  createdAt: now("created_at"),
+  decidedAt: ts("decided_at"),
+}, (t) => [index("referrals_referrer").on(t.referrerId)]);
+
+/** Fraud and abuse signals feeding a user's risk level. Signals add up; none bans anyone on its own. */
+export const riskSignals = sqliteTable("risk_signals", {
+  id: id(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(), // SHARED_DEVICE | SIGNUP_BURST | TRIAL_REUSE | REFERRAL_ABUSE | CHARGEBACK | PAYMENT_FAILURES | MESSAGE_FLAGS | NEW_DEVICE_LOGIN
+  weight: integer("weight").notNull(),
+  detail: text("detail"),
+  resolvedAt: ts("resolved_at"),
+  resolvedById: text("resolved_by_id"),
+  createdAt: now("created_at"),
+}, (t) => [index("risk_user").on(t.userId, t.createdAt)]);
+
+/** Sign-in history (successes and failures) for the Security screen and takeover detection. */
+export const loginEvents = sqliteTable("login_events", {
+  id: id(),
+  userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+  success: bool("success").notNull(),
+  reason: text("reason"), // bad_password | locked | banned | totp_required | ok
+  ip: text("ip"),
+  platform: text("platform"), // ios | android | web
+  deviceName: text("device_name"),
+  installId: text("install_id"), // random per app install; not a hardware identifier
+  createdAt: now("created_at"),
+}, (t) => [index("login_user").on(t.userId, t.createdAt), index("login_install").on(t.installId), index("login_ip").on(t.ip, t.createdAt)]);
 
 export const legalDocuments = sqliteTable("legal_documents", {
   id: id(),
@@ -291,6 +475,8 @@ export const sessions = sqliteTable("sessions", {
   refreshHash: text("refresh_hash").notNull().unique(),
   deviceName: text("device_name"),
   platform: text("platform"),
+  ip: text("ip"),
+  installId: text("install_id"),
   createdAt: now("created_at"),
   lastUsedAt: now("last_used_at"),
   expiresAt: ts("expires_at").notNull(),

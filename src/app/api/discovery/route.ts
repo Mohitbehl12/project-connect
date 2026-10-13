@@ -6,7 +6,7 @@ import { blockedIds, loadAnswers, loadPerson, publicCard, toMatchPerson } from "
 import { alignedTraits, eligibility, scorePair } from "@/lib/matching";
 import { photosFor } from "@/lib/photos";
 
-const MODES = ["recommended", "nearby", "compatibility", "interests", "intent"] as const;
+const MODES = ["recommended", "nearby", "compatibility", "interests", "intent", "new"] as const;
 type Mode = (typeof MODES)[number];
 
 function dobBound(yearsAgo: number) {
@@ -18,6 +18,9 @@ function dobBound(yearsAgo: number) {
 export const GET = route(async ({ req, user }) => {
   const url = new URL(req.url);
   const mode = (MODES.includes(url.searchParams.get("mode") as Mode) ? url.searchParams.get("mode") : "recommended") as Mode;
+  // Explore filters: one interest, verified people only.
+  const interest = url.searchParams.get("interest");
+  const verifiedOnly = url.searchParams.get("verified") === "1";
   if (user.onboardingStep < 3) throw new ApiError(409, "Finish setting up your profile to start discovering people.", "onboarding");
 
   const me = await loadPerson(user.id);
@@ -43,6 +46,8 @@ export const GET = route(async ({ req, user }) => {
     gte(schema.profiles.dob, dobBound(viewer.prefs.ageMax + 1)),
     notInArray(schema.users.id, exclude),
     eq(schema.preferences.discoverable, true),
+    ...(verifiedOnly ? [eq(schema.users.selfieStatus, "VERIFIED")] : []),
+    ...(mode === "new" ? [gte(schema.users.createdAt, new Date(Date.now() - 14 * 86_400_000))] : []),
   ];
   if (!viewer.prefs.longDistance) where.push(eq(schema.profiles.country, viewer.country));
 
@@ -64,6 +69,9 @@ export const GET = route(async ({ req, user }) => {
   const answers = await loadAnswers(rows.map((r) => r.user.id));
   let scored = rows
     .filter((r) => !r.prefs?.incognito || likedMe.has(r.user.id))
+    // "Only verified people can like me": hidden from unverified viewers rather than shown and refused.
+    .filter((r) => r.prefs?.likesFrom !== "VERIFIED" || user.selfieStatus === "VERIFIED")
+    .filter((r) => !interest || r.profile.interests.split(",").includes(interest))
     .map((r) => ({ r, person: toMatchPerson(r, answers.get(r.user.id) ?? {}) }))
     .filter((x) => eligibility(viewer, x.person) === null)
     .map((x) => ({ ...x, s: scorePair(viewer, x.person, weights) }));
@@ -80,12 +88,17 @@ export const GET = route(async ({ req, user }) => {
       scored = scored.filter((x) => x.s.factors.interests > 0.3);
       scored.sort((a, b) => b.s.factors.interests - a.s.factors.interests || b.s.score - a.s.score);
       break;
+    case "new":
+      scored.sort((a, b) => b.r.user.createdAt.getTime() - a.r.user.createdAt.getTime());
+      break;
     case "intent":
       scored = scored.filter((x) => x.person.intent === viewer.intent);
       scored.sort((a, b) => b.s.score - a.s.score);
       break;
     default:
-      scored.sort((a, b) => b.s.score + recentBoost(b.r.user.lastActiveAt) - (a.s.score + recentBoost(a.r.user.lastActiveAt)));
+      // Boosted profiles (a reward or a boost) get a fixed lift; compatibility still dominates.
+      const lift = (u: { lastActiveAt: Date; boostUntil: Date | null }) => recentBoost(u.lastActiveAt) + (u.boostUntil && u.boostUntil.getTime() > Date.now() ? 8 : 0);
+      scored.sort((a, b) => b.s.score + lift(b.r.user) - (a.s.score + lift(a.r.user)));
   }
 
   const page = scored.slice(0, batch);

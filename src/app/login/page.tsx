@@ -21,7 +21,12 @@ function LoginForm() {
     try {
       const r = await api<{ next: string }>("/api/auth/login", { body: { email, password } });
       const back = params.get("next");
-      router.push(back && back.startsWith("/") && !back.startsWith("//") ? back : r.next);
+      // Only same-site paths: "/\evil.com" and "//evil.com" resolve to another origin and are refused.
+      let dest = r.next;
+      if (back) {
+        try { const u = new URL(back, window.location.origin); if (u.origin === window.location.origin && back.startsWith("/")) dest = u.pathname + u.search; } catch { /* ignore */ }
+      }
+      router.push(dest);
     } catch (e: any) {
       setErr(e.message);
       setBusy(false);

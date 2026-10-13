@@ -9,6 +9,8 @@ import { MIN_AGE } from "@/lib/constants";
 import { recordAcceptances, requiredLegalVersions } from "@/lib/legal";
 import { issueOtp } from "@/lib/otp";
 import { audit } from "@/lib/audit";
+import { attachReferral } from "@/lib/referrals";
+import { signupRiskChecks } from "@/lib/fraud";
 
 const Body = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
@@ -19,6 +21,7 @@ const Body = z.object({
   safetyAcknowledged: z.literal(true, { message: "Please acknowledge the safety guidelines" }),
   client: z.enum(["web", "app"]).default("web"), // "app" → tokens in the body instead of a cookie
   platform: z.enum(["ios", "android", "web"]).optional(),
+  referralCode: z.string().trim().max(20).optional(),
 });
 
 export const POST = publicRoute(async ({ req }) => {
@@ -37,9 +40,12 @@ export const POST = publicRoute(async ({ req }) => {
   // Same message either way would be ideal against enumeration, but signup UX needs a clear path to log in.
   if (exists) throw new ApiError(409, "An account with this email already exists. Log in instead.", "email_taken");
 
+  const installId = req.headers.get("x-install-id")?.slice(0, 64) ?? null;
   const [user] = await db.insert(schema.users).values({
-    email: body.email, passwordHash: await hashPassword(body.password), dob: body.dob,
+    email: body.email, passwordHash: await hashPassword(body.password), dob: body.dob, signupIp: ip, signupInstallId: installId,
   }).returning();
+  await attachReferral(user, body.referralCode);
+  await signupRiskChecks(user.id, ip, installId);
 
   const legal = await requiredLegalVersions();
   await recordAcceptances(user.id, legal.map((l) => l.versionId), ip);
@@ -47,7 +53,7 @@ export const POST = publicRoute(async ({ req }) => {
 
   const devCode = await issueOtp(user.id, "EMAIL", user.email);
   if (body.client === "app") {
-    const tokens = await issueTokens(user, { platform: body.platform });
+    const tokens = await issueTokens(user, { platform: body.platform, ip, installId: installId ?? undefined });
     return ok({ id: user.id, next: "/onboarding", devOtp: devCode, ...tokens }, 201);
   }
   await createSession(user);

@@ -1,3 +1,5 @@
+import { messageFlagCheck } from "@/lib/fraud";
+import { openSafe, seal } from "@/lib/crypto";
 import { z } from "zod";
 import { and, asc, desc, eq, gt, gte, isNull, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
@@ -39,7 +41,7 @@ export const GET = route<{ id: string }>(async ({ req, user, params }) => {
         id: m.id,
         mine,
         kind: m.kind,
-        body: m.deletedAt ? null : m.body,
+        body: m.deletedAt ? null : openSafe(m.body, m.matchId),
         deleted: !!m.deletedAt,
         createdAt: m.createdAt,
         read: mine && showReceipts ? !!m.readAt : undefined,
@@ -66,8 +68,9 @@ export const POST = route<{ id: string }>(async ({ req, user, params }) => {
     throw new ApiError(429, `You've sent ${limit} messages in a row. Give them a chance to reply.`, "awaiting_reply");
 
   const flags = screenMessage(body);
-  const [msg] = await db.insert(schema.messages).values({ matchId: match.id, senderId: user.id, body, flags: flags.join(",") }).returning();
+  const [msg] = await db.insert(schema.messages).values({ matchId: match.id, senderId: user.id, body: seal(body, match.id), flags: flags.join(",") }).returning();
 
+  if (flags.length) await messageFlagCheck(user.id);
   const reportable = flags.filter((f) => REPORTABLE_FLAGS.includes(f));
   if (reportable.length) {
     // One open automated report per sender per category per day to avoid flooding the queue.

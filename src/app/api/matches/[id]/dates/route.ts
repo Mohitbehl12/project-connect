@@ -1,3 +1,4 @@
+import { seal } from "@/lib/crypto";
 import { db, schema } from "@/db";
 import { ApiError, ok, parseBody, route } from "@/lib/http";
 import { requireMatch } from "@/lib/matches";
@@ -16,7 +17,7 @@ export const POST = route<{ id: string }>(async ({ req, user, params }) => {
   const [plan] = await db.insert(schema.datePlans).values({
     matchId: match.id, proposerId: user.id, kind: b.kind, place: b.place, startsAt, note: b.note,
   }).returning();
-  await db.insert(schema.messages).values({ matchId: match.id, senderId: user.id, kind: "SYSTEM", body: `Suggested a date: ${DATE_KINDS[b.kind as keyof typeof DATE_KINDS]} at ${b.place}` });
+  await db.insert(schema.messages).values({ matchId: match.id, senderId: user.id, kind: "SYSTEM", body: seal(`Suggested a date: ${DATE_KINDS[b.kind as keyof typeof DATE_KINDS]} at ${b.place}`, match.id) });
   await notify(otherId, "DATE", "New date suggestion", `${DATE_KINDS[b.kind as keyof typeof DATE_KINDS]} at ${b.place}`, `/matches/${match.id}`);
   return ok({ id: plan.id }, 201);
 });

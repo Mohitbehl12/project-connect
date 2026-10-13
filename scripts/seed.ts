@@ -46,17 +46,34 @@ async function main() {
     { code: "PREMIUM_PLUS", name: "Premium Plus", sortOrder: 2, features: { dailyLikes: -1, dailyPriorityLikes: 5, seeWhoLiked: true, advancedFilters: true, incognito: true, travelMode: true, monthlyBoosts: 2 } },
     { code: "VIP", name: "VIP", sortOrder: 3, features: { dailyLikes: -1, dailyPriorityLikes: 10, seeWhoLiked: true, advancedFilters: true, incognito: true, travelMode: true, monthlyBoosts: 5 } },
   ];
-  // Prices are placeholders for testing — set real prices in Admin → Plans.
-  const priceTable: Record<string, [string, string, number][]> = {
-    PREMIUM: [["IN", "INR", 49900], ["US", "USD", 1499], ["GB", "GBP", 1199], ["*", "USD", 1499]],
-    PREMIUM_PLUS: [["IN", "INR", 89900], ["US", "USD", 2499], ["GB", "GBP", 1999], ["*", "USD", 2499]],
-    VIP: [["IN", "INR", 199900], ["US", "USD", 4999], ["*", "USD", 4999]],
+  // All prices are editable in Admin → Pricing. India uses price groups: men pay the "gender:MAN" price,
+  // everyone else (women, non-binary, not stated) pays the "*" price. Groups only apply in countries
+  // listed in billing.genderPricingCountries (IN by default) — they're unlawful in some places.
+  const priceTable: Record<string, [string, string, number, string?][]> = {
+    PREMIUM: [["IN", "INR", 10000, "gender:MAN"], ["IN", "INR", 5000], ["US", "USD", 1499], ["GB", "GBP", 1199], ["*", "USD", 1499]],
+    PREMIUM_PLUS: [["IN", "INR", 24900, "gender:MAN"], ["IN", "INR", 14900], ["US", "USD", 2499], ["GB", "GBP", 1999], ["*", "USD", 2499]],
+    VIP: [["IN", "INR", 99900, "gender:MAN"], ["IN", "INR", 59900], ["US", "USD", 4999], ["*", "USD", 4999]],
   };
   for (const p of planDefs) {
     const [plan] = await db.insert(s.plans).values({ ...p, features: JSON.stringify(p.features) }).returning();
-    for (const [country, currency, amountMinor] of priceTable[p.code] ?? [])
-      await db.insert(s.planPrices).values({ planId: plan.id, country, currency, amountMinor, durationDays: 30 });
+    for (const [country, currency, amountMinor, segment] of priceTable[p.code] ?? [])
+      await db.insert(s.planPrices).values({ planId: plan.id, country, currency, amountMinor, durationDays: 30, segment: segment ?? "*" });
   }
+
+  console.log("Seeding offers and coupons…");
+  await db.insert(s.offers).values([
+    { name: "Welcome ₹1 — men", kind: "INTRO", headline: "Try Premium for ₹1", badge: "Welcome offer", planCode: "PREMIUM", country: "IN", genders: "MAN", audience: "NEW", priceMinor: 100, days: 15, priority: 10 },
+    { name: "Welcome ₹1 — everyone else", kind: "INTRO", headline: "Try Premium for ₹1", badge: "Welcome offer", planCode: "PREMIUM", country: "IN", genders: "", audience: "NEW", priceMinor: 100, days: 30, priority: 10 },
+    { name: "Welcome back", kind: "DISCOUNT", headline: "Welcome back — 40% off your first month", badge: "Welcome back", planCode: "PREMIUM", country: "IN", audience: "RETURNING", discountPct: 40, priority: 5 },
+    { name: "Weekend Dating Pass", kind: "PASS", headline: "Weekend Dating Pass", badge: "3 days", planCode: "PREMIUM", country: "IN", priceMinor: 4900, days: 3, oncePerUser: false, priority: 1 },
+    { name: "Diwali Special 2026", kind: "DISCOUNT", headline: "Diwali Special — 50% off your first month", badge: "Festival offer", planCode: "PREMIUM", country: "IN", discountPct: 50, priority: 20, startsAt: new Date("2026-11-01T00:00:00+05:30"), endsAt: new Date("2026-11-12T00:00:00+05:30"), active: false },
+  ]);
+  await db.insert(s.coupons).values([
+    { code: "WELCOME50", kind: "PERCENT", value: 50, maxDiscountMinor: 5000, audience: "NEW" },
+    { code: "FIRSTDATE", kind: "FIXED", value: 2000, currency: "INR", countries: "IN" },
+    { code: "LOVE2026", kind: "PERCENT", value: 25, endsAt: new Date("2027-01-01T00:00:00+05:30"), usageLimit: 1000 },
+    { code: "FESTIVAL50", kind: "PERCENT", value: 50, maxDiscountMinor: 10000, active: false },
+  ]);
 
   console.log("Seeding config and legal documents…");
   await db.insert(s.appConfig).values({ key: "matching.weights", value: JSON.stringify(DEFAULT_WEIGHTS) });
@@ -78,6 +95,9 @@ async function main() {
     { email: (process.env.SEED_ADMIN_EMAIL ?? "admin@projectconnect.local").toLowerCase(), passwordHash: staffPw, role: "SUPER_ADMIN", emailVerified: true, onboardingStep: 3 },
     { email: "moderator@projectconnect.local", passwordHash: staffPw, role: "MODERATOR", emailVerified: true, onboardingStep: 3 },
     { email: "support@projectconnect.local", passwordHash: staffPw, role: "SUPPORT", emailVerified: true, onboardingStep: 3 },
+    { email: "finance@projectconnect.local", passwordHash: staffPw, role: "FINANCE", emailVerified: true, onboardingStep: 3 },
+    { email: "finance2@projectconnect.local", passwordHash: staffPw, role: "FINANCE", emailVerified: true, onboardingStep: 3 },
+    { email: "security@projectconnect.local", passwordHash: staffPw, role: "SECURITY", emailVerified: true, onboardingStep: 3 },
   ]);
 
   console.log("Seeding test users…");

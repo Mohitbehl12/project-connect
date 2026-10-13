@@ -72,18 +72,20 @@ export default function ProfileTab() {
           </View>
         </View>
 
-        <Pressable accessibilityRole="button" onPress={() => router.push("/premium")} style={{ marginHorizontal: 20, borderRadius: 22, overflow: "hidden" }}>
+        <Pressable accessibilityRole="button" onPress={() => router.push(premium ? "/subscription" : "/premium")} style={{ marginHorizontal: 20, borderRadius: 22, overflow: "hidden" }}>
           <LinearGradient colors={[...dusk]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 18, gap: 4 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Icon name="sparkle" color="#F5B656" /><T v="headline" tone="white">{premium ? `You're on ${me?.user.planCode.replace("_", " ").toLowerCase()}` : "Premium"}</T></View>
-            <T v="callout" tone="white" style={{ opacity: 0.85 }}>{premium ? "Thanks for supporting Project Connect." : "See who likes you, get more likes and finer filters. Free stays fully usable."}</T>
+            <T v="callout" tone="white" style={{ opacity: 0.85 }}>{premium ? "Manage your plan, payments and invoices." : "See who likes you, get more likes and finer filters. Free stays fully usable."}</T>
           </LinearGradient>
         </Pressable>
 
         <View style={{ marginHorizontal: 20, borderRadius: 22, overflow: "hidden", gap: 1, backgroundColor: c.line }}>
           <RowLink icon="shield" tone="trust" label="Safety Center" sub="Verification, reporting, tips" onPress={() => router.push("/safety")} />
+          <RowLink icon="gift" label="Invite & earn" sub="Premium days for every verified friend" onPress={() => router.push("/referrals")} />
+          <RowLink icon="eye" label="Privacy Center" sub="Who sees you and your data" onPress={() => router.push("/privacy")} />
           <RowLink icon="sliders" label="Discovery preferences" sub="Who you see and how far" onPress={() => router.push("/preferences")} />
           <RowLink icon="bell" label="Notifications" onPress={() => router.push("/notifications")} />
-          <RowLink icon="settings" label="Settings" sub="Privacy, appearance, account" onPress={() => router.push("/settings")} />
+          <RowLink icon="settings" label="Settings" sub="Security, subscription, appearance" onPress={() => router.push("/settings")} />
         </View>
       </ScrollView>
     </Screen>

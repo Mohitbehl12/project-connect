@@ -1,3 +1,4 @@
+import { seal } from "@/lib/crypto";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
@@ -36,7 +37,7 @@ export const PATCH = route<{ id: string }>(async ({ req, user, params }) => {
       .where(eq(schema.datePlans.id, plan.id));
     summary = "Suggested a new time for the date";
   }
-  await db.insert(schema.messages).values({ matchId: match.id, senderId: user.id, kind: "SYSTEM", body: summary });
+  await db.insert(schema.messages).values({ matchId: match.id, senderId: user.id, kind: "SYSTEM", body: seal(summary, match.id) });
   await notify(otherId, "DATE", summary, plan.place, `/matches/${match.id}`);
   return ok({ updated: true });
 });

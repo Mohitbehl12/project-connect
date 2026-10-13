@@ -2,6 +2,55 @@
 
 _Last updated: 13 October 2026_
 
+## Payments, security and privacy (13 October 2026)
+
+Built to the payments/security brief. Full details: `docs/PAYMENTS.md`.
+
+- **Billing:**
+  - Configurable price groups. India: men ₹1 for 15 days, then ₹100/month; everyone else ₹1 for 30 days, then ₹50/month.
+  - An offers engine: intro, discount and one-off passes, with flash, festival, welcome-back and weekend examples.
+  - Coupons.
+  - A transparent checkout with a terms checkbox and a price-changed guard.
+  - A Razorpay gateway with signature-verified, idempotent webhooks.
+  - Renewals, a grace period, reminders, cancel, resume and plan change.
+  - Serial GST-style PDF invoices.
+  - Refunds under a two-person rule.
+  - An admin payments dashboard, plus offer, coupon and price editors.
+- **Referrals and fraud:**
+  - Invite codes, rewarded once the friend is verified.
+  - Self-referral rejection and a monthly cap.
+  - Risk scoring (Low/Medium/High) with a review queue. Nothing is banned automatically.
+- **Security:**
+  - Argon2id, sign-in history, new-device alerts and optional 2-step codes (replay-safe).
+  - Device list with immediate sign-out, and log out everywhere.
+  - Password change.
+  - CSP, HSTS and CSRF origin checks.
+  - AES-256-GCM encryption at rest for messages, with key rotation.
+  - Finance and Security staff roles.
+- **Privacy:**
+  - A Privacy Center: hide distance, verified-only likes, blocked list.
+  - Download my data and delete my messages.
+  - Account deletion that keeps only payment records required by law.
+  - Retention purges.
+- **App:**
+  - New tabs: Discover · Matches (with "Likes you") · Messages · Explore · Profile.
+  - A redesigned Premium screen, checkout review, pay page and payment result.
+  - New screens: My subscription, Invite & earn, Privacy Center and Security.
+
+| Check | Result |
+|---|---|
+| Unit tests | **45 / 45** |
+| End-to-end against the production build | **224 / 224** |
+| Typecheck (server and app) | clean |
+| App screens in a phone-sized browser, plus admin pages | no runtime errors |
+| Independent code review of payments and security | 10 issues found, all fixed and covered by new tests |
+
+**Not live yet:**
+- Real money needs Razorpay keys and a test-mode rehearsal.
+- iPhone needs Apple in-app purchase (not built).
+- Android in-app needs Play Billing or Google's user choice billing (not built).
+- Messages are encrypted on our servers but **not end-to-end**; the app says so.
+
 ## Mobile app (October 2026)
 
 The iOS/Android app lives in `mobile/` (Expo SDK 57). Phases 0–3 of the mobile plan are built: backend for mobile, app shell and design system, onboarding and profile, discovery, match and chat. See `mobile/README.md` to run it on a phone with Expo Go.
@@ -53,11 +102,12 @@ Not yet tested: Safari, Firefox and Edge rendering (only Chromium was available 
 |---|---|---|
 | OTP delivery | Codes logged to the server console; returned in API responses when `DEV_SHOW_OTP=true` | SMS provider (MSG91 / Twilio — India needs DLT template registration) and email (Resend / SES) in `src/lib/otp.ts` |
 | Selfie verification | Request goes to a manual moderator queue; no image captured | Liveness + face-match vendor (e.g. HyperVerge, Onfido, AWS Rekognition); store only the result |
-| Payments | Mock checkout activates plans instantly | Razorpay (India) / Stripe (elsewhere) orders + signed webhooks; Apple/Google in-app purchase for native apps |
+| Payments | Test provider ("TEST MODE" pay page). Razorpay integration written, not yet run against a live account | Add Razorpay keys + webhook secret, rehearse in test mode (docs/PAYMENTS.md §3); Apple in-app purchase and Google Play billing for the native apps |
 | Photo moderation | Upload, crop, EXIF stripping, resizing, quality hints and the 6-photo limit are built; photos go live without a nudity/violence check | Add Rekognition, Sightengine or Hive in `src/lib/photos.ts` and start photos as PENDING |
 | Photo storage in production | Local disk driver; S3-compatible driver written but untested | Create an R2 bucket and set `STORAGE_DRIVER=s3` and the `S3_*` variables |
 | Push notifications | App registers its Expo push token; server sends through the Expo Push service when `PUSH_ENABLED=true` | Run `eas init` so the app has a project ID, test on a real device |
 | Email / SMS | Not sent | Email provider and SMS provider (DLT templates in India) |
+| Approximate city on the device list | Not shown | IP-location service |
 | Realtime chat | 4-second polling, no typing indicator | Ably, Pusher or Supabase Realtime publishing from `POST /messages` (mobile Phase 4) |
 | Google / Apple sign-in | Not built | OAuth with Auth.js or direct provider SDKs |
 | Legal text | Placeholder documents | Lawyer-drafted per launch country, including the DPDP Act 2023 (India) and GDPR/UK GDPR |

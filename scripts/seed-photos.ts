@@ -4,7 +4,8 @@
 import "./env";
 import sharp from "sharp";
 import { encode } from "blurhash";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { createClient } from "@libsql/client";
@@ -14,6 +15,7 @@ import * as s from "../src/db/schema";
 
 const db = drizzle(createClient({ url: process.env.DATABASE_URL!, authToken: process.env.DATABASE_AUTH_TOKEN || undefined }), { schema: s });
 const ROOT = path.resolve("data", "uploads");
+const CACHE = path.resolve("data", ".photo-cache");
 
 // Warm, editorial palettes: [deep, mid, light, rim]
 const PALETTES = [
@@ -103,8 +105,18 @@ async function main() {
     const count = 2 + (i % 2);
     for (let v = 0; v < count; v++) {
       // Rendered at half resolution (filters are slow) then scaled up; the content is soft, so nothing is lost.
-      const base = await sharp(Buffer.from(svg(i, v)), { density: 36 }).resize(1080, 1440).png().toBuffer();
-      const out = await sharp(base).composite([{ input: await grainLayer() }]).webp({ quality: 80 }).toBuffer({ resolveWithObject: true });
+      const art = svg(i, v); // always generated, so the random sequence (and every image) stays the same
+      const cacheFile = path.join(CACHE, `${createHash("sha1").update(art).digest("hex")}.webp`);
+      let data: Buffer;
+      try {
+        data = await readFile(cacheFile); // re-seeding reuses rendered images (rendering is slow)
+      } catch {
+        const base = await sharp(Buffer.from(art), { density: 36 }).resize(1080, 1440).png().toBuffer();
+        data = await sharp(base).composite([{ input: await grainLayer() }]).webp({ quality: 80 }).toBuffer();
+        await mkdir(CACHE, { recursive: true });
+        await writeFile(cacheFile, data);
+      }
+      const out = { data, info: { width: 1080, height: 1440 } };
       const tiny = await sharp(out.data).resize(32, 32, { fit: "inside" }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
       const blurhash = encode(new Uint8ClampedArray(tiny.data), tiny.info.width, tiny.info.height, 4, 4);
       const key = `photos/${u.id}/${randomUUID()}.webp`;

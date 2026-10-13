@@ -50,7 +50,7 @@ function Dashboard() {
   const staff = useStaff();
   const router = useRouter();
   const allowed = staff.permissions.includes("analytics.view");
-  useEffect(() => { if (!allowed) router.replace("/admin/reports"); }, [allowed, router]);
+  useEffect(() => { if (!allowed) router.replace(staff.permissions.includes("payments.view") ? "/admin/payments" : staff.permissions.includes("security.view") ? "/admin/risk" : "/admin/reports"); }, [allowed, router, staff.permissions]);
   const { data, error } = useApi<Stats>(allowed ? "/api/admin/stats" : null);
   if (!allowed) return null;
   if (error) return <Alert tone="error">{error.message}</Alert>;

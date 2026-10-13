@@ -25,6 +25,16 @@ const Body = z.object({
     "chat.maxUnansweredMessages": z.number().int().min(1).max(50).optional(),
     "discovery.batchSize": z.number().int().min(5).max(100).optional(),
     "safety.autoSuspendReportThreshold": z.number().int().min(2).max(100).optional(),
+    "billing.genderPricingCountries": z.array(z.string().regex(/^[A-Z]{2}$/)).max(50).optional(),
+    "billing.reminderDays": z.number().int().min(1).max(14).optional(),
+    "billing.graceDays": z.number().int().min(0).max(14).optional(),
+    "billing.seller": z.object({ name: z.string().max(120), address: z.string().max(300), gstin: z.string().max(20), email: z.string().max(120), gstRatePct: z.number().min(0).max(40) }).optional(),
+    "referral.rewardDays": z.number().int().min(0).max(90).optional(),
+    "referral.monthlyCap": z.number().int().min(0).max(100).optional(),
+    "rewards.completeProfileBoostMinutes": z.number().int().min(0).max(1440).optional(),
+    "rewards.verifiedPremiumDays": z.number().int().min(0).max(90).optional(),
+    "retention.deletedMessageDays": z.number().int().min(7).max(3650).optional(),
+    "retention.loginEventDays": z.number().int().min(30).max(3650).optional(),
   }).optional(),
   plans: z.array(z.object({
     id: z.string(),
@@ -38,6 +48,7 @@ const Body = z.object({
       id: z.string().optional(), country: z.string().regex(/^([A-Z]{2}|\*)$/), currency: z.string().regex(/^[A-Z]{3}$/),
       amountMinor: z.number().int().min(0), promoMinor: z.number().int().min(0).nullable().optional(),
       durationDays: z.number().int().min(1).max(366), active: z.boolean().default(true),
+      segment: z.string().regex(/^(\*|gender:(MAN|WOMAN|NONBINARY))$/).default("*"),
     })).optional(),
   })).optional(),
 });
@@ -62,7 +73,12 @@ export const PUT = route(async ({ req, user }) => {
       if (p.features) set.features = JSON.stringify(p.features);
       if (Object.keys(set).length) await db.update(schema.plans).set(set).where(eq(schema.plans.id, p.id));
       for (const pr of p.prices ?? []) {
-        const vals = { country: pr.country, currency: pr.currency, amountMinor: pr.amountMinor, promoMinor: pr.promoMinor ?? null, durationDays: pr.durationDays, active: pr.active };
+        const vals = { country: pr.country, currency: pr.currency, amountMinor: pr.amountMinor, promoMinor: pr.promoMinor ?? null, durationDays: pr.durationDays, active: pr.active, segment: pr.segment };
+        // A changed amount needs a new gateway plan; existing subscribers keep their price until they change plan.
+        if (pr.id) {
+          const before = await db.query.planPrices.findFirst({ where: eq(schema.planPrices.id, pr.id) });
+          if (before && before.amountMinor !== pr.amountMinor) Object.assign(vals, { providerPlanId: null });
+        }
         if (pr.id) await db.update(schema.planPrices).set(vals).where(eq(schema.planPrices.id, pr.id));
         else await db.insert(schema.planPrices).values({ planId: p.id, ...vals });
       }

@@ -26,6 +26,8 @@ const Body = z.object({
   notifyLikes: z.boolean().optional(),
   notifyEmail: z.boolean().optional(),
   theme: z.enum(["SYSTEM", "LIGHT", "DARK"]).optional(),
+  showDistance: z.boolean().optional(),
+  likesFrom: z.enum(["EVERYONE", "VERIFIED"]).optional(),
 });
 
 export const PUT = route(async ({ req, user }) => {

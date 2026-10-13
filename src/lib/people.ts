@@ -99,7 +99,8 @@ export function publicCard(viewer: MatchPerson, r: Row, extra: { score?: number;
     age: ageFromDob(p.dob),
     gender: GENDERS[p.gender as keyof typeof GENDERS] ?? p.gender,
     city: p.city,
-    distance: distanceLabel(km, viewer.city === p.city),
+    // People can hide their distance; others then see only the city.
+    distance: r.prefs?.showDistance === false ? "Distance hidden" : distanceLabel(km, viewer.city === p.city),
     bio: p.bio,
     intent: INTENTS[p.intent as keyof typeof INTENTS] ?? p.intent,
     profession: p.profession,

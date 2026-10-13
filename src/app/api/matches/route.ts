@@ -1,3 +1,4 @@
+import { openSafe } from "@/lib/crypto";
 import { and, desc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ok, route } from "@/lib/http";
@@ -32,7 +33,7 @@ export const GET = route(async ({ user }) => {
       score: m.score,
       createdAt: m.createdAt,
       other: { id: otherId, firstName: o.p.firstName, age: ageFromDob(o.p.dob), city: o.p.city, verified: o.u.selfieStatus === "VERIFIED", photo: photoMap.get(otherId)?.[0] ?? null },
-      lastMessage: last ? { body: last.deletedAt ? "Message deleted" : last.body.slice(0, 80), mine: last.senderId === user.id, at: last.createdAt } : null,
+      lastMessage: last ? { body: last.deletedAt ? "Message deleted" : openSafe(last.body, last.matchId).slice(0, 80), mine: last.senderId === user.id, at: last.createdAt } : null,
       unread: unread.filter((x) => x.matchId === m.id).length,
     }];
   });

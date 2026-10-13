@@ -317,6 +317,219 @@ async function main() {
   const out = await anon.post("/api/auth/logout", { refreshToken: login.data.refreshToken });
   check("app sign-out revokes the refresh token", out.status === 200 && (await anon.post("/api/auth/refresh", { refreshToken: login.data.refreshToken })).status === 401);
 
+
+  // -------------------------------------------------------------------------
+  section("Billing: a new member in India (man)");
+  const M = new Client("UserMan7");
+  await onboard(M, `vikram-${run}@test.local`, "MAN", "WOMAN", "Vikram", answersB);
+
+  section("Billing: personalised quotes (India price groups, ₹1 intro offers)");
+  const envFile = (await import("node:fs")).readFileSync(".env", "utf8");
+  const envVal = (k: string) => process.env[k] ?? envFile.match(new RegExp(`^${k}="?([^"\\n]*)"?`, "m"))?.[1] ?? "";
+  const { createHmac } = await import("node:crypto");
+  const { totpAt } = await import("../src/lib/totp");
+
+  const catB = await M.get("/api/billing/catalogue");
+  const qB = catB.data?.plans?.find((p: any) => p.code === "PREMIUM")?.quote;
+  check("man in India: ₹1 today", qB?.todayMinor === 100, qB);
+  check("man in India: 15-day intro, then ₹100/month", qB?.introDays === 15 && qB?.nextChargeMinor === 10000 && qB?.currency === "INR", qB);
+  check("quote states the renewal price and date in words", /Then ₹100 every month, starting \d+ \w+ 20\d\d/.test((qB?.terms ?? []).join(" ")), qB?.terms);
+  check("quote says how to avoid being charged", /Cancel any time before/.test((qB?.terms ?? []).join(" ")));
+  const subA = await A.get("/api/billing/subscription");
+  check("woman in India got ₹1 for a month, then ₹50/month", subA.data?.subscription?.status === "TRIALING" && subA.data.subscription.nextChargeMinor === 5000, subA.data?.subscription);
+  check("A's ₹1 payment is in the history with an invoice number", subA.data?.payments?.[0]?.amountMinor === 100 && /^PC\/\d{4}-\d{2}\/\d{6}$/.test(subA.data.payments[0].invoiceNo ?? ""), subA.data?.payments);
+
+  const qc = await M.post("/api/billing/quote", { planCode: "PREMIUM", coupon: "welcome50" });
+  check("a coupon replaces the intro offer (no stacking)", qc.data?.quote?.offer === null && qc.data.quote.coupon?.code === "WELCOME50" && qc.data.quote.todayMinor === 5000, qc.data?.quote);
+  const qbad = await M.post("/api/billing/quote", { planCode: "PREMIUM", coupon: "NOPE123" });
+  check("an invalid coupon keeps the offer and explains why", qbad.data?.quote?.todayMinor === 100 && /isn't valid/.test(qbad.data.quote.couponError ?? ""), qbad.data?.quote);
+
+  section("Billing: checkout, failure, retry, success");
+  const noTerms = await M.post("/api/billing/checkout", { planCode: "PREMIUM", acceptTerms: false, expectedTodayMinor: 100 });
+  check("checkout without accepting the terms is refused", noTerms.status === 422, noTerms.data);
+  const stale = await M.post("/api/billing/checkout", { planCode: "PREMIUM", acceptTerms: true, expectedTodayMinor: 999 });
+  check("checkout refuses if the price shown is out of date", stale.status === 409 && stale.data?.code === "price_changed", stale.data);
+  const co1 = await M.post("/api/billing/checkout", { planCode: "PREMIUM", acceptTerms: true, expectedTodayMinor: 100, returnTo: "app" });
+  check("checkout starts with the test provider and a pay link", co1.status === 201 && co1.data.provider === "MOCK" && /\/pay\/.+\?t=/.test(co1.data.payUrl), co1.data);
+  const payTok = new URL(co1.data.payUrl).searchParams.get("t")!;
+  const payInfo = await anon.get(`/api/billing/pay/${co1.data.paymentId}?t=${encodeURIComponent(payTok)}`);
+  check("pay page shows amount and renewal terms (scoped token)", payInfo.status === 200 && payInfo.data.payment.amountMinor === 100 && payInfo.data.terms.some((t: string) => /₹100/.test(t)), payInfo.data);
+  check("pay page refuses without a token", (await anon.get(`/api/billing/pay/${co1.data.paymentId}`)).status === 401);
+  const fail = await anon.post("/api/billing/mock/complete", { paymentId: co1.data.paymentId, token: payTok, outcome: "fail" });
+  const st1 = await M.get(`/api/billing/payments/${co1.data.paymentId}`);
+  check("declined payment is recorded with a friendly reason", fail.status === 200 && st1.data?.payment?.status === "FAILED" && /declined/.test(st1.data.payment.failureReason ?? ""), st1.data);
+  check("a failed payment doesn't grant Premium", (await M.get("/api/me")).data?.user?.planCode === "FREE");
+  const co2 = await M.post("/api/billing/checkout", { planCode: "PREMIUM", acceptTerms: true, expectedTodayMinor: 100 });
+  const ok2 = await M.post("/api/billing/mock/complete", { paymentId: co2.data?.paymentId, outcome: "success", method: "upi" });
+  const st2 = await M.get(`/api/billing/payments/${co2.data?.paymentId}`);
+  check("retry succeeds and Premium switches on", ok2.data?.result === "activated" && st2.data?.payment?.status === "CAPTURED" && st2.data.subscription.status === "TRIALING", st2.data);
+  check("next payment is ₹100 after 15 days", st2.data?.subscription?.nextChargeMinor === 10000 && Math.round((new Date(st2.data.subscription.nextChargeAt).getTime() - Date.now()) / 86400_000) === 15, st2.data?.subscription);
+  const replay = await M.post("/api/billing/mock/complete", { paymentId: co2.data?.paymentId, outcome: "success" });
+  check("completing the same payment twice changes nothing", replay.data?.result !== "activated", replay.data);
+  check("intro offer isn't offered again", !(await M.get("/api/billing/catalogue")).data?.plans?.some((p: any) => p.quote?.introDays), undefined);
+  check("can't start a second subscription", (await M.post("/api/billing/checkout", { planCode: "PREMIUM", acceptTerms: true, expectedTodayMinor: 10000 })).status === 409);
+
+  section("Billing: invoices");
+  const inv = await fetch(`${BASE}/api/billing/invoices/${co2.data?.paymentId}`, { headers: { cookie: M.cookie } });
+  check("owner downloads a PDF invoice", inv.status === 200 && inv.headers.get("content-type") === "application/pdf" && (await inv.arrayBuffer()).byteLength > 1000);
+  check("someone else can't see it", (await A.get(`/api/billing/invoices/${co2.data?.paymentId}`)).status === 404);
+  const link = await M.get(`/api/billing/invoices/${co2.data?.paymentId}?link=1`);
+  check("short-lived invoice link works without a session", link.status === 200 && (await fetch(link.data.url)).status === 200, link.data);
+
+  section("Billing: signed webhooks (renewal, idempotency, dispute)");
+  const finance = new Client("Finance1"), finance2 = new Client("Finance22"), support = new Client("Support1"), mod = new Client("Moderat1"), security = new Client("Security1");
+  for (const [c, e] of [[finance, "finance"], [finance2, "finance2"], [support, "support"], [mod, "moderator"], [security, "security"]] as const)
+    check(`${e} staff logs in`, (await c.post("/api/auth/login", { email: `${e}@projectconnect.local`, password: ADMIN_PASSWORD })).status === 200);
+  const plist = await finance.get(`/api/admin/billing/payments?q=${co2.data?.paymentId}`);
+  const subRef = plist.data?.payments?.[0]?.gatewayRef;
+  check("finance sees the payment with its gateway reference, and no card data", !!subRef && !JSON.stringify(plist.data).match(/card_number|cvv|vpa/i), plist.data?.payments?.[0]);
+  const hook = async (body: unknown, eventId: string, sig?: string) => {
+    const raw = JSON.stringify(body);
+    const r = await fetch(`${BASE}/api/webhooks/razorpay`, { method: "POST", headers: { "content-type": "application/json", "x-razorpay-event-id": eventId, "x-razorpay-signature": sig ?? createHmac("sha256", envVal("RAZORPAY_WEBHOOK_SECRET")).update(raw).digest("hex") }, body: raw });
+    return { status: r.status, data: await r.json().catch(() => null) };
+  };
+  const charged = (id: string) => ({ event: "subscription.charged", payload: { subscription: { entity: { id: subRef } }, payment: { entity: { id, status: "captured", amount: 10000, currency: "INR", method: "upi" } } } });
+  check("webhook with a bad signature is rejected", (await hook(charged("pay_bad"), `evt_bad_${run}`, "deadbeef")).status === 400);
+  const rnw1 = await hook(charged(`pay_renew_${run}`), `evt_renew_${run}`);
+  const afterRenew = await M.get("/api/billing/subscription");
+  check("signed renewal webhook charges ₹100 and moves to ACTIVE", rnw1.status === 200 && rnw1.data?.results?.[0] === "renewed" && afterRenew.data?.subscription?.status === "ACTIVE", { rnw1: rnw1.data, sub: afterRenew.data?.subscription });
+  const r2 = await hook(charged(`pay_renew_${run}`), `evt_renew_${run}`);
+  const r3 = await hook(charged(`pay_renew_${run}`), `evt_renew_other_${run}`);
+  const afterDup = await M.get("/api/billing/subscription");
+  check("repeated webhooks are idempotent (by event id and by payment id)", r2.data?.duplicate === true && r3.data?.results?.[0] === "duplicate" && afterDup.data.payments.filter((p: any) => p.purpose === "RENEWAL").length === 1, { r2: r2.data, r3: r3.data });
+  const spoof = await hook({ event: "payment.captured", payload: { payment: { entity: { id: `pay_spoof_${run}`, status: "captured", amount: 10000, currency: "INR", method: "upi", order_id: "order_unknown", notes: { pc_payment_id: co1.data?.paymentId } } } } }, `evt_spoof_${run}`);
+  check("a payment can't settle one of our checkouts by naming it in notes", spoof.data?.results?.[0] === "unmatched" && (await M.get(`/api/billing/payments/${co1.data?.paymentId}`)).data?.payment?.status === "FAILED", spoof.data);
+  const pend = await hook({ event: "subscription.pending", payload: { subscription: { entity: { id: subRef } } } }, `evt_pend_${run}`);
+  check("failed renewal → past due, Premium kept during grace", pend.data?.results?.[0] === "past_due" && (await M.get("/api/me")).data?.user?.planCode === "PREMIUM", pend.data);
+  await hook(charged(`pay_renew2_${run}`), `evt_renew2_${run}`);
+  check("a later successful charge clears past due", (await M.get("/api/billing/subscription")).data?.subscription?.status === "ACTIVE");
+
+  section("Billing: cancel, resume, change plan");
+  const can1 = await M.post("/api/billing/subscription", { action: "cancel" });
+  const sAfter = (await M.get("/api/billing/subscription")).data?.subscription;
+  check("cancelling is one step and keeps access until the period ends", can1.status === 200 && sAfter?.renews === false && new Date(sAfter.endsAt).getTime() > Date.now() && (await M.get("/api/me")).data?.user?.planCode === "PREMIUM", sAfter);
+  check("cancelling twice is refused clearly", (await M.post("/api/billing/subscription", { action: "cancel" })).status === 404);
+  const res1 = await M.post("/api/billing/subscription", { action: "resume" });
+  check("auto-renew can be turned back on (test provider)", res1.status === 200 && res1.data.subscription.renews === true, res1.data);
+  const chg = await M.post("/api/billing/subscription", { action: "change", planCode: "PREMIUM_PLUS" });
+  check("plan change is scheduled for the next renewal at the new price", chg.data?.subscription?.pendingPlanCode === "PREMIUM_PLUS" && chg.data.subscription.nextChargeMinor === 24900, chg.data?.subscription);
+  await M.post("/api/billing/subscription", { action: "change", planCode: "PREMIUM" });
+
+  section("Billing: scheduled jobs");
+  check("jobs endpoint needs the cron secret", (await anon.post("/api/cron/billing")).status === 403);
+  const job = await fetch(`${BASE}/api/cron/billing`, { method: "POST", headers: { "x-cron-secret": envVal("CRON_SECRET") } });
+  const jobData = await job.json();
+  check("jobs run (reminders, renewals, expiry, retention)", job.status === 200 && "billing" in jobData && "retention" in jobData, jobData);
+
+  section("Refunds: two-person rule and roles");
+  const first = (await finance.get(`/api/admin/billing/payments?q=${co2.data?.paymentId}`)).data?.payments?.[0];
+  check("moderators can't see payments", (await mod.get("/api/admin/billing/payments")).status === 403);
+  const rfq = await support.post("/api/admin/billing/refunds", { paymentId: first?.id, amountMinor: 100, reason: "Charged by mistake (e2e)", revokeAccess: false });
+  check("support can request a refund", rfq.status === 201, rfq.data);
+  check("support can't approve one", (await support.post(`/api/admin/billing/refunds/${rfq.data?.refund?.id}`, { approve: true })).status === 403);
+  check("too-large refund is refused", (await finance.post("/api/admin/billing/refunds", { paymentId: first?.id, amountMinor: 999999, reason: "Too much (e2e)" })).status >= 409);
+  const ap = await finance.post(`/api/admin/billing/refunds/${rfq.data?.refund?.id}`, { approve: true, note: "OK" });
+  check("finance approves (different person) and it's processed", ap.status === 200 && ap.data.status === "PROCESSED", ap.data);
+  const rq2 = await finance.post("/api/admin/billing/refunds", { paymentId: (await finance.get(`/api/admin/billing/payments?q=pay_renew_${run}`)).data?.payments?.[0]?.id, amountMinor: 5000, reason: "Partial goodwill refund (e2e)" });
+  check("the requester can't approve their own refund", (await finance.post(`/api/admin/billing/refunds/${rq2.data?.refund?.id}`, { approve: true })).status === 403);
+  check("a second finance person can", (await finance2.post(`/api/admin/billing/refunds/${rq2.data?.refund?.id}`, { approve: true, note: "ok" })).data?.status === "PROCESSED");
+  const hist = (await M.get("/api/billing/subscription")).data?.payments ?? [];
+  check("customer sees refunded and partially refunded payments", hist.some((p: any) => p.status === "REFUNDED") && hist.some((p: any) => p.status === "PARTIALLY_REFUNDED"), hist.map((p: any) => p.status));
+  const dsp = await hook({ event: "payment.dispute.created", payload: { dispute: { entity: { payment_id: `pay_renew2_${run}`, amount: 10000 } } } }, `evt_dsp_${run}`);
+  check("chargebacks are recorded", dsp.data?.results?.[0] === "disputed", dsp.data);
+  const stats = await finance.get("/api/admin/billing/stats");
+  check("payments dashboard: revenue by currency, trials, refunds, chargebacks", stats.status === 200 && stats.data.revenue.total.some((x: any) => x.currency === "INR") && stats.data.trialing >= 1 && stats.data.chargebacks >= 1 && stats.data.refunds.length >= 1, stats.data);
+
+  section("Offers, coupons and prices (admin)");
+  const gb = await finance.post("/api/admin/billing/offers", { name: "UK men", kind: "INTRO", headline: "Try for £1", planCode: "PREMIUM", country: "GB", genders: ["MAN"], priceMinor: 100, days: 7 });
+  check("gender-specific offers are blocked outside enabled countries", gb.status === 422 && gb.data?.code === "gender_pricing_off", gb.data);
+  const flash = await finance.post("/api/admin/billing/offers", { name: `Flash ${run}`, kind: "DISCOUNT", headline: "50% off — today only", badge: "Today only", planCode: "PREMIUM_PLUS", country: "IN", discountPct: 50, startsAt: new Date(Date.now() - 1000).toISOString(), endsAt: new Date(Date.now() + 86400_000).toISOString(), priority: 30 });
+  check("finance creates a time-boxed flash offer", flash.status === 201, flash.data);
+  const cpn = await finance.post("/api/admin/billing/coupons", { code: `E2E${run.toUpperCase().slice(-6)}`, kind: "PERCENT", value: 10, usageLimit: 5 });
+  check("finance creates a coupon", cpn.status === 201, cpn.data);
+  check("duplicate coupon codes are refused", (await finance.post("/api/admin/billing/coupons", { code: `E2E${run.toUpperCase().slice(-6)}`, kind: "PERCENT", value: 10 })).status === 409);
+  check("support can't edit offers", (await support.get("/api/admin/billing/offers")).status === 403);
+
+  section("Referrals and fraud checks");
+  const refB = await M.get("/api/referrals");
+  check("member gets an invite code and link", /^[A-Z2-9]{7}$/.test(refB.data?.code ?? "") && refB.data.link.includes(refB.data.code), refB.data);
+  const C = new Client("Friend-C1");
+  const regC = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "10.9.9.1", "x-install-id": `inst-c-${run}` }, body: JSON.stringify({ email: `friendc-${run}@test.local`, password: "Testing123", dob: "1997-05-05", acceptLegal: true, confirmAdult: true, safetyAcknowledged: true, referralCode: refB.data.code, client: "app", platform: "android" }) }).then((r) => r.json());
+  check("friend joins with the code", !!regC.id, regC);
+  const vC = await admin.post(`/api/admin/users/${regC.id}`, { action: "VERIFY", reason: "e2e" });
+  const refB2 = await M.get("/api/referrals");
+  check("friend verified → inviter rewarded with Premium days", vC.status === 200 && refB2.data?.history?.[0]?.status === "REWARDED" && refB2.data.earnedDays === refB2.data.rewardDays, refB2.data);
+  check("paying inviter has the days saved for later", (await M.get("/api/billing/subscription")).data?.subscription?.bankedDays >= 7);
+  const tokC = regC.accessToken;
+  const refC = await fetch(`${BASE}/api/referrals`, { headers: { authorization: `Bearer ${tokC}` } }).then((r) => r.json());
+  const regD = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "10.9.9.2", "x-install-id": `inst-c-${run}` }, body: JSON.stringify({ email: `selfref-${run}@test.local`, password: "Testing123", dob: "1997-05-05", acceptLegal: true, confirmAdult: true, safetyAcknowledged: true, referralCode: refC.code, client: "app" }) }).then((r) => r.json());
+  await admin.post(`/api/admin/users/${regD.id}`, { action: "VERIFY", reason: "e2e" });
+  const refC2 = await fetch(`${BASE}/api/referrals`, { headers: { authorization: `Bearer ${tokC}` } }).then((r) => r.json());
+  check("a 'friend' made on the same device earns nothing", refC2.history?.[0]?.status === "REJECTED", refC2.history);
+  for (let i = 0; i < 4; i++)
+    await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": `10.9.8.${i}`, "x-install-id": `farm-${run}` }, body: JSON.stringify({ email: `farm${i}-${run}@test.local`, password: "Testing123", dob: "1997-05-05", acceptLegal: true, confirmAdult: true, safetyAcknowledged: true, client: "app" }) });
+  const farm5 = await fetch(`${BASE}/api/auth/register`, { method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": "10.9.8.9", "x-install-id": `farm-${run}` }, body: JSON.stringify({ email: `farm9-${run}@test.local`, password: "Testing123", dob: "1997-05-05", acceptLegal: true, confirmAdult: true, safetyAcknowledged: true, client: "app" }) }).then((r) => r.json());
+  const risk = await security.get("/api/admin/billing/risk");
+  const farmFlag = risk.data?.queue?.find((u: any) => u.id === farm5.id);
+  check("five accounts from one install → farmFlag for review (not banned)", farmFlag?.risk === "MEDIUM" && farmFlag.status === "ACTIVE" && farmFlag.signals.some((s: any) => s.kind === "SHARED_DEVICE"), farmFlag);
+  const resv = await security.post(`/api/admin/billing/risk/${farm5.id}`, { note: "Checked: shared family phone (e2e)" });
+  check("a reviewer can clear the signals", resv.data?.level === "LOW", resv.data);
+  check("finance can't see the risk queue", (await finance.get("/api/admin/billing/risk")).status === 403);
+
+  section("Security: sign-in history, 2-step codes, devices, headers");
+  const aEmail = `tara-${run}@test.local`;
+  await A.post("/api/auth/login", { email: aEmail, password: "Testing123" }); // a normal web sign-in first
+  await anon.post("/api/auth/login", { email: aEmail, password: "wrong-password-1" });
+  const hist2 = await A.get("/api/security/logins");
+  check("sign-in history shows the failed attempt with a masked network", hist2.data?.logins?.some((l: any) => !l.success && l.reason === "Wrong password" && /x\.x$/.test(l.network ?? "")), hist2.data?.logins?.slice(0, 3));
+  const oldPhone = await fetch(`${BASE}/api/auth/token`, { method: "POST", headers: { "content-type": "application/json", "x-install-id": `old-${run}` }, body: JSON.stringify({ email: aEmail, password: "Testing123", platform: "ios", deviceName: "Old iPhone" }) }).then((r) => r.json());
+  const t1 = await A.post("/api/security/totp", { action: "start" });
+  check("2-step setup returns a secret and authenticator link", /^[A-Z2-7]{32}$/.test(t1.data?.secret ?? "") && t1.data.otpauthUrl.startsWith("otpauth://totp/"), t1.data);
+  check("wrong confirmation code is refused", (await A.post("/api/security/totp", { action: "confirm", code: "000000" })).status === 422);
+  const t2 = await A.post("/api/security/totp", { action: "confirm", code: totpAt(t1.data.secret, Date.now()) });
+  check("2-step verification turns on", t2.data?.enabled === true, t2.data);
+  const noCode = await anon.post("/api/auth/token", { email: aEmail, password: "Testing123", platform: "android" });
+  check("sign-in now asks for the code", noCode.status === 401 && noCode.data?.code === "totp_required", noCode.data);
+  const withCode = await fetch(`${BASE}/api/auth/token`, { method: "POST", headers: { "content-type": "application/json", "x-install-id": `pixel-${run}` }, body: JSON.stringify({ email: aEmail, password: "Testing123", platform: "android", deviceName: "Pixel 9", totp: totpAt(t1.data.secret, Date.now()) }) }).then((r) => r.json());
+  check("sign-in with the code works", !!withCode.accessToken, withCode);
+  const replayCode = await anon.post("/api/auth/token", { email: aEmail, password: "Testing123", platform: "android", totp: totpAt(t1.data.secret, Date.now()) });
+  check("the same 2-step code can't be used twice", replayCode.status === 401 && replayCode.data?.code === "bad_totp", replayCode.data);
+  const notes = (await A.get("/api/notifications")).data?.notifications ?? [];
+  check("new-device sign-in sends a security alert", notes.some((n: any) => n.title === "New sign-in to your account"), notes.slice(0, 3).map((n: any) => n.title));
+  const authA = { authorization: `Bearer ${withCode.accessToken}`, "content-type": "application/json" };
+  const devs = await fetch(`${BASE}/api/security/sessions`, { headers: authA }).then((r) => r.json());
+  check("active devices list marks this one as current", devs.devices?.some((d: any) => d.current && d.name === "Pixel 9"), devs);
+  const others = await fetch(`${BASE}/api/security/sessions`, { method: "POST", headers: authA, body: JSON.stringify({ action: "others" }) });
+  check("signing out other devices cuts them off immediately", others.status === 200 && (await fetch(`${BASE}/api/me`, { headers: { authorization: `Bearer ${oldPhone.accessToken}` } })).status === 401 && (await fetch(`${BASE}/api/me`, { headers: authA })).status === 200);
+  await A.post("/api/security/totp", { action: "disable", password: "Testing123", code: totpAt(t1.data.secret, Date.now()) });
+  check("2-step can be turned off with password + code", (await A.get("/api/security/totp")).data?.enabled === false);
+  const all = await fetch(`${BASE}/api/security/sessions`, { method: "POST", headers: authA, body: JSON.stringify({ action: "all" }) }).then((r) => r.json());
+  const after = await fetch(`${BASE}/api/me`, { headers: authA });
+  check("log out of all devices revokes app tokens and web sessions", all.signedOut === true && after.status === 401 && (await A.get("/api/me")).status === 401);
+  await A.post("/api/auth/login", { email: aEmail, password: "Testing123" });
+  const csrf = await fetch(`${BASE}/api/preferences`, { method: "PUT", headers: { "content-type": "application/json", cookie: A.cookie, origin: "https://evil.example" }, body: JSON.stringify({ showOnline: false }) });
+  check("cross-site cookie requests are blocked (CSRF)", csrf.status === 403);
+  const home = await fetch(`${BASE}/`);
+  check("security headers: CSP, frame denial, no sniffing", !!home.headers.get("content-security-policy")?.includes("frame-ancestors 'none'") && home.headers.get("x-frame-options") === "DENY" && home.headers.get("x-content-type-options") === "nosniff");
+
+  section("Privacy: encryption at rest, distance, export, deletion");
+  const { createClient } = await import("@libsql/client");
+  const dbc = createClient({ url: envVal("DATABASE_URL") || "file:./data/dev.db" });
+  const lastMsg = (await dbc.execute("select body from messages where kind = 'TEXT' order by created_at desc limit 1")).rows[0]?.body as string;
+  check("messages are stored encrypted (AES-256-GCM), not as text", lastMsg?.startsWith("enc:") && !/chai|board/i.test(lastMsg), lastMsg?.slice(0, 30));
+  const pr = await A.put("/api/preferences", { showDistance: false, likesFrom: "VERIFIED" });
+  check("privacy controls save (hide distance, verified-only likes)", pr.status === 200, pr.data);
+  const exp = await fetch(`${BASE}/api/privacy/export`, { headers: { cookie: A.cookie } });
+  const expJson = await exp.json();
+  check("download my data: JSON with my info, no password hash or coordinates", exp.status === 200 && expJson.account?.email === aEmail && !JSON.stringify(expJson).includes("passwordHash") && !("lat" in (expJson.profile ?? {})), Object.keys(expJson));
+  const dm = await A.post("/api/privacy/messages", {});
+  check("delete my messages", dm.status === 200 && dm.data.deleted >= 1, dm.data);
+  const delB = await M.del("/api/me", { password: "Testing123" });
+  check("account deletion keeps only what the law requires", delB.status === 200 && delB.data.kept?.some((k: string) => /Payment/.test(k)), delB.data);
+  check("deleted account can't sign in", (await anon.post("/api/auth/login", { email: `vikram-${run}@test.local`, password: "Testing123" })).status === 401);
+  const anonPay = await finance.get(`/api/admin/billing/payments?q=${co2.data?.paymentId}`);
+  check("payment records stay for tax, without the person's email", anonPay.data?.payments?.[0]?.email?.startsWith("deleted+"), anonPay.data?.payments?.[0]?.email);
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) {
     console.log("Failed:\n - " + failures.join("\n - "));

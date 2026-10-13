@@ -18,6 +18,19 @@ export const CONFIG_DEFAULTS = {
   "chat.maxUnansweredMessages": 4, // messages a person can send before the other replies
   "discovery.batchSize": 20,
   "safety.autoSuspendReportThreshold": 5, // distinct reporters within 30 days → auto-suspend pending review
+  // Billing
+  "billing.genderPricingCountries": ["IN"] as string[], // gender price groups / offers apply only here
+  "billing.reminderDays": 2, // renewal reminder this many days before each charge
+  "billing.graceDays": 3, // keep access this long after a failed renewal while the gateway retries
+  "billing.seller": { name: "Project Connect (placeholder legal entity)", address: "Address to be added", gstin: "", email: "billing@example.com", gstRatePct: 18 },
+  // Referrals and rewards
+  "referral.rewardDays": 7,
+  "referral.monthlyCap": 10, // rewards one person can earn per calendar month
+  "rewards.completeProfileBoostMinutes": 30, // one-time boost for reaching 100% profile
+  "rewards.verifiedPremiumDays": 0, // optional Premium days for completing selfie verification
+  // Data retention
+  "retention.deletedMessageDays": 90, // deleted messages are kept this long for safety review, then purged
+  "retention.loginEventDays": 180,
 };
 export type ConfigKey = keyof typeof CONFIG_DEFAULTS;
 
@@ -26,7 +39,7 @@ export async function getConfig<K extends ConfigKey>(key: K): Promise<(typeof CO
   if (!row) return CONFIG_DEFAULTS[key];
   try {
     const parsed = JSON.parse(row.value);
-    if (typeof CONFIG_DEFAULTS[key] === "object") return { ...(CONFIG_DEFAULTS[key] as object), ...parsed };
+    if (typeof CONFIG_DEFAULTS[key] === "object" && !Array.isArray(CONFIG_DEFAULTS[key])) return { ...(CONFIG_DEFAULTS[key] as object), ...parsed };
     return parsed;
   } catch {
     return CONFIG_DEFAULTS[key];

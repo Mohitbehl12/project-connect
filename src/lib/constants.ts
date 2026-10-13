@@ -1,7 +1,7 @@
 // Single source of truth for enum-like values, option labels and the personality question bank.
 // Everything here is product copy written for Project Connect — not copied from any other app.
 
-export const ROLES = ["USER", "MODERATOR", "SUPPORT", "ADMIN", "SUPER_ADMIN"] as const;
+export const ROLES = ["USER", "MODERATOR", "SUPPORT", "FINANCE", "SECURITY", "ADMIN", "SUPER_ADMIN"] as const;
 export type Role = (typeof ROLES)[number];
 
 export const GENDERS = { WOMAN: "Woman", MAN: "Man", NONBINARY: "Non-binary" } as const;

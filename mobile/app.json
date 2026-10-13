@@ -42,18 +42,31 @@
           "imageWidth": 160,
           "resizeMode": "contain",
           "backgroundColor": "#F7F6FB",
-          "dark": { "image": "./assets/splash-icon.png", "backgroundColor": "#12112A" }
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#12112A"
+          }
         }
       ],
       [
         "expo-image-picker",
-        { "photosPermission": "Choose photos for your profile.", "cameraPermission": "Take a profile photo or a verification selfie." }
+        {
+          "photosPermission": "Choose photos for your profile.",
+          "cameraPermission": "Take a profile photo or a verification selfie."
+        }
       ],
       [
         "expo-notifications",
-        { "icon": "./assets/notification-icon.png", "color": "#2E2A6E" }
-      ]
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#2E2A6E"
+        }
+      ],
+      "expo-web-browser",
+      "expo-sharing"
     ],
-    "experiments": { "typedRoutes": true }
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }

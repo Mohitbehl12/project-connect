@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { FlatList, Pressable, RefreshControl, View, useWindowDimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Button } from "@/components/Button";
+import { Header } from "@/components/Header";
 import { Icon, VerifiedBadge } from "@/components/Icon";
 import { T } from "@/components/Text";
 import { EmptyState, ErrorState, PhotoView, Screen, Skeleton } from "@/components/ui";
@@ -16,7 +17,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 type Likes = { total: number; cards: Card[]; hidden: number; locked: { blurhash: string | null }[]; canSeeAll: boolean };
 type Cell = { kind: "card"; card: Card } | { kind: "locked"; blurhash: string | null; i: number };
 
-export default function LikesTab() {
+export default function LikesScreen() {
   const { c } = useTheme();
   const { width } = useWindowDimensions();
   const qc = useQueryClient();
@@ -30,10 +31,7 @@ export default function LikesTab() {
 
   return (
     <Screen>
-      <View style={{ paddingTop: 6, paddingBottom: 12 }}>
-        <T v="title">Likes</T>
-        <T v="caption" tone="muted">{q.data?.total ? `${q.data.total} ${q.data.total === 1 ? "person likes" : "people like"} you` : "People who like you show up here"}</T>
-      </View>
+      <Header title="Likes you" sub={q.data?.total ? `${q.data.total} ${q.data.total === 1 ? "person likes" : "people like"} you` : "People who like you show up here"} />
       {q.isLoading && <View style={{ flexDirection: "row", gap: 12 }}><Skeleton w={w} h={w * 1.35} r={22} /><Skeleton w={w} h={w * 1.35} r={22} /></View>}
       {q.error && <ErrorState message={(q.error as Error).message} onRetry={() => q.refetch()} />}
       {q.data && q.data.total === 0 && (
