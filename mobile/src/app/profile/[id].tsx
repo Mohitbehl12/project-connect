@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { FlatList, Pressable, ScrollView, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { CompatArc } from "@/components/Arc";
 import { Button, IconButton } from "@/components/Button";
 import { Icon, VerifiedBadge } from "@/components/Icon";
@@ -34,7 +35,7 @@ export default function ProfileSheet() {
   const [page, setPage] = useState(0);
 
   if (!card) return <ErrorState message="This profile isn't available any more." onRetry={() => router.back()} />;
-  const h = width * 1.2;
+  const h = width * 1.3;
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
@@ -48,20 +49,27 @@ export default function ProfileSheet() {
             <IconButton icon="close" label="Close profile" tone="glass" size={44} onPress={() => router.back()} />
             <IconButton icon="shield" label="Safety options" tone="glass" size={44} onPress={() => router.push({ pathname: "/report", params: { userId: card.id, name: card.firstName } })} />
           </View>
+          <LinearGradient pointerEvents="none" colors={["rgba(18,17,42,0.5)", "transparent"]} style={{ position: "absolute", left: 0, right: 0, top: 0, height: insets.top + 90 }} />
+          <LinearGradient pointerEvents="none" colors={["transparent", "rgba(12,11,30,0.88)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: h * 0.42 }} />
+          <View pointerEvents="none" style={{ position: "absolute", left: 20, right: 20, bottom: 30, gap: 4 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+              <T v="display" tone="white" style={{ fontSize: 42, lineHeight: 46, flexShrink: 1 }} numberOfLines={1}>{card.firstName}<T tone="white" style={{ fontFamily: "BricolageGrotesque_700Bold", fontSize: 32, lineHeight: 46, opacity: 0.92 }}>  {card.age}</T></T>
+              {card.verified && <VerifiedBadge size={26} />}
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Icon name="pin" size={16} color="rgba(255,255,255,0.85)" />
+              <T tone="white" style={{ opacity: 0.88 }}>{card.city} · {card.distance}</T>
+            </View>
+          </View>
           {card.photos.length > 1 && (
-            <View style={{ position: "absolute", bottom: 14, alignSelf: "center", flexDirection: "row", gap: 6 }}>
+            <View style={{ position: "absolute", bottom: 12, alignSelf: "center", flexDirection: "row", gap: 6 }}>
               {card.photos.map((p, i) => <View key={p.id} style={{ width: i === page ? 18 : 6, height: 6, borderRadius: 3, backgroundColor: i === page ? "#FFF" : "rgba(255,255,255,0.5)" }} />)}
             </View>
           )}
         </View>
 
-        <View style={{ paddingHorizontal: 20, gap: 6 }}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-            <T v="display">{card.firstName}, {card.age}</T>
-            {card.verified && <VerifiedBadge size={24} />}
-          </View>
-          <T tone="muted">{card.city} · {card.distance}</T>
-          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
+        <View style={{ paddingHorizontal: 20, marginTop: -8 }}>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
             <Chip small label={card.intent} tone="accent" />
             {[card.profession, card.education, card.heightCm ? `${card.heightCm} cm` : null].filter(Boolean).map((f) => <Chip small key={f!} label={f!} />)}
           </View>
@@ -75,7 +83,7 @@ export default function ProfileSheet() {
         )}
 
         <Pressable accessibilityRole="button" accessibilityLabel="See full compatibility breakdown" onPress={() => router.push({ pathname: "/compatibility/[id]", params: { id: card.id } })}
-          style={{ marginHorizontal: 20, backgroundColor: c.surface, borderRadius: 24, padding: 18, gap: 16 }}>
+          style={{ marginHorizontal: 20, backgroundColor: c.surface, borderRadius: 26, padding: 18, gap: 16, shadowColor: "#2E2A6E", shadowOpacity: 0.1, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 3, borderWidth: 1, borderColor: c.line }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
             <CompatArc score={compat.data?.overall ?? card.score ?? 0} size={76} />
             <View style={{ flex: 1, gap: 4 }}>

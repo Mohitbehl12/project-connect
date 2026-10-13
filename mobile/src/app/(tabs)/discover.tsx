@@ -4,9 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { ScrollView, TextInput, View } from "react-native";
 import Animated, { FadeIn, FadeInDown, useSharedValue } from "react-native-reanimated";
 import { BottomSheet, SheetAction } from "@/components/BottomSheet";
-import { Button, IconButton } from "@/components/Button";
+import { Button, IconButton, usePressScale } from "@/components/Button";
+import { Sunset } from "@/components/Ambient";
+import { ArcMark } from "@/components/Arc";
+import { Pressable } from "react-native";
 import { CardDeck, type DeckHandle, type Decision } from "@/components/CardDeck";
-import { Icon } from "@/components/Icon";
+import { Icon, type IconName } from "@/components/Icon";
 import { T } from "@/components/Text";
 import { Banner, Chip, EmptyState, ErrorState, Screen, Skeleton } from "@/components/ui";
 import { Image } from "expo-image";
@@ -103,21 +106,22 @@ export default function Discover() {
   const verifyNudge = me?.user.selfieStatus === "NONE";
 
   return (
-    <Screen pad={false}>
-      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 6, gap: 8 }}>
+    <Screen pad={false} ambient="top">
+      <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 4, gap: 10 }}>
+        <ArcMark size={30} />
         <View style={{ flex: 1 }}>
-          <T v="title">Discover</T>
-          <T v="caption" tone="muted">{q.data ? (remaining ? `People you might click with · ${remaining} here` : "You're all caught up") : "Finding people you might click with"}</T>
+          <T v="title" style={{ fontSize: 24, lineHeight: 28 }}>Discover</T>
+          <T v="caption" tone="muted" numberOfLines={1}>{q.data ? (remaining ? `${remaining} people you might click with` : "You're all caught up") : "Finding people you might click with"}</T>
         </View>
         <View>
-          <IconButton icon="bell" label={me?.unreadNotifications ? `Notifications, ${me.unreadNotifications} new` : "Notifications"} size={44} onPress={() => router.push("/notifications")} />
+          <IconButton icon="bell" label={me?.unreadNotifications ? `Notifications, ${me.unreadNotifications} new` : "Notifications"} size={42} onPress={() => router.push("/notifications")} />
           {!!me?.unreadNotifications && <View style={{ position: "absolute", right: 8, top: 8, width: 10, height: 10, borderRadius: 5, backgroundColor: c.alert, borderWidth: 2, borderColor: c.surface }} />}
         </View>
-        <IconButton icon="sliders" label="Preferences" size={44} onPress={() => router.push("/preferences")} />
+        <IconButton icon="sliders" label="Preferences" size={42} onPress={() => router.push("/preferences")} />
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingHorizontal: 20, paddingVertical: 12 }}>
-        {MODES.map(([k, l]) => <Chip key={k} label={l} selected={mode === k} onPress={() => setMode(k)} />)}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ gap: 8, paddingHorizontal: 20, paddingVertical: 10 }}>
+        {MODES.map(([k, l]) => <Chip key={k} small label={l} selected={mode === k} onPress={() => { haptic.tick(); setMode(k); }} />)}
       </ScrollView>
 
       {notice && (
@@ -128,8 +132,8 @@ export default function Discover() {
         </Animated.View>
       )}
 
-      <View style={{ flex: 1, paddingHorizontal: 12 }}>
-        {q.isLoading && <Skeleton h={600} r={28} style={{ flex: 1 }} />}
+      <View style={{ flex: 1, paddingHorizontal: 10 }}>
+        {q.isLoading && <Skeleton h={600} r={32} style={{ flex: 1 }} />}
         {q.error && <ErrorState message={(q.error as Error).message} onRetry={() => q.refetch()} />}
         {q.data && !top && (
           <Animated.View entering={FadeIn} style={{ flex: 1, justifyContent: "center" }}>
@@ -146,11 +150,12 @@ export default function Discover() {
       </View>
 
       {top && (
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 14, paddingVertical: 12, paddingHorizontal: 20 }}>
-          <IconButton icon="undo" label="Undo last pass" size={44} disabled={!lastPassed} onPress={undo} />
-          <IconButton icon="pass" label={`Pass on ${top.firstName}`} size={60} onPress={() => deck.current?.swipe("PASS")} />
-          <IconButton icon="star" label={`Priority like with a note to ${top.firstName}`} size={52} iconColor={c.accent} onPress={() => { setNote(top.shared[0] ? `You're into ${top.shared[0].label.toLowerCase()} too — ` : ""); setNoteFor(top); }} />
-          <Button title="Like" v="accent" size="lg" icon="likes" onPress={() => deck.current?.swipe("LIKE")} style={{ flex: 1, maxWidth: 160 }} />
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 18, paddingTop: 14, paddingBottom: 8 }}>
+          <Orb icon="undo" label="Undo last pass" size={46} disabled={!lastPassed} onPress={undo} />
+          <Orb icon="pass" label={`Pass on ${top.firstName}`} size={64} onPress={() => deck.current?.swipe("PASS")} />
+          <Orb icon="likes" label={`Like ${top.firstName}`} size={78} like onPress={() => deck.current?.swipe("LIKE")} />
+          <Orb icon="star" label={`Priority like with a note to ${top.firstName}`} size={56} tint={c.accent}
+            onPress={() => { setNote(top.shared[0] ? `You're into ${top.shared[0].label.toLowerCase()} too — ` : ""); setNoteFor(top); }} />
         </View>
       )}
 
@@ -180,5 +185,22 @@ export default function Discover() {
           onPress={() => { const card = noteFor!; setNoteFor(null); haptic.success(); decide("PRIORITY", card, note.trim()); }} />
       </BottomSheet>
     </Screen>
+  );
+}
+
+/** Round action button with a soft coloured glow. The Like orb is the only sunset-filled control. */
+function Orb({ icon, label, size, onPress, like, tint, disabled }: { icon: IconName; label: string; size: number; onPress: () => void; like?: boolean; tint?: string; disabled?: boolean }) {
+  const { c, dark } = useTheme();
+  const press = usePressScale();
+  const glow = like ? "#F0864A" : tint ?? (dark ? "#000" : "#2E2A6E");
+  return (
+    <Animated.View style={[press.style, { opacity: disabled ? 0.4 : 1, borderRadius: size / 2, shadowColor: glow, shadowOpacity: like ? 0.55 : dark ? 0.5 : 0.14, shadowRadius: like ? 22 : 14, shadowOffset: { width: 0, height: like ? 10 : 6 }, elevation: like ? 10 : 5 }]}>
+      <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled}
+        onPressIn={press.onPressIn} onPressOut={press.onPressOut} onPress={() => { haptic.light(); onPress(); }}
+        style={{ width: size, height: size, borderRadius: size / 2, overflow: "hidden", alignItems: "center", justifyContent: "center", backgroundColor: like ? undefined : c.surface, borderWidth: like ? 0 : 1, borderColor: c.line }}>
+        {like && <Sunset style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 } as any} />}
+        <View style={{ zIndex: 1 }}><Icon name={icon} size={size * (like ? 0.44 : 0.42)} color={like ? "#FFFFFF" : tint ?? c.text} filled={like || icon === "star"} stroke={like ? 2 : 2.2} /></View>
+      </Pressable>
+    </Animated.View>
   );
 }

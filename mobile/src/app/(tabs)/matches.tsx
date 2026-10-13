@@ -42,7 +42,7 @@ export default function MatchesTab() {
           renderItem={({ item: m }) => (
             <Pressable accessibilityRole="button" accessibilityLabel={`${m.other.firstName}, ${m.score} percent compatible. Say hello.`}
               onPress={() => router.push({ pathname: "/chat/[id]", params: { id: m.id } })} style={{ width: w, height: w * 1.3, borderRadius: 22, overflow: "hidden" }}>
-              <PhotoView photo={m.other.photo} style={{ position: "absolute", inset: 0 } as any} />
+              <PhotoView photo={m.other.photo} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 } as any} />
               <View style={{ position: "absolute", top: 8, right: 8, borderRadius: 30, padding: 4, backgroundColor: "rgba(18,17,42,0.4)" }}><CompatArc score={m.score} size={44} onDark /></View>
               <LinearGradient colors={["transparent", "rgba(18,17,42,0.9)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: 12, paddingTop: 36 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>

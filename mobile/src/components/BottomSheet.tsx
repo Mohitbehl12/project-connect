@@ -12,7 +12,7 @@ export function BottomSheet({ open, onClose, title, children }: { open: boolean;
   return (
     <Modal visible={open} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, justifyContent: "flex-end" }}>
-        <Animated.View entering={FadeIn.duration(180)} style={{ position: "absolute", inset: 0, backgroundColor: c.overlay }}>
+        <Animated.View entering={FadeIn.duration(180)} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: c.overlay }}>
           <Pressable accessibilityRole="button" accessibilityLabel="Close" style={{ flex: 1 }} onPress={onClose} />
         </Animated.View>
         <Animated.View entering={SlideInDown.duration(260)} accessibilityViewIsModal

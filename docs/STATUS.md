@@ -1,6 +1,6 @@
 # Status, testing report and next phases
 
-_Last updated: 9 October 2026_
+_Last updated: 13 October 2026_
 
 ## Mobile app (October 2026)
 
@@ -14,6 +14,8 @@ The iOS/Android app lives in `mobile/` (Expo SDK 57). Phases 0–3 of the mobile
 | App journey in a phone-sized browser (390 × 844), light and dark: welcome → sign-in → discover → profile → likes → match moment → chat → matches → messages → profile → compatibility → premium → safety, plus sign-up and onboarding | no runtime errors |
 
 Not yet verified: real iPhone and Android devices (gestures, haptics and performance can only be judged there), VoiceOver/TalkBack passes, small and large phone sizes.
+
+**Visual upgrade (13 October):** floating glass tab bar with a sliding indicator; soft ambient light behind screens; full-bleed Discover card with photo tap-through (tap the left/right edge of the photo), a quoted profile answer, drag glyphs and a like burst; glowing action buttons with a sunset Like; match moment with glow, particle burst and three tappable conversation starters; profile hero with the name over the photo; gradient rings for new matches in Messages; gradient chat bubbles; welcome screen with an animated card collage and new copy ("Meet someone worth staying for." / "Find my match"); richer placeholder photos (rim-lit silhouettes, horizon scenes, bokeh — still abstract, never real people; regenerate with `npm run db:seed-photos -- --force`). Re-tested: 22/22 unit, 126/126 E2E, app typecheck clean, light and dark journey with no runtime errors.
 
 **Changed during this phase:** the compatibility score is now the plain weighted average on the same scale as the five bars (previously stretched into a 40–99 band, which made "71% overall" sit above bars of 5–50%). Scores shown to people will be lower and more honest.
 

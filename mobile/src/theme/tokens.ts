@@ -48,8 +48,15 @@ export const palettes = {
 
 export type Palette = { [K in keyof (typeof palettes)["light"]]: string };
 
-/** The one gradient in the system — reserved for Premium. */
+/** Premium surfaces. */
 export const dusk = ["#2E2A6E", "#6C5CE7"] as const;
+/** Warm action gradient — the Like button and match celebration only. */
+export const sunset = ["#F7B54C", "#F0864A", "#E2557A"] as const;
+/** Ambient light behind screens: three soft colour fields per theme. */
+export const aurora = {
+  light: ["rgba(143,136,240,0.30)", "rgba(242,169,59,0.22)", "rgba(226,85,122,0.14)"],
+  dark: ["rgba(108,92,231,0.42)", "rgba(242,169,59,0.16)", "rgba(226,85,122,0.20)"],
+} as const;
 
 export const fonts = {
   display: "BricolageGrotesque_800ExtraBold",

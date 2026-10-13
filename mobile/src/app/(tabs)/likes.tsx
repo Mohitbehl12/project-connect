@@ -61,7 +61,7 @@ export default function LikesTab() {
           renderItem={({ item: cell }) => cell.kind === "card" ? (
             <Pressable accessibilityRole="button" accessibilityLabel={`${cell.card.firstName}, ${cell.card.age}${cell.card.likeKind === "PRIORITY" ? ", sent a priority like" : ""}`}
               onPress={() => router.push({ pathname: "/profile/[id]", params: { id: cell.card.id } })} style={{ width: w, height: w * 1.35, borderRadius: 22, overflow: "hidden" }}>
-              <PhotoView photo={cell.card.photos[0]} style={{ position: "absolute", inset: 0 } as any} />
+              <PhotoView photo={cell.card.photos[0]} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 } as any} />
               <LinearGradient colors={["transparent", "rgba(18,17,42,0.9)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: 12, paddingTop: 40 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                   <T v="headline" tone="white" numberOfLines={1} style={{ flexShrink: 1 }}>{cell.card.firstName}, {cell.card.age}</T>
@@ -77,8 +77,8 @@ export default function LikesTab() {
             </Pressable>
           ) : (
             <View accessible accessibilityLabel="Someone who likes you. Hidden on the free plan." style={{ width: w, height: w * 1.35, borderRadius: 22, overflow: "hidden", backgroundColor: c.raised }}>
-              {cell.blurhash && <Image placeholder={{ blurhash: cell.blurhash }} style={{ position: "absolute", inset: 0 } as any} />}
-              <View style={{ position: "absolute", inset: 0, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(18,17,42,0.25)" }}>
+              {cell.blurhash && <Image placeholder={{ blurhash: cell.blurhash }} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 } as any} />}
+              <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(18,17,42,0.25)" }}>
                 <Icon name="lock" color="#FFF" size={26} />
               </View>
             </View>

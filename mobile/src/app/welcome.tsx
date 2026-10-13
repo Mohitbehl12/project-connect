@@ -3,32 +3,56 @@ import { router } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
 import { FlatList, useWindowDimensions, View } from "react-native";
-import Animated, { Easing, FadeInDown, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming } from "react-native-reanimated";
+import Animated, { Easing, FadeInDown, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming, type SharedValue } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Svg, { Path } from "react-native-svg";
 import { Button } from "@/components/Button";
 import { VerifiedBadge } from "@/components/Icon";
 import { T } from "@/components/Text";
-import { CompatArc } from "@/components/Arc";
+import { ArcMark, CompatArc } from "@/components/Arc";
+import { Aurora } from "@/components/Ambient";
 
-/** The signature moment: two arcs slide together until they almost close. */
-function HeroArcs({ size }: { size: number }) {
+/** Three tilted sample cards (illustrations, not real people) fanned around the brand arc. */
+const SAMPLES = [
+  { name: "Meera", age: 29, score: 87, g: ["#8F88F0", "#E2557A", "#F7B54C"], tag: "Trekking", rot: -9, x: -0.3, y: 0.06 },
+  { name: "Arjun", age: 31, score: 82, g: ["#3F7563", "#7FD1B0", "#F2E6C9"], tag: "Cooking", rot: 8, x: 0.3, y: 0.08 },
+  { name: "Sara", age: 27, score: 91, g: ["#F0864A", "#F7B54C", "#FDE7C4"], tag: "Live music", rot: 0, x: 0, y: 0 },
+] as const;
+
+function Collage({ size }: { size: number }) {
   const reduced = useReducedMotion();
   const p = useSharedValue(reduced ? 1 : 0);
-  useEffect(() => { if (!reduced) p.value = withDelay(250, withTiming(1, { duration: 900, easing: Easing.out(Easing.cubic) })); }, [p, reduced]);
-  const left = useAnimatedStyle(() => ({ transform: [{ translateX: (1 - p.value) * -size * 0.28 }, { rotate: `${(1 - p.value) * -25}deg` }], opacity: 0.3 + p.value * 0.7 }));
-  const right = useAnimatedStyle(() => ({ transform: [{ translateX: (1 - p.value) * size * 0.28 }, { rotate: `${(1 - p.value) * 25}deg` }], opacity: 0.3 + p.value * 0.7 }));
-  const w = size * 0.11, r = size / 2 - w, cx = size / 2, g = 0.24;
-  const pt = (a: number) => `${cx + r * Math.cos(a)} ${cx + r * Math.sin(a)}`;
+  useEffect(() => { if (!reduced) p.value = withDelay(200, withTiming(1, { duration: 900, easing: Easing.out(Easing.back(1.3)) })); }, [p, reduced]);
+  const w = size * 0.62, h = w * 1.32;
   return (
-    <View style={{ width: size, height: size }} accessibilityElementsHidden>
-      <Animated.View style={[{ position: "absolute" }, left]}>
-        <Svg width={size} height={size}><Path d={`M${pt(-Math.PI / 2 - g)} A${r} ${r} 0 0 0 ${pt(Math.PI / 2 + g)}`} stroke="#C9C4FF" strokeWidth={w} strokeLinecap="round" fill="none" /></Svg>
-      </Animated.View>
-      <Animated.View style={[{ position: "absolute" }, right]}>
-        <Svg width={size} height={size}><Path d={`M${pt(-Math.PI / 2 + g)} A${r} ${r} 0 0 1 ${pt(Math.PI / 2 - g)}`} stroke="#F5B656" strokeWidth={w} strokeLinecap="round" fill="none" /></Svg>
-      </Animated.View>
+    <View style={{ width: size * 1.3, height: h * 1.12, alignItems: "center", justifyContent: "center" }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      {SAMPLES.map((s, i) => <SampleCard key={s.name} s={s} w={w} h={h} p={p} spread={size} hero={i === 2} />)}
     </View>
+  );
+}
+
+function SampleCard({ s, w, h, p, spread, hero }: { s: (typeof SAMPLES)[number]; w: number; h: number; p: SharedValue<number>; spread: number; hero: boolean }) {
+  const style = useAnimatedStyle(() => ({
+    opacity: Math.min(1, p.value * 1.5),
+    transform: [{ translateX: s.x * spread * p.value }, { translateY: s.y * spread + (1 - p.value) * 40 }, { rotate: `${s.rot * p.value}deg` }, { scale: hero ? 1 : 0.9 }],
+  }));
+  return (
+    <Animated.View style={[{ position: "absolute", width: w, height: h, borderRadius: 26, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.45, shadowRadius: 24, shadowOffset: { width: 0, height: 14 }, elevation: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" }, style]}>
+      <LinearGradient colors={[...s.g]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
+      {/* soft abstract figure */}
+      <View style={{ position: "absolute", left: w * 0.3, top: h * 0.16, width: w * 0.4, height: w * 0.4, borderRadius: w, backgroundColor: "rgba(255,255,255,0.35)" }} />
+      <View style={{ position: "absolute", left: w * 0.12, top: h * 0.46, width: w * 0.76, height: h * 0.7, borderRadius: w, backgroundColor: "rgba(255,255,255,0.25)" }} />
+      <LinearGradient colors={["transparent", "rgba(12,11,30,0.85)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: h * 0.5 }} />
+      <View style={{ position: "absolute", top: 10, right: 10 }}><CompatArc score={s.score} size={hero ? 46 : 40} onDark /></View>
+      <View style={{ position: "absolute", left: 14, right: 14, bottom: 14, gap: 6 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+          <T v="headline" tone="white" style={{ fontFamily: "BricolageGrotesque_800ExtraBold", fontSize: hero ? 22 : 19 }}>{s.name}, {s.age}</T>
+          {hero && <VerifiedBadge size={18} />}
+        </View>
+        <View style={{ alignSelf: "flex-start", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.2)" }}>
+          <T v="caption" tone="white" style={{ fontFamily: "Figtree_700Bold" }}>{s.tag}</T>
+        </View>
+      </View>
+    </Animated.View>
   );
 }
 
@@ -72,7 +96,7 @@ function SafetyArt() {
 }
 
 const SLIDES = [
-  { title: "Meet people who actually match you.", body: "Compatibility first, endless swiping never." },
+  { title: "Meet someone worth staying for.", body: "Meaningful connections with people who match your vibe, values and energy." },
   { title: "Know why before you say hello.", body: "Every profile shows what you have in common." },
   { title: "Safe by design.", body: "Verification, quick reporting and privacy built in." },
 ];
@@ -81,14 +105,16 @@ export default function Welcome() {
   const { width, height } = useWindowDimensions();
   const [page, setPage] = useState(0);
   const list = useRef<FlatList>(null);
-  const art = Math.min(width * 0.62, height * 0.3);
+  const art = Math.min(width * 0.6, height * 0.3);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#12112A" }}>
       <StatusBar style="light" />
-      <LinearGradient colors={["#2E2A6E", "#12112A"]} start={{ x: 0.2, y: 0 }} end={{ x: 0.5, y: 0.75 }} style={{ position: "absolute", inset: 0 }} />
+      <LinearGradient colors={["#2E2A6E", "#12112A"]} start={{ x: 0.2, y: 0 }} end={{ x: 0.5, y: 0.75 }} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
+      <Aurora variant="match" style={{ opacity: 0.55 }} />
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 24, paddingTop: 8 }}>
+          <ArcMark size={28} left="#C9C4FF" right="#F5B656" />
           <T v="headline" tone="white" style={{ fontFamily: "BricolageGrotesque_800ExtraBold" }}>Project Connect</T>
         </View>
         <FlatList
@@ -102,7 +128,7 @@ export default function Welcome() {
           renderItem={({ item, index }) => (
             <View style={{ width, flex: 1, paddingHorizontal: 28, justifyContent: "center", gap: 36 }}>
               <View style={{ alignItems: "center", minHeight: art }}>
-                {index === 0 ? <HeroArcs size={art} /> : index === 1 ? <MiniCard /> : <SafetyArt />}
+                {index === 0 ? <Collage size={art} /> : index === 1 ? <MiniCard /> : <SafetyArt />}
               </View>
               <Animated.View entering={FadeInDown.duration(400).delay(150)} style={{ gap: 10 }}>
                 <T v="display" tone="white" style={{ fontSize: 38, lineHeight: 42 }}>{item.title}</T>
@@ -115,7 +141,7 @@ export default function Welcome() {
           <View style={{ flexDirection: "row", gap: 6, justifyContent: "center", marginBottom: 8 }} accessibilityLabel={`Page ${page + 1} of 3`}>
             {SLIDES.map((s, i) => <View key={s.title} style={{ height: 6, width: i === page ? 22 : 6, borderRadius: 3, backgroundColor: i === page ? "#F5B656" : "rgba(255,255,255,0.3)" }} />)}
           </View>
-          <Button title="Create my profile" v="accent" size="lg" full onPress={() => router.push("/sign-up")} />
+          <Button title="Find my match" v="accent" size="lg" full onPress={() => router.push("/sign-up")} />
           <Button title="I already have an account" v="ghost" textColor="#FFFFFF" full onPress={() => router.push("/sign-in")} />
           <T v="caption" center style={{ color: "rgba(255,255,255,0.55)" }}>For adults 18 and over.</T>
         </View>

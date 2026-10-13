@@ -66,7 +66,7 @@ export function CompatArc({ score, size = 56, live, onDark, label = true }: { sc
           strokeDasharray={`${circ} ${circ}`} animatedProps={props} />
       </Svg>
       {label && (
-        <View style={{ position: "absolute", inset: 0, alignItems: "center", justifyContent: "center" }}>
+        <View style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, alignItems: "center", justifyContent: "center" }}>
           <T v={size >= 80 ? "title" : "callout"} tone={onDark ? "white" : "text"} style={{ fontFamily: "BricolageGrotesque_800ExtraBold", fontSize: size * 0.3, lineHeight: size * 0.34 }}>
             {score}<T tone={onDark ? "white" : "muted"} style={{ fontSize: size * 0.15 }}>%</T>
           </T>

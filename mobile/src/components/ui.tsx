@@ -1,4 +1,5 @@
 import { Image } from "expo-image";
+import { Aurora } from "./Ambient";
 import { useEffect, useState, type ReactNode } from "react";
 import { Pressable, ScrollView, TextInput, View, type TextInputProps, type ViewStyle } from "react-native";
 import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withRepeat, withTiming, useReducedMotion } from "react-native-reanimated";
@@ -12,11 +13,12 @@ import { Button } from "./Button";
 import { Icon } from "./Icon";
 import { T } from "./Text";
 
-export function Screen({ children, edges = ["top"], style, scroll, pad = true }: { children: ReactNode; edges?: Edge[]; style?: ViewStyle; scroll?: boolean; pad?: boolean }) {
+export function Screen({ children, edges = ["top"], style, scroll, pad = true, ambient }: { children: ReactNode; edges?: Edge[]; style?: ViewStyle; scroll?: boolean; pad?: boolean; ambient?: "top" | "full" }) {
   const { c } = useTheme();
   const inner = { paddingHorizontal: pad ? 20 : 0, flexGrow: 1 };
   return (
     <SafeAreaView edges={edges} style={[{ flex: 1, backgroundColor: c.bg }, style]}>
+      {ambient && <Aurora variant={ambient} />}
       {scroll ? <ScrollView contentContainerStyle={[inner, { paddingBottom: 32 }]} keyboardShouldPersistTaps="handled">{children}</ScrollView> : <View style={[inner, { flex: 1 }]}>{children}</View>}
     </SafeAreaView>
   );

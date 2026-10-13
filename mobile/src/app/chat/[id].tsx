@@ -1,3 +1,5 @@
+import { dusk } from "@/theme/tokens";
+import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -144,8 +146,9 @@ export default function Chat() {
             <Animated.View entering={FadeInUp.duration(160)} style={{ alignItems: m.mine ? "flex-end" : "flex-start", marginTop: grouped ? 2 : 10 }}>
               <Pressable onLongPress={() => { if (!m.deleted && !m.id.startsWith("tmp")) { haptic.medium(); setMsgAction(m); } }}
                 accessibilityHint={m.mine ? "Long press for options, such as delete" : "Long press to report this message"}
-                style={{ maxWidth: "80%", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderBottomRightRadius: m.mine && !grouped ? 6 : 20, borderBottomLeftRadius: !m.mine && !grouped ? 6 : 20, backgroundColor: m.mine ? c.brand : c.surface, opacity: m.deleted ? 0.6 : 1 }}>
-                <T style={{ color: m.mine ? c.brandText : c.text, fontStyle: m.deleted ? "italic" : "normal" }}>{m.deleted ? "Message deleted" : m.body}</T>
+                style={{ maxWidth: "80%", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderBottomRightRadius: m.mine && !grouped ? 6 : 20, borderBottomLeftRadius: !m.mine && !grouped ? 6 : 20, backgroundColor: m.mine ? undefined : c.surface, overflow: "hidden", opacity: m.deleted ? 0.6 : 1 }}>
+                {m.mine && <LinearGradient colors={[...dusk]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />}
+                <T style={{ color: m.mine ? "#FFFFFF" : c.text, fontStyle: m.deleted ? "italic" : "normal" }}>{m.deleted ? "Message deleted" : m.body}</T>
               </Pressable>
               {m.warning && (
                 <Pressable onPress={() => router.push({ pathname: "/report", params: { userId: o?.id ?? "", name: o?.firstName ?? "", messageId: m.id } })}
