@@ -7,3 +7,9 @@ node_modules
 *.tsbuildinfo
 next-env.d.ts
 data/
+
+# built during deploy
+public/app/
+mobile/dist/
+mobile/.expo/
+mobile/.env

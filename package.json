@@ -15,7 +15,9 @@
     "test:e2e": "tsx tests/e2e.ts",
     "typecheck": "tsc --noEmit",
     "db:seed-photos": "tsx scripts/seed-photos.ts",
-    "keys:rotate": "tsx scripts/rotate-keys.ts"
+    "keys:rotate": "tsx scripts/rotate-keys.ts",
+    "db:remove-samples": "tsx scripts/remove-samples.ts",
+    "build:all": "npm --prefix mobile ci && npm --prefix mobile run export:server && next build"
   },
   "keywords": [],
   "author": "",
@@ -50,5 +52,8 @@
     "typescript": "^6.0.3",
     "vitest": "^5.0.3"
   },
-  "private": true
+  "private": true,
+  "engines": {
+    "node": ">=22 <23"
+  }
 }

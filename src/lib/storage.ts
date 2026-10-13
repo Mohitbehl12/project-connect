@@ -35,7 +35,7 @@ export function verifyMediaSignature(key: string, exp: number, sig: string) {
 }
 
 class LocalStorage implements Storage {
-  root = path.resolve(process.cwd(), "data", "uploads");
+  root = process.env.UPLOAD_DIR ? path.resolve(process.env.UPLOAD_DIR) : path.resolve(process.cwd(), "data", "uploads");
   private file(key: string) {
     assertKey(key);
     return path.join(this.root, key);

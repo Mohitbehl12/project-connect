@@ -14,7 +14,7 @@ import { eq, like, or } from "drizzle-orm";
 import * as s from "../src/db/schema";
 
 const db = drizzle(createClient({ url: process.env.DATABASE_URL!, authToken: process.env.DATABASE_AUTH_TOKEN || undefined }), { schema: s });
-const ROOT = path.resolve("data", "uploads");
+const ROOT = process.env.UPLOAD_DIR ? path.resolve(process.env.UPLOAD_DIR) : path.resolve("data", "uploads");
 const CACHE = path.resolve("data", ".photo-cache");
 
 // Warm, editorial palettes: [deep, mid, light, rim]

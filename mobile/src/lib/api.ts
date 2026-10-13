@@ -3,7 +3,9 @@ import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
 /** API base. On a phone, set EXPO_PUBLIC_API_URL to your computer's LAN address (see README). */
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000").replace(/\/$/, "");
+// "same-origin" = the web build is served by the API server itself (the deployed /app), so calls are relative.
+const RAW_API = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:3000";
+export const API_URL = RAW_API === "same-origin" ? "" : RAW_API.replace(/\/$/, "");
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public code?: string) {

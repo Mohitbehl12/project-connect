@@ -20,5 +20,6 @@ export async function verifyScoped(token: string | null | undefined, purpose: "p
 }
 
 export function appUrl() {
-  return (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  // Render sets RENDER_EXTERNAL_URL automatically; APP_URL (e.g. your own domain) wins when set.
+  return (process.env.APP_URL || process.env.RENDER_EXTERNAL_URL || "http://localhost:3000").replace(/\/$/, "");
 }

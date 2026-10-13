@@ -1,4 +1,7 @@
 // Seeds plans, legal documents, config, staff accounts, two demo users and ~200 test users.
+// On a deployed server (SEED_DEPLOYED=true): one admin from SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD, and the
+// fictional sample people only if SEED_SAMPLE_USERS=true (private tests). Remove them before a public launch:
+// npm run db:remove-samples
 // All seeded people are fictional test data. Safe to re-run on an empty database.
 import "./env";
 import bcrypt from "bcryptjs";
@@ -90,8 +93,16 @@ async function main() {
   }
 
   console.log("Seeding staff accounts…");
-  const staffPw = await bcrypt.hash(process.env.SEED_ADMIN_PASSWORD ?? "ChangeMe!2026", 12);
-  await db.insert(s.users).values([
+  const deployed = process.env.SEED_DEPLOYED === "true";
+  const adminPw = process.env.SEED_ADMIN_PASSWORD ?? "ChangeMe!2026";
+  if (deployed && (adminPw === "ChangeMe!2026" || adminPw.length < 12)) {
+    throw new Error("Set SEED_ADMIN_PASSWORD to a strong password (12+ characters) before seeding a deployed server.");
+  }
+  const staffPw = await bcrypt.hash(adminPw, 12);
+  if (deployed) {
+    // On a server, only your own admin account is created. Give colleagues roles in Admin → Users.
+    await db.insert(s.users).values({ email: (process.env.SEED_ADMIN_EMAIL ?? "admin@projectconnect.local").toLowerCase(), passwordHash: staffPw, role: "SUPER_ADMIN", emailVerified: true, onboardingStep: 3 });
+  } else await db.insert(s.users).values([
     { email: (process.env.SEED_ADMIN_EMAIL ?? "admin@projectconnect.local").toLowerCase(), passwordHash: staffPw, role: "SUPER_ADMIN", emailVerified: true, onboardingStep: 3 },
     { email: "moderator@projectconnect.local", passwordHash: staffPw, role: "MODERATOR", emailVerified: true, onboardingStep: 3 },
     { email: "support@projectconnect.local", passwordHash: staffPw, role: "SUPPORT", emailVerified: true, onboardingStep: 3 },
@@ -99,6 +110,11 @@ async function main() {
     { email: "finance2@projectconnect.local", passwordHash: staffPw, role: "FINANCE", emailVerified: true, onboardingStep: 3 },
     { email: "security@projectconnect.local", passwordHash: staffPw, role: "SECURITY", emailVerified: true, onboardingStep: 3 },
   ]);
+
+  if (deployed && process.env.SEED_SAMPLE_USERS !== "true") {
+    console.log("Done. No sample people created (SEED_SAMPLE_USERS is not \"true\").");
+    return;
+  }
 
   console.log("Seeding test users…");
   const demoPw = await bcrypt.hash("Demo!2026", 10);

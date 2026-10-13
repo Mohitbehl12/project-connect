@@ -29,6 +29,11 @@ const securityHeaders = [
 const nextConfig = {
   poweredByHeader: false,
   serverExternalPackages: ["@node-rs/argon2", "sharp"],
+  // The phone-browser version of the app (Expo web build in public/app) is a single-page app:
+  // any /app/... path that isn't a real file gets its index.html.
+  async rewrites() {
+    return [{ source: "/app/:path*", destination: "/app/index.html" }];
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

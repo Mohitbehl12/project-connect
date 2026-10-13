@@ -17,7 +17,17 @@ function cors(res: NextResponse, origin: string) {
   return res;
 }
 
+// PRIVATE_BETA=true: ask search engines not to index anything (private test deployments).
+function finish(res: NextResponse) {
+  if (process.env.PRIVATE_BETA === "true") res.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return res;
+}
+
 export function middleware(req: NextRequest) {
+  return finish(handle(req));
+}
+
+function handle(req: NextRequest) {
   const { pathname } = req.nextUrl;
   if (pathname.startsWith("/api/")) {
     const origin = req.headers.get("origin") ?? "";
