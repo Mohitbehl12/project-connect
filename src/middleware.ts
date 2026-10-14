@@ -37,8 +37,11 @@ function handle(req: NextRequest) {
     // request that relies on the session cookie must come from our own origin.
     const mutating = !["GET", "HEAD"].includes(req.method);
     if (mutating && req.cookies.get("pc_session") && !req.headers.get("authorization") && origin) {
-      const self = req.nextUrl.origin;
-      if (origin !== self && !allowed) return NextResponse.json({ error: "Cross-site request blocked.", code: "csrf" }, { status: 403 });
+      // Behind a proxy (Render), nextUrl holds the internal address, so compare against the public host.
+      const host = req.headers.get("x-forwarded-host") ?? req.headers.get("host") ?? req.nextUrl.host;
+      let originHost = "";
+      try { originHost = new URL(origin).host; } catch { /* malformed → blocked */ }
+      if (originHost !== host && !allowed) return NextResponse.json({ error: "Cross-site request blocked.", code: "csrf" }, { status: 403 });
     }
     return allowed ? cors(NextResponse.next(), origin) : NextResponse.next();
   }
