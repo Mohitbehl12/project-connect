@@ -41,6 +41,8 @@ The database (SQLite) and photos live on the disk, and Render snapshots the disk
    ```
    The staff-role checks expect the local test accounts, so a few of them will fail on a live server. Every other check should pass.
 
+**Admin password not working, or forgotten?** In Render → Environment, add `ADMIN_RESET_PASSWORD` with a password you choose (12 or more characters) and save. On the next start the admin account for `SEED_ADMIN_EMAIL` gets that password, lockouts are cleared, and the account is created if it's missing. The log shows `✓ Admin password reset`. Then **delete `ADMIN_RESET_PASSWORD`** from the environment.
+
 **Never change or delete `FIELD_KEY_SECRET`.** It encrypts messages; without it, stored messages can't be read. `AUTH_SECRET` can be rotated, but doing so signs everyone out.
 
 ## 2. Getting the app to testers
