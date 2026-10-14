@@ -147,3 +147,7 @@ Voice/video calls, voice messages, image and GIF sharing in chat, typing indicat
 - [ ] Error monitoring (Sentry) and uptime checks on
 - [ ] Data-retention purge job running
 - [ ] Backups enabled on the production database
+
+## Forgot password
+- Done and tested end-to-end (12 checks): same answer for unknown emails, single-use hashed tokens, 30-minute expiry, weak passwords refused, every session signed out, rate limits.
+- Not yet live-tested: actual email delivery via Resend (needs `RESEND_API_KEY` + `EMAIL_FROM`).

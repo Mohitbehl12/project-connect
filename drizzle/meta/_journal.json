@@ -8,6 +8,13 @@
       "when": 1791950547475,
       "tag": "0000_init",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1791990468319,
+      "tag": "0001_password_resets",
+      "breakpoints": true
     }
   ]
 }

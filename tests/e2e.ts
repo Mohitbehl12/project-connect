@@ -530,6 +530,32 @@ async function main() {
   const anonPay = await finance.get(`/api/admin/billing/payments?q=${co2.data?.paymentId}`);
   check("payment records stay for tax, without the person's email", anonPay.data?.payments?.[0]?.email?.startsWith("deleted+"), anonPay.data?.payments?.[0]?.email);
 
+  section("Forgot password");
+  const fpEmail = `reset-${run}@test.local`;
+  const R1 = new Client("Resetter1");
+  const regR = await R1.post("/api/auth/register", { email: fpEmail, password: "Testing123", dob: "1995-03-03", acceptLegal: true, confirmAdult: true, safetyAcknowledged: true });
+  check("reset: account created and signed in", regR.status < 300 && (await R1.get("/api/me")).status === 200, regR.data);
+  const fpAnon = new Client("ForgotAnon1");
+  const fUnknown = await fpAnon.post("/api/auth/forgot", { email: `nobody-${run}@test.local` });
+  const fKnown = await fpAnon.post("/api/auth/forgot", { email: fpEmail });
+  check("unknown and known emails get the same answer", fUnknown.status === 200 && fKnown.status === 200 && fUnknown.data.message === fKnown.data.message && !fUnknown.data.devResetUrl, [fUnknown.data, fKnown.data]);
+  const resetUrl: string = fKnown.data.devResetUrl ?? "";
+  const token = new URL(resetUrl || "http://x/").searchParams.get("token") ?? "";
+  check("test mode returns the reset link", resetUrl.includes("/reset-password?token=") && token.length > 30, fKnown.data);
+  check("link is valid before use", (await fpAnon.get(`/api/auth/reset?token=${encodeURIComponent(token)}`)).data?.valid === true);
+  check("a weak new password is refused", (await fpAnon.post("/api/auth/reset", { token, password: "short" })).status === 422);
+  const done = await fpAnon.post("/api/auth/reset", { token, password: "BrandNew!2026" });
+  check("new password set", done.status === 200 && done.data.reset === true, done.data);
+  check("the link can't be used twice", (await fpAnon.post("/api/auth/reset", { token, password: "Another!2026" })).status >= 400);
+  check("a made-up link is refused", (await fpAnon.post("/api/auth/reset", { token: "x".repeat(43), password: "Another!2026" })).status >= 400);
+  check("old sessions are signed out", (await R1.get("/api/me")).status === 401);
+  check("old password no longer works", (await fpAnon.post("/api/auth/login", { email: fpEmail, password: "Testing123" })).status === 401);
+  check("new password works", (await new Client("Resetter2").post("/api/auth/login", { email: fpEmail, password: "BrandNew!2026" })).status === 200);
+  const f2 = await fpAnon.post("/api/auth/forgot", { email: fpEmail });
+  const tok2 = new URL(f2.data.devResetUrl).searchParams.get("token");
+  await fpAnon.post("/api/auth/forgot", { email: fpEmail });
+  check("asking again cancels the older link", (await fpAnon.get(`/api/auth/reset?token=${tok2}`)).data?.valid === false);
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) {
     console.log("Failed:\n - " + failures.join("\n - "));

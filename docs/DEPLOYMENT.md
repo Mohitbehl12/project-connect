@@ -119,3 +119,14 @@ When you need more than one server:
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | you, later | See `docs/PAYMENTS.md` |
 | `DEV_SHOW_OTP` | blueprint | `false`; never `true` in production |
 | `PUSH_ENABLED` | later | `true` after the native app has an Expo project id |
+
+## Password-reset emails (Resend)
+
+"Forgot password?" is on the website login and in the app. It emails a one-time link (valid 30 minutes; asking again cancels older links; using it signs out every device).
+
+Emails are only sent once both of these are set in Render → Environment:
+
+- `RESEND_API_KEY` — from resend.com → API Keys.
+- `EMAIL_FROM` — e.g. `Project Connect <no-reply@yourdomain.com>`. The domain must be verified in Resend. Resend's shared test sender `onboarding@resend.dev` only delivers to the email that owns the Resend account.
+
+Until then, the request still answers normally but no email goes out (a warning is logged). The Resend sender has not yet been tested against a live account.

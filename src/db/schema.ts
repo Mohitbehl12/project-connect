@@ -492,3 +492,14 @@ export const devices = sqliteTable("devices", {
   appVersion: text("app_version"),
   updatedAt: now("updated_at"),
 }, (t) => [index("devices_user").on(t.userId)]);
+
+/** "Forgot password" links: single-use, 30 minutes, stored only as a SHA-256 hash. */
+export const passwordResets = sqliteTable("password_resets", {
+  id: id(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: ts("expires_at").notNull(),
+  usedAt: ts("used_at"),
+  ip: text("ip"),
+  createdAt: now("created_at"),
+}, (t) => [index("password_resets_user").on(t.userId)]);
