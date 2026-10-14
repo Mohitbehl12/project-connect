@@ -3,4 +3,6 @@
 module.exports = ({ config }) => ({
   ...config,
   experiments: { ...(config.experiments ?? {}), ...(process.env.EXPO_BASE_URL ? { baseUrl: process.env.EXPO_BASE_URL } : {}) },
+  // Your Expo project id (expo.dev) for test builds and push notifications; `eas init` can also write it to app.json.
+  extra: { ...(config.extra ?? {}), ...(process.env.EAS_PROJECT_ID ? { eas: { projectId: process.env.EAS_PROJECT_ID } } : {}) },
 });

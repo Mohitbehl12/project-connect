@@ -17,10 +17,10 @@
     "db:seed-photos": "tsx scripts/seed-photos.ts",
     "keys:rotate": "tsx scripts/rotate-keys.ts",
     "db:remove-samples": "tsx scripts/remove-samples.ts",
-    "build:all": "npm run build:app-web && next build",
-    "build:app-web": "cd mobile && EXPO_BASE_URL=/app EXPO_PUBLIC_API_URL= npx expo export --platform web --output-dir ../public/app",
-    "start:server": "tsx scripts/migrate.ts && tsx scripts/seed-if-empty.ts && next start -H 0.0.0.0",
-    "db:migrate": "tsx scripts/migrate.ts"
+    "build:all": "npm --prefix mobile ci && npm run build:app-web && next build",
+    "start:server": "sh scripts/start.sh",
+    "db:migrate": "tsx scripts/migrate.ts",
+    "build:app-web": "npm --prefix mobile run export:server"
   },
   "keywords": [],
   "author": "",
@@ -57,6 +57,6 @@
   },
   "private": true,
   "engines": {
-    "node": ">=20.18"
+    "node": ">=22 <23"
   }
 }

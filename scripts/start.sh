@@ -1,13 +1,13 @@
 #!/bin/sh
 # Production start (Render or any single server with a persistent disk).
-# 1) make sure the data folder exists  2) apply the database schema  3) seed once on an empty database
+# 1) make sure the data folder exists  2) apply database migrations  3) seed once on an empty database
 # 4) run the scheduled jobs every 30 minutes in the background  5) start the server.
 set -e
 DATA_DIR="${DATA_DIR:-/var/data}"
 mkdir -p "$DATA_DIR" "${UPLOAD_DIR:-$DATA_DIR/uploads}"
 export DATABASE_URL="${DATABASE_URL:-file:$DATA_DIR/app.db}"
 
-npx drizzle-kit push --force
+npx tsx scripts/migrate.ts   # applies committed SQL migrations (never prompts)
 npx tsx scripts/bootstrap.ts
 
 PORT="${PORT:-3000}"

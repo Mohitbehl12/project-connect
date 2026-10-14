@@ -2,7 +2,7 @@
 
 _Last updated: 14 October 2026_
 
-The setup is one Render web service in Singapore with a 2 GB persistent disk, plus a small cron job. It serves:
+The setup is one Render web service in Singapore with a 2 GB persistent disk. Scheduled jobs (renewal reminders, expiry, clean-up) run inside it every 30 minutes. It serves:
 
 | Address | What |
 |---|---|
@@ -14,7 +14,7 @@ The setup is one Render web service in Singapore with a 2 GB persistent disk, pl
 The database (SQLite) and photos live on the disk, and Render snapshots the disk daily. It runs as a single instance, which is right for launch. When you outgrow it, move the database to Turso or Postgres and photos to Cloudflare R2 (see "Scaling later").
 
 **Cost:**
-- The Render Starter instance, about 2 GB of disk and a cron job come to roughly US$8–10 a month.
+- The Render Starter instance and about 2 GB of disk come to roughly US$8 a month.
 - Check render.com/pricing for current prices.
 - A custom domain is optional.
 
@@ -23,7 +23,7 @@ The database (SQLite) and photos live on the disk, and Render snapshots the disk
 1. **Get the code into GitHub.** Push this repository to a **private** GitHub repo. `.env`, `data/` and `node_modules` are git-ignored and must stay out of git.
 2. **Create the services on Render.**
    - Sign up at render.com and connect your GitHub account.
-   - Go to **New → Blueprint** and pick the repo. Render reads `render.yaml` and shows two services: `project-connect` and `project-connect-jobs`.
+   - Go to **New → Blueprint** and pick the repo. Render reads `render.yaml` and shows the `project-connect` service.
 3. **Enter your admin email.**
    - When Render asks for `SEED_ADMIN_EMAIL`, enter the email you'll use to log in to the admin panel.
    - Leave the Razorpay fields empty for now.
@@ -41,7 +41,7 @@ The database (SQLite) and photos live on the disk, and Render snapshots the disk
    ```
    The staff-role checks expect the local test accounts, so a few of them will fail on a live server. Every other check should pass.
 
-**Never change or delete `FIELD_KEY_V1`.** It encrypts messages; without it, stored messages can't be read. `AUTH_SECRET` can be rotated, but doing so signs everyone out.
+**Never change or delete `FIELD_KEY_SECRET`.** It encrypts messages; without it, stored messages can't be read. `AUTH_SECRET` can be rotated, but doing so signs everyone out.
 
 ## 2. Getting the app to testers
 
@@ -59,13 +59,13 @@ The database (SQLite) and photos live on the disk, and Render snapshots the disk
 3. In `mobile/eas.json`, set `EXPO_PUBLIC_API_URL` to your Render URL.
 4. Run `npx eas-cli build -p android --profile preview`. Expo builds it in the cloud and gives you a link and QR code to install the APK.
 
-**When you change the phone app,** run `npm run build:app-web` and commit `public/app` so the web link (option A) updates on the next deploy.
+**When you change the phone app,** run `npm run build:app-web` and commit `public/app` so the web link (option A) updates on the next deploy. It's built ahead of time because building it on a small Render instance can run out of memory.
 
 ## 3. Everyday operations
 
 - **Deploys:** every push to the repo's main branch redeploys automatically. Start-up applies new database migrations first.
 - **Changing the database schema:** edit `src/db/schema.ts`, run `npx drizzle-kit generate` locally (it asks about renames), commit the new file in `drizzle/`, then push.
-- **Logs:** Render → `project-connect` → Logs. The cron job's runs are under `project-connect-jobs`.
+- **Logs:** Render → `project-connect` → Logs.
 - **Backups:**
   - Render snapshots the disk daily.
   - For an extra copy, download `/var/data/prod.db` from the Render Shell now and then.
@@ -77,7 +77,8 @@ The database (SQLite) and photos live on the disk, and Render snapshots the disk
 
 The blueprint starts in **test mode**:
 - `ENABLE_MOCK_PAYMENTS=true` means Premium can be tried with simulated payments. The pay page says "TEST MODE".
-- No sample profiles are created, so Discover fills up as testers join.
+- No sample profiles are created, so Discover fills up as testers join. To demo with fictional sample profiles instead, add `SEED_SAMPLE_USERS=true` before the first start, and run `npm run db:remove-samples` from the Render Shell before going public.
+- `PRIVATE_BETA=true` keeps search engines away.
 
 Before inviting the public, change these:
 
@@ -107,8 +108,10 @@ When you need more than one server:
 | `SEED_ADMIN_EMAIL` | you | Used on the first start only |
 | `SEED_ADMIN_PASSWORD` | generated | Your first admin password; change it after logging in |
 | `AUTH_SECRET` | generated | Signs sessions |
-| `FIELD_KEY_V1` | generated | Message encryption key; never change |
-| `CRON_SECRET` | generated | Shared with the cron job |
+| `FIELD_KEY_SECRET` | generated | Message encryption key; never change |
+| `CRON_SECRET` | generated | Protects the scheduled-jobs endpoint |
+| `PRIVATE_BETA` | blueprint | `true` = search engines are asked not to index the site; remove when you launch |
+| `SEED_SAMPLE_USERS` | optional | `true` before the first start adds ~200 fictional sample profiles so Discover isn't empty while testing; remove them later with `npm run db:remove-samples` |
 | `APP_URL` | optional | Your custom domain; defaults to Render's URL |
 | `BILLING_PROVIDER`, `ENABLE_MOCK_PAYMENTS` | blueprint | Test mode; see §4 |
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | you, later | See `docs/PAYMENTS.md` |

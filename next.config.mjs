@@ -32,10 +32,7 @@ const nextConfig = {
   // The phone-browser version of the app (Expo web build in public/app) is a single-page app:
   // any /app/... path that isn't a real file gets its index.html.
   async rewrites() {
-    return [{ source: "/app/:path*", destination: "/app/index.html" }];
-  },
-  // The phone app's web version is served from /app (built into public/app by npm run build:app-web).
-  async rewrites() {
+    // "fallback" runs after real files, so /app/_expo/... assets are served as files.
     return { fallback: [{ source: "/app/:path*", destination: "/app/index.html" }] };
   },
   async headers() {

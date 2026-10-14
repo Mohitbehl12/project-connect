@@ -9,6 +9,7 @@ async function main() {
   const db = createClient({ url: process.env.DATABASE_URL!, authToken: process.env.DATABASE_AUTH_TOKEN || undefined });
   const { rows } = await db.execute("select count(*) as n from plans");
   if (Number(rows[0]?.n ?? 0) > 0) { console.log("[bootstrap] database already set up"); return; }
+  if (!process.env.SEED_ADMIN_EMAIL) throw new Error("Set SEED_ADMIN_EMAIL (your admin login email) before the first start.");
   console.log("[bootstrap] empty database — seeding");
   const env = { ...process.env, SEED_DEPLOYED: "true" };
   execSync("npx tsx scripts/seed.ts", { stdio: "inherit", env });
