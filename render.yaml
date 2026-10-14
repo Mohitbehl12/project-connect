@@ -1,0 +1,63 @@
+# Render Blueprint — creates the whole setup from this repo: Render → New → Blueprint → pick the repo.
+# One web service (server + website + admin + the phone app's web version at /app) with a persistent disk,
+# and a cron job for scheduled tasks. Region: Singapore (closest Render region to India).
+services:
+  - type: web
+    name: project-connect
+    runtime: node
+    region: singapore
+    plan: starter              # a disk needs a paid instance; one instance only (database + photos live on the disk)
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm run start:server   # applies migrations, sets up a fresh database once, then starts
+    healthCheckPath: /api/health
+    disk:
+      name: data
+      mountPath: /var/data
+      sizeGB: 2
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        value: file:/var/data/prod.db
+      - key: UPLOAD_DIR
+        value: /var/data/uploads
+      - key: SEED_ADMIN_EMAIL     # your admin login — Render asks for it when you create the Blueprint
+        sync: false
+      - key: SEED_ADMIN_PASSWORD  # generated; read it in Render → project-connect → Environment
+        generateValue: true
+      - key: AUTH_SECRET          # signs sessions; changing it signs everyone out
+        generateValue: true
+      - key: FIELD_KEY_V1         # encrypts messages at rest — never change or delete it, or messages become unreadable
+        generateValue: true
+      - key: CRON_SECRET
+        generateValue: true
+      # --- Test phase settings: change these before inviting the public (see docs/DEPLOYMENT.md) ---
+      - key: BILLING_PROVIDER
+        value: mock
+      - key: ENABLE_MOCK_PAYMENTS   # "true" = testers can try Premium with simulated payments, no money moves
+        value: "true"
+      - key: DEV_SHOW_OTP
+        value: "false"
+      - key: PUSH_ENABLED
+        value: "false"
+      # --- Fill these in when you go live with payments ---
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+
+  - type: cron
+    name: project-connect-jobs
+    runtime: node
+    region: singapore
+    plan: starter
+    schedule: "*/30 * * * *"   # every 30 minutes: renewal reminders, expiry, banked rewards, data clean-up
+    buildCommand: echo "nothing to build"
+    startCommand: 'curl -fsS -X POST -H "x-cron-secret: $CRON_SECRET" "http://$API_HOSTPORT/api/cron/billing"'
+    envVars:
+      - key: CRON_SECRET
+        fromService: { type: web, name: project-connect, envVarKey: CRON_SECRET }
+      - key: API_HOSTPORT
+        fromService: { type: web, name: project-connect, property: hostport }

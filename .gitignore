@@ -9,7 +9,7 @@ next-env.d.ts
 data/
 
 # built during deploy
-public/app/
+# public/app/ is committed (the phone app's web version, rebuilt with: npm run build:app-web)
 mobile/dist/
 mobile/.expo/
 mobile/.env

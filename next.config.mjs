@@ -34,6 +34,10 @@ const nextConfig = {
   async rewrites() {
     return [{ source: "/app/:path*", destination: "/app/index.html" }];
   },
+  // The phone app's web version is served from /app (built into public/app by npm run build:app-web).
+  async rewrites() {
+    return { fallback: [{ source: "/app/:path*", destination: "/app/index.html" }] };
+  },
   async headers() {
     return [
       { source: "/:path*", headers: securityHeaders },

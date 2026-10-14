@@ -1,61 +1,116 @@
-# Deployment (free tier test environment)
+# Deployment
 
-Recommended: **Vercel** (app + API, free HTTPS) + **Turso** (libSQL database, free tier). Both have free plans suitable for a test environment; check their current limits before relying on them.
+_Last updated: 14 October 2026_
 
-## 1. Database on Turso
+The setup is one Render web service in Singapore with a 2 GB persistent disk, plus a small cron job. It serves:
 
-```bash
-# install the CLI: https://docs.turso.tech
-turso auth signup
-turso db create project-connect                    # choose a region near your users (see turso docs)
-turso db show project-connect --url                # → libsql://project-connect-<you>.turso.io
-turso db tokens create project-connect             # → auth token
-```
-
-Create the tables and seed from your machine:
-
-```bash
-DATABASE_URL="libsql://…" DATABASE_AUTH_TOKEN="…" npx drizzle-kit push --force
-DATABASE_URL="libsql://…" DATABASE_AUTH_TOKEN="…" SEED_ADMIN_PASSWORD="<strong password>" npm run db:seed
-```
-
-Skip the seed (or delete the test users) for anything real-user-facing.
-
-## 2. App on Vercel
-
-1. Push the repository to GitHub (`.env` and `data/` are git-ignored — never commit them).
-2. In Vercel: **Add New → Project → import the repo**. Framework is detected as Next.js.
-3. Set environment variables (Production and Preview):
-
-| Variable | Value |
+| Address | What |
 |---|---|
-| `DATABASE_URL` | `libsql://…turso.io` |
-| `DATABASE_AUTH_TOKEN` | Turso token |
-| `AUTH_SECRET` | `openssl rand -base64 48` — unique per environment |
-| `DEV_SHOW_OTP` | `true` only while OTP delivery is mocked; `false` once SMS/email is wired |
-| `ENABLE_MOCK_PAYMENTS` | `true` for the test environment only |
-| `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | only needed when seeding |
+| `https://<your-app>.onrender.com/` | Website: sign-up, discovery, chat, plans |
+| `https://<your-app>.onrender.com/admin` | Admin panel |
+| `https://<your-app>.onrender.com/app` | The phone app's web version (testers open this on their phone) |
+| `https://<your-app>.onrender.com/api/…` | The API that the native app uses |
 
-4. Deploy. Vercel provides HTTPS on `*.vercel.app`; add a custom domain later.
-5. Verify: `BASE_URL=https://<your-app>.vercel.app npm run test:e2e` (creates two test accounts).
+The database (SQLite) and photos live on the disk, and Render snapshots the disk daily. It runs as a single instance, which is right for launch. When you outgrow it, move the database to Turso or Postgres and photos to Cloudflare R2 (see "Scaling later").
 
-## Monitoring and logs
+**Cost:**
+- The Render Starter instance, about 2 GB of disk and a cron job come to roughly US$8–10 a month.
+- Check render.com/pricing for current prices.
+- A custom domain is optional.
 
-- Vercel → Project → Logs shows API errors (`[api] unhandled error` lines).
-- Add Sentry (free developer tier) with `npx @sentry/wizard@latest -i nextjs` for error alerts.
-- Admin → Audit log covers security-relevant events.
+## 1. One-time setup (about 10 minutes)
 
-## Environment variable reference
+1. **Get the code into GitHub.** Push this repository to a **private** GitHub repo. `.env`, `data/` and `node_modules` are git-ignored and must stay out of git.
+2. **Create the services on Render.**
+   - Sign up at render.com and connect your GitHub account.
+   - Go to **New → Blueprint** and pick the repo. Render reads `render.yaml` and shows two services: `project-connect` and `project-connect-jobs`.
+3. **Enter your admin email.**
+   - When Render asks for `SEED_ADMIN_EMAIL`, enter the email you'll use to log in to the admin panel.
+   - Leave the Razorpay fields empty for now.
+4. **Deploy.**
+   - Click **Apply**. The first build takes about 5–8 minutes.
+   - On the first start the server creates the tables, plans, offers, coupons, legal pages and your admin account.
+5. **Find your admin password.**
+   - It's in Render → `project-connect` → **Environment** → `SEED_ADMIN_PASSWORD` (generated, 44 characters).
+   - Log in at `/admin`.
+   - Go to Settings → Billing and enter your business name, address, GSTIN and billing email. These appear on invoices.
+6. **Check it's healthy.** `https://<your-app>.onrender.com/api/health` should show `{"ok":true}`.
+7. **Run the full test suite against the live server (optional).** This creates a few test accounts:
+   ```bash
+   BASE_URL=https://<your-app>.onrender.com SEED_ADMIN_EMAIL=<you> SEED_ADMIN_PASSWORD=<generated> npm run test:e2e
+   ```
+   The staff-role checks expect the local test accounts, so a few of them will fail on a live server. Every other check should pass.
 
-| Variable | Required | Notes |
+**Never change or delete `FIELD_KEY_V1`.** It encrypts messages; without it, stored messages can't be read. `AUTH_SECRET` can be rotated, but doing so signs everyone out.
+
+## 2. Getting the app to testers
+
+| Option | Effort | Notes |
 |---|---|---|
-| `DATABASE_URL` | yes | `file:./data/dev.db` locally |
-| `DATABASE_AUTH_TOKEN` | prod | Turso token |
-| `AUTH_SECRET` | yes | ≥32 chars; rotating it logs everyone out |
-| `DEV_SHOW_OTP` | no | Returns OTP codes in API responses — test only |
-| `ENABLE_MOCK_PAYMENTS` | no | Allows mock checkout in production builds — test only |
-| `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | seed only | Change the default password before any shared deploy |
+| **A. Web link** | none | Testers open `https://<your-app>.onrender.com/app` on their phone. In Safari or Chrome, "Add to Home Screen" makes it feel like an app. No haptics; photo upload uses the browser picker. |
+| **B. Expo Go** (your own phone) | 2 min | On your computer: in `mobile/`, put `EXPO_PUBLIC_API_URL=https://<your-app>.onrender.com` in `.env`, run `npx expo start`, and scan the QR code with Expo Go. |
+| **C. Android test build** | 20 min | Install an APK on any Android phone. Steps below. |
+| **D. iPhone TestFlight** | later | Needs an Apple Developer account (US$99/year). |
 
-## Before real users
+**Option C, an Android test APK:**
 
-Work through the launch checklist in `docs/STATUS.md`.
+1. Create a free account at expo.dev.
+2. In `mobile/`, run `npx eas-cli login`, then `npx eas-cli init`. This links the project and writes its id.
+3. In `mobile/eas.json`, set `EXPO_PUBLIC_API_URL` to your Render URL.
+4. Run `npx eas-cli build -p android --profile preview`. Expo builds it in the cloud and gives you a link and QR code to install the APK.
+
+**When you change the phone app,** run `npm run build:app-web` and commit `public/app` so the web link (option A) updates on the next deploy.
+
+## 3. Everyday operations
+
+- **Deploys:** every push to the repo's main branch redeploys automatically. Start-up applies new database migrations first.
+- **Changing the database schema:** edit `src/db/schema.ts`, run `npx drizzle-kit generate` locally (it asks about renames), commit the new file in `drizzle/`, then push.
+- **Logs:** Render → `project-connect` → Logs. The cron job's runs are under `project-connect-jobs`.
+- **Backups:**
+  - Render snapshots the disk daily.
+  - For an extra copy, download `/var/data/prod.db` from the Render Shell now and then.
+- **Custom domain:**
+  - Render → `project-connect` → Settings → Custom Domains. Add your domain and follow the DNS steps; HTTPS is automatic.
+  - Then set `APP_URL=https://yourdomain.com`.
+
+## 4. Test phase vs. going public
+
+The blueprint starts in **test mode**:
+- `ENABLE_MOCK_PAYMENTS=true` means Premium can be tried with simulated payments. The pay page says "TEST MODE".
+- No sample profiles are created, so Discover fills up as testers join.
+
+Before inviting the public, change these:
+
+| Change | How |
+|---|---|
+| Real payments | Follow `docs/PAYMENTS.md` §3: add the Razorpay keys and webhook, set `BILLING_PROVIDER=razorpay`, rehearse in Razorpay test mode, then **delete** `ENABLE_MOCK_PAYMENTS` |
+| Legal pages | Admin → Legal: publish lawyer-reviewed Terms, Privacy, Refund policy and more (two-person publishing) |
+| Email/SMS (OTP, password reset) | Add a provider (Resend/SES, MSG91/Twilio with India DLT) — not built yet |
+| Photo moderation | Add a moderation API (see `docs/STATUS.md`) |
+| Monitoring | Add Sentry, plus uptime checks on `/api/health` |
+| Grievance officer | Name one and add their contact details (India IT Rules) |
+
+## 5. Scaling later
+
+When you need more than one server:
+- Move the database to Turso (`DATABASE_URL=libsql://…`, `DATABASE_AUTH_TOKEN`) or Postgres.
+- Move photos to Cloudflare R2: set `STORAGE_DRIVER=s3` and the `S3_*` variables. Test this driver first; it has never been tested.
+- Move rate limiting to Redis or Upstash.
+- Then the web service can run several instances without a disk.
+
+## Environment variables
+
+| Variable | Set by | Notes |
+|---|---|---|
+| `DATABASE_URL` | blueprint | `file:/var/data/prod.db` |
+| `UPLOAD_DIR` | blueprint | `/var/data/uploads` |
+| `SEED_ADMIN_EMAIL` | you | Used on the first start only |
+| `SEED_ADMIN_PASSWORD` | generated | Your first admin password; change it after logging in |
+| `AUTH_SECRET` | generated | Signs sessions |
+| `FIELD_KEY_V1` | generated | Message encryption key; never change |
+| `CRON_SECRET` | generated | Shared with the cron job |
+| `APP_URL` | optional | Your custom domain; defaults to Render's URL |
+| `BILLING_PROVIDER`, `ENABLE_MOCK_PAYMENTS` | blueprint | Test mode; see §4 |
+| `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | you, later | See `docs/PAYMENTS.md` |
+| `DEV_SHOW_OTP` | blueprint | `false`; never `true` in production |
+| `PUSH_ENABLED` | later | `true` after the native app has an Expo project id |
