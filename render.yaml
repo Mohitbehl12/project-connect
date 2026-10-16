@@ -74,6 +74,14 @@ services:
         sync: false
       - key: SIGHTENGINE_SECRET
         sync: false
+      # Fictional sample people with matches and chats, for testing (demo logins aanya@demo.local and
+      # rohan@demo.local). Set "false" and run `npm run db:remove-samples` before the public launch.
+      - key: SEED_SAMPLE_USERS
+        value: "true"
+      - key: SEED_SAMPLE_COUNT
+        value: "120"
+      - key: SAMPLE_MATCHES_FOR
+        sync: false
       # On-server photo and face checks (nudity scan, selfie face match). They need ~300 MB extra memory,
       # which the Starter plan (512 MB) can't spare: keep "false" until the service runs on Standard (2 GB)
       # or larger, then set "true". While off, photos and selfies are checked by staff by eye.

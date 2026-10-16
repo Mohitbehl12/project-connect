@@ -41,8 +41,8 @@ const BIOS = [
 const PROMPT_QS = ["A perfect first date for me is", "I'm quietly proud of", "The way to my heart is", "My friends would describe me as", "Something I'm learning right now"];
 const PROMPT_AS = ["a long walk ending at a chai stall", "finally running a half marathon", "remembering the small things", "the one who always plans the trip", "Carnatic vocals, badly", "a museum we both pretend to understand", "my terrible puns", "baking sourdough that actually rises"];
 
-async function main() {
-  const now = new Date();
+/** Plans, prices, offers, coupons, config, legal placeholders and staff accounts (first run only). */
+async function seedBase(now: Date) {
   console.log("Seeding plans…");
   const planDefs = [
     { code: "FREE", name: "Free", sortOrder: 0, features: { dailyLikes: 25, dailyPriorityLikes: 1, seeWhoLiked: false, advancedFilters: false, incognito: false, travelMode: false, monthlyBoosts: 0 } },
@@ -121,8 +121,15 @@ async function main() {
     { email: "finance2@projectconnect.local", passwordHash: staffPw, role: "FINANCE", emailVerified: true, onboardingStep: 3 },
     { email: "security@projectconnect.local", passwordHash: staffPw, role: "SECURITY", emailVerified: true, onboardingStep: 3 },
   ]);
+}
 
-  if (deployed && process.env.SEED_SAMPLE_USERS !== "true") {
+async function main() {
+  const now = new Date();
+  const deployed = process.env.SEED_DEPLOYED === "true";
+  // SEED_PEOPLE_ONLY=true: add only the fictional sample people to an existing database (scripts/sample-data.ts).
+  if (process.env.SEED_PEOPLE_ONLY === "true") console.log("Adding sample people to an existing database…");
+  else await seedBase(now);
+  if (deployed && process.env.SEED_SAMPLE_USERS !== "true" && process.env.SEED_PEOPLE_ONLY !== "true") {
     console.log("Done. No sample people created (SEED_SAMPLE_USERS is not \"true\").");
     return;
   }
@@ -141,7 +148,7 @@ async function main() {
     { email: "aanya@demo.local", first: "Aanya", gender: "WOMAN", city: "Delhi", age: 27, interestedIn: "MAN", demo: true },
     { email: "rohan@demo.local", first: "Rohan", gender: "MAN", city: "Delhi", age: 29, interestedIn: "WOMAN", demo: true },
   ];
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < Number(process.env.SEED_SAMPLE_COUNT ?? 200); i++) {
     const r = rand();
     const gender = r < 0.47 ? "WOMAN" : r < 0.94 ? "MAN" : "NONBINARY";
     const first = gender === "WOMAN" ? pick(WOMEN) : gender === "MAN" ? pick(MEN) : pick(NB);

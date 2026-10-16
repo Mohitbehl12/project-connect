@@ -6,6 +6,15 @@ import { execSync } from "node:child_process";
 import { createClient } from "@libsql/client";
 
 async function main() {
+  await setUp();
+  if (process.env.SEED_SAMPLE_USERS === "true") {
+    // Fictional sample people, matches and chats for testing. Never blocks start-up.
+    try { execSync("npx tsx scripts/sample-data.ts", { stdio: "inherit", env: { ...process.env, SEED_DEPLOYED: "true" } }); }
+    catch { console.warn("[bootstrap] ⚠ sample data step failed — the site starts anyway"); }
+  }
+}
+
+async function setUp() {
   const db = createClient({ url: process.env.DATABASE_URL!, authToken: process.env.DATABASE_AUTH_TOKEN || undefined });
   const { rows } = await db.execute("select count(*) as n from plans");
   if (Number(rows[0]?.n ?? 0) > 0) {
