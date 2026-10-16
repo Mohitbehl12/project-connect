@@ -204,14 +204,20 @@ export function buildQuote(args: {
     }
   }
 
+  // Discounts land on whole rupees (₹124.50 → ₹125): prices with paise look untidy and harder to trust.
+  const tidy = (minor: number) => (cur === "INR" ? Math.round(minor / 100) * 100 : minor);
+
   if (offer?.kind === "INTRO") {
     today = Math.max(minimumCharge(cur), offer.priceMinor ?? minimumCharge(cur));
     introDays = offer.days ?? price.durationDays;
   } else if (offer?.kind === "DISCOUNT") {
     discount = Math.min(base - minimumCharge(cur), Math.round((base * (offer.discountPct ?? 0)) / 100));
-    today = base - discount;
+    today = Math.max(minimumCharge(cur), tidy(base - discount));
+    discount = base - today;
   } else if (couponOut) {
-    today = base - discount;
+    today = Math.max(minimumCharge(cur), tidy(base - discount));
+    discount = base - today;
+    couponOut.discountMinor = discount;
   }
 
   const firstPeriod = introDays ?? price.durationDays;

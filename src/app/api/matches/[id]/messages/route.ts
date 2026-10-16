@@ -10,10 +10,11 @@ import { getConfig } from "@/lib/config";
 import { rateLimit } from "@/lib/ratelimit";
 import { REPORTABLE_FLAGS, screenMessage, warningFor, type Flag } from "@/lib/moderation";
 import { notify } from "@/lib/notify";
+import { bumpChat, setTyping } from "@/lib/realtime";
 
 /**
- * Messages are delivered by short polling (client calls with ?after=<iso>).
- * Upgrade path: Supabase Realtime / Socket.io / Pusher publishing from POST below — same payload shape.
+ * Messages. The app learns about changes instantly through /wait (long polling, lib/realtime) and then
+ * fetches here; GET also marks incoming messages as read.
  */
 export const GET = route<{ id: string }>(async ({ req, user, params }) => {
   const { match, otherId } = await requireMatch(params.id, user.id, { allowEnded: true });
@@ -24,9 +25,10 @@ export const GET = route<{ id: string }>(async ({ req, user, params }) => {
     .where(and(eq(schema.messages.matchId, match.id), afterDate && !isNaN(+afterDate) ? gt(schema.messages.createdAt, afterDate) : undefined))
     .orderBy(asc(schema.messages.createdAt)).limit(500);
 
-  // Mark incoming as read.
-  await db.update(schema.messages).set({ readAt: new Date() })
-    .where(and(eq(schema.messages.matchId, match.id), ne(schema.messages.senderId, user.id), isNull(schema.messages.readAt)));
+  // Mark incoming as read (and tell the sender's open chat, for read receipts).
+  const read = await db.update(schema.messages).set({ readAt: new Date() })
+    .where(and(eq(schema.messages.matchId, match.id), ne(schema.messages.senderId, user.id), isNull(schema.messages.readAt))).returning({ id: schema.messages.id });
+  if (read.length) bumpChat(match.id);
   await db.update(schema.users).set({ lastActiveAt: new Date() }).where(eq(schema.users.id, user.id));
 
   const otherPrefs = await db.query.preferences.findFirst({ where: eq(schema.preferences.userId, otherId) });
@@ -87,5 +89,7 @@ export const POST = route<{ id: string }>(async ({ req, user, params }) => {
   }
 
   await notify(otherId, "MESSAGE", "New message", "You have a new message.", `/matches/${match.id}`);
+  setTyping(match.id, user.id, false, false); // cleared together with the message, so the other side wakes once and sees both
+  bumpChat(match.id);
   return ok({ id: msg.id, createdAt: msg.createdAt, flagged: flags.length > 0 }, 201);
 });

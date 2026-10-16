@@ -24,11 +24,17 @@ export const OfferBody = z.object({
   active: z.boolean().default(true),
 });
 
+export const URGENCY = /\b(today only|only today|ends? (today|tonight|soon)|last chance|hurry|limited time|few hours|final hours|now or never|expires? (today|soon))\b/i;
+
 export async function validateOffer(b: z.infer<typeof OfferBody>) {
   if (b.kind === "INTRO" && (!b.priceMinor || !b.days)) throw new ApiError(422, "An intro offer needs a price and a number of days.", "validation");
   if (b.kind === "PASS" && (!b.priceMinor || !b.days)) throw new ApiError(422, "A pass needs a price and a number of days.", "validation");
   if (b.kind === "DISCOUNT" && !b.discountPct) throw new ApiError(422, "A discount needs a percentage.", "validation");
   if (b.startsAt && b.endsAt && b.endsAt <= b.startsAt) throw new ApiError(422, "The end date must be after the start date.", "validation");
+  // No false urgency: words like "today only" or "ends soon" need an end date that is actually that close.
+  const urgent = URGENCY.test(`${b.badge ?? ""} ${b.headline}`);
+  if (urgent && (!b.endsAt || b.endsAt.getTime() - Date.now() > 48 * 3_600_000 || b.endsAt.getTime() < Date.now()))
+    throw new ApiError(422, "Words like \"today only\", \"ends soon\" or \"last chance\" need a real end date within the next 48 hours. Set the end date, or use a plain name such as \"Festival offer\".", "false_urgency");
   if (b.genders.length && !(await getConfig("billing.genderPricingCountries")).includes(b.country))
     throw new ApiError(422, `Gender-specific offers aren't enabled for ${b.country}. They're unlawful in some countries — check with a lawyer, then add the country in Settings.`, "gender_pricing_off");
 }

@@ -47,7 +47,7 @@ export function PhotoGrid({ onCountChange }: { onCountChange?: (n: number) => vo
       }
       const r = await api<{ photo: MyPhoto }>("/api/photos", { form });
       haptic.success();
-      setHint({ tone: r.photo.quality === "GOOD" ? "trust" : "warn", text: r.photo.hint });
+      setHint({ tone: r.photo.status === "PENDING" ? "trust" : r.photo.quality === "GOOD" ? "trust" : "warn", text: r.photo.hint });
       await refresh();
     } catch (e: any) {
       haptic.warning();
@@ -100,7 +100,12 @@ export function PhotoGrid({ onCountChange }: { onCountChange?: (n: number) => vo
                         <T v="caption" style={{ color: c.brandText }}>Main</T>
                       </View>
                     )}
-                    {p.quality !== "GOOD" && (
+                    {p.status === "PENDING" && (
+                      <View style={{ position: "absolute", left: 8, right: 8, top: 8, backgroundColor: c.scrim, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 4 }}>
+                        <T v="caption" style={{ color: "#FFFFFF" }} center>Being checked</T>
+                      </View>
+                    )}
+                    {p.status !== "PENDING" && p.quality !== "GOOD" && (
                       <View style={{ position: "absolute", right: 8, top: 8, width: 22, height: 22, borderRadius: 11, backgroundColor: c.accent, alignItems: "center", justifyContent: "center" }}>
                         <T v="caption" style={{ color: c.accentText, fontFamily: "Figtree_700Bold" }}>!</T>
                       </View>

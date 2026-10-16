@@ -37,12 +37,40 @@ export default function Chat() {
   const [plus, setPlus] = useState(false);
   const [msgAction, setMsgAction] = useState<Message | null>(null);
   const detail = useQuery({ queryKey: ["match", id], queryFn: () => api<Detail>(`/api/matches/${id}`) });
-  // Short polling for now; realtime (typing, instant delivery) arrives with the realtime service in Phase 4.
+  // Instant updates: /wait answers the moment this chat changes or the other person types; a slow
+  // refetch stays as a safety net.
   const msgs = useQuery({
     queryKey: ["messages", id],
     queryFn: () => api<{ messages: Message[]; ended: boolean }>(`/api/matches/${id}/messages`),
-    refetchInterval: 4000,
+    refetchInterval: 20_000,
   });
+  const [otherTyping, setOtherTyping] = useState(false);
+  useEffect(() => {
+    let alive = true, v = -1, typing = false;
+    const ctrl = new AbortController();
+    (async () => {
+      while (alive) {
+        try {
+          const r: { version: number; typing: boolean } = await api(`/api/matches/${id}/wait?v=${v}&typing=${typing ? 1 : 0}`, { signal: ctrl.signal });
+          if (!alive) break;
+          if (v !== -1 && r.version !== v) qc.invalidateQueries({ queryKey: ["messages", id] });
+          v = r.version; typing = r.typing; setOtherTyping(r.typing);
+        } catch {
+          if (!alive) break;
+          await new Promise((res) => setTimeout(res, 3000)); // offline or server restarting: try again shortly
+        }
+      }
+    })();
+    return () => { alive = false; ctrl.abort(); };
+  }, [id, qc]);
+  const lastTypingSent = useRef(0);
+  function onType(t: string) {
+    setText(t);
+    if (t.trim() && Date.now() - lastTypingSent.current > 3000) {
+      lastTypingSent.current = Date.now();
+      api(`/api/matches/${id}/typing`, { body: { typing: true } }).catch(() => {});
+    }
+  }
   const list = useRef<FlatList>(null);
 
   useEffect(() => { if (detail.data) cardCache.put([detail.data.other]); }, [detail.data]);
@@ -130,6 +158,11 @@ export default function Chat() {
         data={items}
         keyExtractor={(m) => m.id}
         contentContainerStyle={{ padding: 14, gap: 4, flexGrow: 1 }}
+        ListHeaderComponent={otherTyping ? (
+          <Animated.View entering={FadeIn} accessibilityLiveRegion="polite" style={{ alignSelf: "flex-start", backgroundColor: c.surface, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, marginTop: 4 }}>
+            <T v="caption" tone="muted">{o?.firstName ?? "They"} is typing…</T>
+          </Animated.View>
+        ) : null}
         ListFooterComponent={detail.data && !hasText ? (
           <Animated.View entering={FadeIn} style={{ alignItems: "center", gap: 6, paddingVertical: 24 }}>
             <PhotoView photo={o?.photos[0]} rounded={44} style={{ width: 88, height: 88 }} />
@@ -181,7 +214,7 @@ export default function Chat() {
           )}
           <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 10, paddingTop: 8 }}>
             <IconButton icon="plus" label="More: suggest a date" size={44} onPress={() => setPlus(true)} />
-            <TextInput value={text} onChangeText={setText} placeholder={`Message ${o?.firstName ?? ""}`} placeholderTextColor={c.faint} multiline maxLength={2000}
+            <TextInput value={text} onChangeText={onType} placeholder={`Message ${o?.firstName ?? ""}`} placeholderTextColor={c.faint} multiline maxLength={2000}
               accessibilityLabel="Message"
               style={{ flex: 1, minHeight: 44, maxHeight: 120, borderRadius: 22, backgroundColor: c.raised, paddingHorizontal: 16, paddingTop: 11, paddingBottom: 11, fontSize: 17, color: c.text, fontFamily: "Figtree_500Medium" }} />
             <IconButton icon="send" label="Send" size={44} tone="brand" disabled={!text.trim()} onPress={send} />

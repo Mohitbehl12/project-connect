@@ -91,7 +91,7 @@ async function refresh(): Promise<boolean> {
   return refreshing;
 }
 
-type Opts = { method?: string; body?: unknown; form?: FormData; auth?: boolean };
+type Opts = { method?: string; body?: unknown; form?: FormData; auth?: boolean; signal?: AbortSignal };
 
 export async function api<T = any>(path: string, opts: Opts = {}): Promise<T> {
   const extra = await clientHeaders();
@@ -104,6 +104,7 @@ export async function api<T = any>(path: string, opts: Opts = {}): Promise<T> {
         ...(accessToken && opts.auth !== false ? { authorization: `Bearer ${accessToken}` } : {}),
       },
       body: opts.form ?? (opts.body !== undefined ? JSON.stringify(opts.body) : undefined),
+      signal: opts.signal,
     });
 
   let res: Response;

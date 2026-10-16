@@ -166,3 +166,10 @@ Voice/video calls, voice messages, image and GIF sharing in chat, typing indicat
 - Done and tested: encrypted database backups every 6 hours (folder now, cloud storage once set up), retention, "Back up now", and a restore tool. A restore was tested here: integrity ok, all accounts present.
 - Done, untested live: OTP by email (Resend) and SMS (MSG91), switching on once keys are added.
 - Done: GitHub workflow that builds the apps on Expo once EXPO_TOKEN is added; reviewer demo-account script.
+
+## Review fixes (design, features, safety, payments)
+- Photo checks: no photo reaches other people unchecked. Explicit photos are refused automatically once Sightengine keys are set (untested against a live account); borderline ones, and every photo while no scanner is set up, wait in Admin → Photo review. The app shows "Being checked".
+- Instant chat: new messages, deletions and read receipts arrive at once (long polling, one server), plus "…is typing". With several servers this needs Redis pub/sub.
+- Honest offers: urgency words ("today only", "ends soon"…) are refused unless the offer really ends within 48 hours. Discounted INR prices are rounded to whole rupees.
+- Gender change after sign-up adds a risk signal for staff review (prices differ by gender); it never blocks the change.
+- Tests: 66 unit, 339 end-to-end.

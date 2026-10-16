@@ -642,6 +642,51 @@ async function main() {
   check("backup status lists it", bks.data?.configured === true && bks.data.recent?.[0]?.key === bk.data.key && !bks.data.last.error, bks.data);
   check("finance staff can't take backups", (await finance.post("/api/admin/backups", {})).status === 403);
 
+  section("Photo checks (staff review queue)");
+  await admin.put("/api/admin/config", { config: { "moderation.photoScreening": "review" } });
+  const tokNow = (await anon.post("/api/auth/token", { email: appEmail, password: "Testing123", platform: "android" })).data?.accessToken; // the early token has expired by now
+  const fReview = new FormData(); fReview.append("file", new Blob([new Uint8Array(jpeg)], { type: "image/jpeg" }), "review.jpg");
+  const upR = await bearer("POST", "/api/photos", undefined, tokNow, fReview);
+  check("in review mode a new photo waits for a check", upR.status === 201 && upR.data.photo?.status === "PENDING" && /checking this photo/.test(upR.data.photo.hint), upR.data);
+  const queue = await admin.get("/api/admin/photos");
+  check("staff see it in Photo review", queue.data?.photos?.some((p: any) => p.id === upR.data.photo.id), queue.data);
+  check("finance staff can't review photos", (await finance.get("/api/admin/photos")).status === 403);
+  check("staff approve it", (await admin.post(`/api/admin/photos/${upR.data.photo.id}`, { approve: true })).data?.status === "LIVE");
+  check("an approved photo can't be reviewed twice", (await admin.post(`/api/admin/photos/${upR.data.photo.id}`, { approve: false })).status === 409);
+  const fReview2 = new FormData(); fReview2.append("file", new Blob([new Uint8Array(jpeg)], { type: "image/jpeg" }), "review2.jpg");
+  const upR2 = await bearer("POST", "/api/photos", undefined, tokNow, fReview2);
+  await admin.post(`/api/admin/photos/${upR2.data.photo.id}`, { approve: false });
+  const mineAfter = (await bearer("GET", "/api/photos", undefined, tokNow)).data?.photos ?? [];
+  check("a refused photo is removed and the rest renumbered", !mineAfter.some((p: any) => p.id === upR2.data.photo.id) && mineAfter.every((p: any, i: number) => p.position === i), mineAfter.map((p: any) => [p.id.slice(0, 4), p.position, p.status]));
+  await admin.put("/api/admin/config", { config: { "moderation.photoScreening": "auto" } });
+
+  section("Offers: no false urgency");
+  const fake = await admin.post("/api/admin/billing/offers", { name: `Fake urgency ${run}`, kind: "DISCOUNT", headline: "Hurry — 20% off", badge: "Today only", planCode: "VIP", country: "IN", discountPct: 20, active: false });
+  check("\"Today only\" without a real end date is refused", fake.status === 422 && fake.data?.code === "false_urgency", fake.data);
+  const real = await admin.post("/api/admin/billing/offers", { name: `Real urgency ${run}`, kind: "DISCOUNT", headline: "20% off", badge: "Today only", planCode: "VIP", country: "IN", discountPct: 20, endsAt: new Date(Date.now() + 12 * 3_600_000).toISOString(), active: false });
+  check("\"Today only\" with an end date today is allowed", real.status === 201, real.data);
+
+  section("Chat: instant delivery and typing");
+  const w2Id = (await W2.get("/api/me")).data?.user?.id, m3Id = (await M3.get("/api/me")).data?.user?.id;
+  await W2.post("/api/likes", { toId: m3Id, kind: "LIKE" });
+  const mt = await M3.post("/api/likes", { toId: w2Id, kind: "LIKE" });
+  const rtMatch = mt.data?.matchId;
+  check("a match to chat in", !!rtMatch, mt.data);
+  const v0 = (await W2.get(`/api/matches/${rtMatch}/wait?v=-1&wait=0`)).data?.version;
+  const rt0 = Date.now();
+  const waiting = W2.get(`/api/matches/${rtMatch}/wait?v=${v0}&typing=0`);
+  await new Promise((r) => setTimeout(r, 300));
+  await M3.post(`/api/matches/${rtMatch}/typing`, { typing: true });
+  const typed = await waiting;
+  check("the other person sees \"typing…\" at once", typed.data?.typing === true && Date.now() - rt0 < 3000, typed.data);
+  const rt1 = Date.now();
+  const waiting2 = W2.get(`/api/matches/${rtMatch}/wait?v=${typed.data.version}&typing=1`);
+  await new Promise((r) => setTimeout(r, 300));
+  await M3.post(`/api/matches/${rtMatch}/messages`, { body: "Hey Meera! Coffee this week?" });
+  const got = await waiting2;
+  check("a new message wakes the other phone at once (no polling delay)", got.data?.version > typed.data.version && got.data.typing === false && Date.now() - rt1 < 3000, got.data);
+  check("outsiders can't listen to a chat", (await IAP.get(`/api/matches/${rtMatch}/wait?v=0&wait=0`)).status === 404);
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) {
     console.log("Failed:\n - " + failures.join("\n - "));

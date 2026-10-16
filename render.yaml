@@ -69,6 +69,11 @@ services:
         value: /var/data/backups
       - key: BACKUP_KEEP_DAYS
         value: "14"
+      # Automatic photo checks (Sightengine). Without these, new photos wait in Admin → Photo review.
+      - key: SIGHTENGINE_USER
+        sync: false
+      - key: SIGHTENGINE_SECRET
+        sync: false
       # In-app purchases (App Store / Google Play). Off until the store accounts and products exist.
       - key: STORE_BILLING_ENABLED
         value: "false"

@@ -7,22 +7,25 @@ import { rateLimit } from "@/lib/ratelimit";
 import { MAX_PHOTOS, MAX_UPLOAD_BYTES, QUALITY_HINT, processPhoto, refreshCompleteness, type PhotoQuality } from "@/lib/photos";
 import { storage } from "@/lib/storage";
 import { audit } from "@/lib/audit";
+import { screenPhoto } from "@/lib/photoScreen";
+
+const PENDING_HINT = "Thanks! We're checking this photo. Others will see it once it's approved, usually within a few hours.";
+const REJECTED_HINT = "This photo wasn't approved. It isn't shown to anyone — remove it and add another.";
 
 async function myPhotos(userId: string) {
   const rows = await db.select().from(schema.photos).where(eq(schema.photos.userId, userId)).orderBy(asc(schema.photos.position));
   const s = storage();
   return Promise.all(rows.map(async (r) => ({
     id: r.id, url: await s.url(r.storageKey), blurhash: r.blurhash, width: r.width, height: r.height, position: r.position,
-    status: r.status, quality: r.quality, hint: QUALITY_HINT[r.quality as PhotoQuality],
+    status: r.status, quality: r.quality, hint: r.status === "PENDING" ? PENDING_HINT : r.status === "REJECTED" ? REJECTED_HINT : QUALITY_HINT[r.quality as PhotoQuality],
   })));
 }
 
 export const GET = route(async ({ user }) => ok({ photos: await myPhotos(user.id), max: MAX_PHOTOS }), { allowSuspended: true });
 
 /**
- * Upload one photo as multipart form-data (field "file").
- * MODERATION IS MOCKED: photos go live immediately. Production must run an automated nudity/violence
- * check here (e.g. AWS Rekognition, Sightengine, Hive) and start photos as PENDING until it passes.
+ * Upload one photo as multipart form-data (field "file"). It's checked before anyone else can see it
+ * (lib/photoScreen): explicit photos are refused, borderline ones wait for staff review.
  */
 export const POST = route(async ({ req, user }) => {
   rateLimit(`photo:${user.id}`, 30, 60 * 60_000);
@@ -36,16 +39,21 @@ export const POST = route(async ({ req, user }) => {
   if (file.size > MAX_UPLOAD_BYTES) throw new ApiError(413, "That photo is over 10 MB. Try a smaller one.", "too_large");
 
   const processed = await processPhoto(Buffer.from(await file.arrayBuffer()));
+  const check = await screenPhoto(processed.data);
+  if (check.status === "REJECTED") {
+    await audit(user.id, "photo.rejected_auto", "user", user.id, { reason: check.reason });
+    throw new ApiError(422, "This photo can't be used because it looks explicit. Please choose a different one — see our Community Guidelines.", "photo_rejected");
+  }
   const key = `photos/${user.id}/${randomUUID()}.webp`;
   await storage().put(key, processed.data, "image/webp");
   const [row] = await db.insert(schema.photos).values({
     userId: user.id, storageKey: key, position: n, width: processed.width, height: processed.height,
-    blurhash: processed.blurhash, quality: processed.quality, status: "LIVE",
+    blurhash: processed.blurhash, quality: processed.quality, status: check.status,
   }).returning();
   const completeness = await refreshCompleteness(user.id);
-  await audit(user.id, "photo.upload", "photo", row.id, { quality: processed.quality });
+  await audit(user.id, "photo.upload", "photo", row.id, { quality: processed.quality, check: check.reason });
   return ok({
-    photo: { id: row.id, url: await storage().url(key), blurhash: row.blurhash, width: row.width, height: row.height, position: row.position, status: row.status, quality: row.quality, hint: QUALITY_HINT[processed.quality] },
+    photo: { id: row.id, url: await storage().url(key), blurhash: row.blurhash, width: row.width, height: row.height, position: row.position, status: row.status, quality: row.quality, hint: row.status === "PENDING" ? PENDING_HINT : QUALITY_HINT[processed.quality] },
     completeness,
   }, 201);
 });

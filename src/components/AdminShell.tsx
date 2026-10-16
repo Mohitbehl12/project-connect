@@ -14,6 +14,7 @@ const NAV: [string, string, string][] = [
   ["/admin/reports", "Reports", "reports.view"],
   ["/admin/grievances", "Complaints", "grievances.handle"],
   ["/admin/verification", "Verification", "users.verify"],
+  ["/admin/photos", "Photo review", "users.moderate"],
   ["/admin/users", "Users", "users.view"],
   ["/admin/matches", "Matches", "users.view"],
   ["/admin/payments", "Payments", "payments.view"],

@@ -140,3 +140,12 @@ describe("billing periods (pricing v2)", () => {
     expect(q.terms.join(" ")).toMatch(/every year/);
   });
 });
+
+describe("tidy prices and honest offers", () => {
+  it("discounts land on whole rupees", () => {
+    const plus: PriceRow = { id: "plus", planCode: "PREMIUM_PLUS", country: "IN", currency: "INR", amountMinor: 24900, durationDays: 30, segment: "*" };
+    const q = buildQuote({ price: plus, offer: offer({ kind: "DISCOUNT", discountPct: 50, planCode: "PREMIUM_PLUS" }), buyer: buyer(), now, genderCountries: IN, reminderDays: 2 });
+    expect(q.todayMinor).toBe(12500);
+    expect(q.discountMinor).toBe(12400);
+  });
+});

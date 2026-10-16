@@ -36,6 +36,7 @@ const Body = z.object({
     "rewards.verifiedPremiumDays": z.number().int().min(0).max(90).optional(),
     "retention.deletedMessageDays": z.number().int().min(7).max(3650).optional(),
     "retention.loginEventDays": z.number().int().min(30).max(3650).optional(),
+    "moderation.photoScreening": z.enum(["auto", "review", "off"]).optional(),
     "legal.contacts": z.object({
       companyName: z.string().max(120), supportEmail: z.string().max(120), safetyEmail: z.string().max(120), privacyEmail: z.string().max(120),
       grievanceOfficer: z.object({ name: z.string().max(80), designation: z.string().max(80), email: z.string().max(120), phone: z.string().max(30), address: z.string().max(300) }),

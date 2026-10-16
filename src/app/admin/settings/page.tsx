@@ -69,6 +69,17 @@ function Settings() {
         </section>
       </div>
 
+      <section className="panel mt-6 p-5">
+        <h2 className="text-lg font-bold">Photo checks</h2>
+        <p className="mt-1 text-sm text-ink-soft">How new photos are checked before others can see them. Automatic checking uses Sightengine once its keys are in the server settings; until then, photos wait in Admin → Photo review.</p>
+        <select aria-label="Photo checks" className="input mt-3 max-w-md" value={cfg["moderation.photoScreening"] ?? "auto"} onChange={(e) => setCfg({ ...cfg, "moderation.photoScreening": e.target.value })}>
+          <option value="auto">Automatic check, staff review when unsure (recommended)</option>
+          <option value="review">Staff review every photo</option>
+          <option value="off">No checks (testing only)</option>
+        </select>
+        <div><button className="btn-primary mt-4" disabled={!staff.permissions.includes("config.edit")} onClick={() => save({ config: { "moderation.photoScreening": cfg["moderation.photoScreening"] } }, "Photo checks")}>Save photo checks</button></div>
+      </section>
+
       {staff.permissions.includes("config.edit") && <BackupsPanel />}
 
       <section className="panel mt-6 p-5">

@@ -15,6 +15,7 @@ export const RISK_KINDS = {
   PAYMENT_FAILURES: "Many failed payments in a row",
   MESSAGE_FLAGS: "Several messages flagged by safety screening",
   NEW_DEVICE_LOGIN: "Sign-in from a new device after failed attempts",
+  GENDER_CHANGED: "Changed gender after sign-up (prices differ by gender)",
 } as const;
 export type RiskKind = keyof typeof RISK_KINDS;
 

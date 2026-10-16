@@ -32,6 +32,8 @@ export const CONFIG_DEFAULTS = {
   // Data retention
   "retention.deletedMessageDays": 90, // deleted messages are kept this long for safety review, then purged
   "retention.loginEventDays": 180,
+  // Photo checks before anyone else sees a photo: "auto" (scanner, else staff review) | "review" | "off" (testing).
+  "moderation.photoScreening": "auto" as "auto" | "review" | "off",
   // Last database backup (written by the backup job, shown in Admin → Settings).
   "ops.lastBackup": { at: null, key: null, bytes: 0, error: null } as { at: string | null; key: string | null; bytes: number; error: string | null; failedAt?: string },
   // Published contacts (Contact page, Grievance page, app). Empty officer name = shown as "being appointed".
