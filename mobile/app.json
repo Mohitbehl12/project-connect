@@ -13,7 +13,20 @@
       "supportsTablet": false,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Choose photos for your profile.",
-        "NSCameraUsageDescription": "Take a profile photo or a verification selfie."
+        "NSCameraUsageDescription": "Take a profile photo or a verification selfie.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyTracking": false,
+        "NSPrivacyTrackingDomains": [],
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          }
+        ]
       }
     },
     "android": {
@@ -23,7 +36,13 @@
         "monochromeImage": "./assets/adaptive-icon-mono.png",
         "backgroundColor": "#7B48CC"
       },
-      "predictiveBackGestureEnabled": true
+      "predictiveBackGestureEnabled": true,
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -52,7 +71,8 @@
         "expo-image-picker",
         {
           "photosPermission": "Choose photos for your profile.",
-          "cameraPermission": "Take a profile photo or a verification selfie."
+          "cameraPermission": "Take a profile photo or a verification selfie.",
+          "microphonePermission": false
         }
       ],
       [
@@ -63,7 +83,8 @@
         }
       ],
       "expo-web-browser",
-      "expo-sharing"
+      "expo-sharing",
+      "expo-iap"
     ],
     "experiments": {
       "typedRoutes": true

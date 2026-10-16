@@ -9,6 +9,7 @@ import { notify } from "./notify";
 import { mockProvider } from "./payments/mock";
 import { razorpayProvider } from "./payments/razorpay";
 import { friendlyFailure, type BillingEvent, type PaymentProvider } from "./payments/types";
+import { accountTokenFor, storeBillingEnabled, type StoreName, type StoreState } from "./payments/stores";
 import { buildQuote, eligibleOffers, formatDate, formatMoney, offersApplyTo, periodWord, pickPrice, planName, priceOptions, type Buyer, type OfferRow, type PriceRow, type Quote } from "./pricing";
 import { addRiskSignal } from "./risk";
 
@@ -80,7 +81,7 @@ export async function loadBuyer(user: User): Promise<Buyer> {
   };
 }
 
-async function priceRows(): Promise<(PriceRow & { providerPlanId: string | null })[]> {
+async function priceRows(): Promise<(PriceRow & { providerPlanId: string | null; appleProductId: string | null; googleProductId: string | null })[]> {
   const rows = await db.select({ p: schema.planPrices, code: schema.plans.code })
     .from(schema.planPrices).innerJoin(schema.plans, eq(schema.plans.id, schema.planPrices.planId))
     .where(and(eq(schema.planPrices.active, true), eq(schema.plans.active, true)));
@@ -127,7 +128,7 @@ export async function catalogue(user: User) {
       const options = [];
       for (const pr of priceOptions(await priceRows(), p.code, await loadBuyer(user), await getConfig("billing.genderPricingCountries"))) {
         const q = pr.id === quote.priceId ? quote : await quoteFor(user, p.code, { durationDays: pr.durationDays });
-        options.push({ durationDays: pr.durationDays, label: periodLabel(pr.durationDays), perMonthMinor: Math.round((pr.amountMinor * 30) / pr.durationDays), quote: q });
+        options.push({ durationDays: pr.durationDays, label: periodLabel(pr.durationDays), perMonthMinor: Math.round((pr.amountMinor * 30) / pr.durationDays), quote: q, store: storeIds(pr) });
       }
       out.push({ code: p.code, name: p.name, features: JSON.parse(p.features) as PlanFeatures, quote, options });
     } catch { /* plan not sold in this country */ }
@@ -140,7 +141,12 @@ export async function catalogue(user: User) {
     for (const o of eligibleOffers(offers, p.code, buyer, new Date(), genderCountries).filter((x) => x.kind === "PASS"))
       passes.push(buildQuote({ price, offer: o, buyer, now: new Date(), genderCountries, reminderDays }));
   }
-  return { plans: out, passes, subscription: await subscriptionSummary(user.id), provider: checkoutProviderName(), appleIap: { enabled: false } };
+  return {
+    plans: out, passes, subscription: await subscriptionSummary(user.id), provider: checkoutProviderName(),
+    appleIap: { enabled: storeBillingEnabled() },
+    // In-app purchase: the ids that tie a purchase to this account (Apple appAccountToken / Google obfuscated id).
+    store: storeBillingEnabled() ? { enabled: true, appleAccountToken: accountTokenFor("APPLE", user.id), googleAccountId: accountTokenFor("GOOGLE", user.id) } : { enabled: false },
+  };
 }
 
 function periodLabel(d: number) {
@@ -470,6 +476,7 @@ export async function subscriptionSummary(userId: string) {
 export async function cancelSubscription(user: User) {
   const s = await liveSubscription(user.id);
   if (!s || s.kind !== "RECURRING" || s.cancelAtPeriodEnd) throw new ApiError(404, "You don't have a plan that renews.", "none");
+  if (isStore(s.provider)) throw new ApiError(409, `This plan is billed by ${STORE_LABEL[s.provider as StoreName]}. Turn off auto-renew in your phone's subscription settings.`, "store_managed");
   if (s.providerRef) await providerByName(s.provider)?.cancelAtCycleEnd(s.providerRef);
   await db.update(schema.subscriptions).set({ status: "CANCELLED", cancelAtPeriodEnd: true, nextChargeAt: null, nextChargeMinor: null }).where(eq(schema.subscriptions.id, s.id));
   await audit(user.id, "subscription.cancel", "subscription", s.id);
@@ -489,6 +496,7 @@ export async function resumeSubscription(user: User) {
 export async function changePlan(user: User, planCode: string) {
   const s = await liveSubscription(user.id);
   if (!s || s.kind !== "RECURRING" || s.cancelAtPeriodEnd) throw new ApiError(404, "You need a plan that renews to change it.", "none");
+  if (isStore(s.provider)) throw new ApiError(409, `This plan is billed by ${STORE_LABEL[s.provider as StoreName]}. Change it from the Premium screen in the app.`, "store_managed");
   if (planCode === s.planCode) {
     await db.update(schema.subscriptions).set({ pendingPlanCode: null }).where(eq(schema.subscriptions.id, s.id));
     return subscriptionSummary(user.id);
@@ -596,6 +604,102 @@ export async function grantPremiumDays(userId: string, days: number, reason: str
   return "granted";
 }
 
+// ---------------------------------------------------------------------------
+// App Store / Google Play subscriptions (verified in ./payments/stores)
+// ---------------------------------------------------------------------------
+
+const STORE_LABEL: Record<StoreName, string> = { APPLE: "App Store", GOOGLE: "Google Play" };
+export const STORE_PROVIDERS = ["APPLE", "GOOGLE"] as const;
+const isStore = (provider: string) => (STORE_PROVIDERS as readonly string[]).includes(provider);
+
+async function priceForProduct(store: StoreName, productId: string, country: string) {
+  const col = store === "APPLE" ? schema.planPrices.appleProductId : schema.planPrices.googleProductId;
+  const rows = await db.select({ p: schema.planPrices, code: schema.plans.code }).from(schema.planPrices)
+    .innerJoin(schema.plans, eq(schema.plans.id, schema.planPrices.planId)).where(eq(col, productId));
+  if (!rows.length) return null;
+  const pick = rows.find((r) => r.p.country === country) ?? rows.find((r) => r.p.country === "*") ?? rows[0];
+  return { ...pick.p, planCode: pick.code };
+}
+
+/**
+ * Brings our records in line with what the store says about one subscription. Called when the phone sends
+ * a fresh purchase (with the signed-in user) and when a store notification arrives (renewal, cancel, refund).
+ * The store is the merchant for these sales: it charges the member, handles tax and issues the receipt,
+ * so no invoice of ours is created.
+ */
+export async function applyStoreState(state: StoreState, opts: { userId?: string } = {}) {
+  const label = STORE_LABEL[state.store];
+  const existing = await db.query.subscriptions.findFirst({ where: and(eq(schema.subscriptions.provider, state.store), eq(schema.subscriptions.providerRef, state.ref)) });
+  let userId = existing?.userId ?? null;
+  if (opts.userId) {
+    const other = (existing && existing.userId !== opts.userId) || (state.accountToken && state.accountToken !== accountTokenFor(state.store, opts.userId));
+    if (other) throw new ApiError(409, `This ${label} subscription belongs to a different Project Connect account. Sign in to that account, or contact support.`, "store_other_account");
+    userId = opts.userId;
+  }
+  if (!userId && state.store === "APPLE" && state.accountToken) {
+    userId = (await db.query.users.findFirst({ where: eq(schema.users.id, state.accountToken) }))?.id ?? null;
+  }
+  if (!userId) return { applied: false as const, reason: "unknown_account" };
+
+  const profile = await db.query.profiles.findFirst({ where: eq(schema.profiles.userId, userId) });
+  const price = await priceForProduct(state.store, state.productId, profile?.country ?? "IN");
+  if (!price) throw new ApiError(422, "That product isn't one of our plans.", "store_unknown_product");
+  const now = new Date();
+
+  // Google upgrades and downgrades issue a new token; the subscription it replaces ends now.
+  if (state.replacesRef)
+    await db.update(schema.subscriptions).set({ status: "EXPIRED", endsAt: now, cancelAtPeriodEnd: true, nextChargeAt: null, nextChargeMinor: null })
+      .where(and(eq(schema.subscriptions.provider, state.store), eq(schema.subscriptions.providerRef, state.replacesRef), ne(schema.subscriptions.status, "EXPIRED")));
+
+  const live = state.status === "ACTIVE" || state.status === "GRACE";
+  const status = state.status === "REVOKED" || state.status === "EXPIRED" ? "EXPIRED" : state.status === "PENDING" ? "PENDING"
+    : state.status === "GRACE" ? "PAST_DUE" : state.autoRenew ? "ACTIVE" : "CANCELLED";
+  const amountMinor = state.amountMinor ?? price.amountMinor;
+  const currency = state.currency ?? price.currency;
+  const renews = live && state.autoRenew;
+  const values = {
+    planCode: price.planCode, priceId: price.id, status, kind: "RECURRING", amountMinor, currency, periodDays: price.durationDays,
+    endsAt: state.status === "REVOKED" ? now : state.expiresAt, cancelAtPeriodEnd: !renews,
+    nextChargeAt: renews ? state.expiresAt : null, nextChargeMinor: renews ? amountMinor : null, pendingPlanCode: null, introEndsAt: null,
+  };
+  let subId: string;
+  if (existing) {
+    await db.update(schema.subscriptions).set(values).where(eq(schema.subscriptions.id, existing.id));
+    subId = existing.id;
+  } else {
+    const [row] = await db.insert(schema.subscriptions).values({ ...values, userId, provider: state.store, providerRef: state.ref, termsAcceptedAt: now, startedAt: state.startsAt }).returning();
+    subId = row.id;
+  }
+
+  // One payment row per store transaction (renewals each get their own id), so replays are harmless.
+  let newPayment = false;
+  if (state.transactionId) {
+    const pid = `${state.store}:${state.transactionId}`;
+    const seen = await db.query.payments.findFirst({ where: eq(schema.payments.providerPaymentId, pid) });
+    if (!seen && live) {
+      await db.insert(schema.payments).values({
+        userId, subscriptionId: subId, provider: state.store, purpose: existing ? "RENEWAL" : "INITIAL", status: "CAPTURED", amountMinor, currency,
+        planCode: price.planCode, providerPaymentId: pid, method: state.store === "APPLE" ? "app_store" : "google_play", paidAt: state.startsAt,
+      }).onConflictDoNothing();
+      newPayment = true;
+    }
+    if (seen && state.status === "REVOKED" && seen.status === "CAPTURED")
+      await db.update(schema.payments).set({ status: "REFUNDED", refundedMinor: seen.amountMinor }).where(eq(schema.payments.id, seen.id));
+  }
+
+  await syncUserPlan(userId);
+  if (!existing && live) await notify(userId, "SUBSCRIPTION", `${planName(price.planCode)} is on`, `Paid through ${label}. ${renews ? `Renews on ${formatDate(state.expiresAt)}` : `On until ${formatDate(state.expiresAt)}`}. Manage it in your ${label} subscriptions.`, "/subscription");
+  else if (existing && newPayment) await notify(userId, "SUBSCRIPTION", "Payment received", `${label} renewed ${planName(price.planCode)}. Next renewal on ${formatDate(state.expiresAt)}.`, "/subscription");
+  else if (state.status === "REVOKED" && existing?.status !== "EXPIRED") await notify(userId, "SUBSCRIPTION", `${planName(price.planCode)} has ended`, `${label} refunded or revoked this purchase, so Premium is off.`, "/subscription");
+  await audit(opts.userId ?? null, "billing.store_sync", "subscription", subId, { store: state.store, product: state.productId, status: state.status, autoRenew: state.autoRenew, env: state.environment });
+  return { applied: true as const, subscriptionId: subId, status };
+}
+
+/** For the app: which store product ids to offer, by plan and billing period. */
+function storeIds(p: { appleProductId?: string | null; googleProductId?: string | null }) {
+  return storeBillingEnabled() ? { apple: p.appleProductId ?? null, google: p.googleProductId ?? null } : null;
+}
+
 /**
  * Free Premium for women and everyone who isn't a man, in gender-pricing countries (India), given once
  * per account when sign-up is finished. No payment details and nothing renews. Length is set in
@@ -644,6 +748,7 @@ export async function runBillingJobs(now = new Date()) {
   const due = await db.select().from(schema.subscriptions).where(and(inArray(schema.subscriptions.status, ["TRIALING", "ACTIVE"]), eq(schema.subscriptions.cancelAtPeriodEnd, false), isNotNull(schema.subscriptions.nextChargeAt), lte(schema.subscriptions.nextChargeAt, soon)));
   for (const s of due) {
     if (!s.nextChargeAt || s.nextChargeAt <= now || s.reminderSentFor?.getTime() === s.nextChargeAt.getTime()) continue;
+    if (isStore(s.provider)) continue; // the App Store and Google Play send their own renewal notices
     await notify(s.userId, "SUBSCRIPTION", s.status === "TRIALING" ? "Your intro period ends soon" : "Upcoming payment",
       `${formatMoney(s.nextChargeMinor ?? s.amountMinor, s.currency)} for ${planName(s.pendingPlanCode ?? s.planCode)} on ${formatDate(s.nextChargeAt)}. Don't want it? Turn off auto-renew in My Subscription before then.`, "/subscription");
     await db.update(schema.subscriptions).set({ reminderSentFor: s.nextChargeAt }).where(eq(schema.subscriptions.id, s.id));

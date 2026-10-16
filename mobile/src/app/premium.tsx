@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Platform, Pressable, ScrollView, TextInput, View } from "react-native";
+import { Linking, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Aurora, Sunset } from "@/components/Ambient";
@@ -10,9 +10,11 @@ import { Button, IconButton } from "@/components/Button";
 import { Icon, type IconName } from "@/components/Icon";
 import { T } from "@/components/Text";
 import { Banner, ErrorState, Skeleton } from "@/components/ui";
-import { api } from "@/lib/api";
+import { API_URL, api } from "@/lib/api";
 import { money, niceDate, per } from "@/lib/format";
 import { haptic } from "@/lib/haptics";
+import { onPurchaseResult } from "@/lib/purchases";
+import { buyStoreProduct, loadStoreProducts, ownedStorePurchases, storeSupported, type StoreProduct } from "@/lib/store";
 import type { Catalogue, Quote } from "@/lib/types";
 import { useTheme } from "@/theme/ThemeProvider";
 
@@ -54,7 +56,45 @@ export default function Premium() {
   const freeUntil = sub?.status === "REWARD" ? sub.endsAt : null;
   /** The quote for a plan at the billing period the person picked (monthly by default). */
   const quoteOf = (p: (typeof plans)[number]) => p.options?.find((o) => o.durationDays === period[p.code])?.quote ?? p.quote;
-  const iosBlocked = Platform.OS === "ios" && q.data?.provider === "RAZORPAY" && !q.data.appleIap.enabled;
+  // On iPhone and Android, Premium is bought through the App Store / Google Play when the server has it on.
+  const storeMode = storeSupported && !!q.data?.store?.enabled;
+  const storeName = Platform.OS === "ios" ? "the App Store" : "Google Play";
+  const iosBlocked = Platform.OS === "ios" && !storeMode && q.data?.provider === "RAZORPAY";
+  const [products, setProducts] = useState<Record<string, StoreProduct>>({});
+  const [buying, setBuying] = useState(false);
+  const [storeMsg, setStoreMsg] = useState<{ tone: "trust" | "alert"; text: string } | null>(null);
+  const idOf = (o?: { store?: { apple: string | null; google: string | null } | null }) => (Platform.OS === "ios" ? o?.store?.apple : o?.store?.google) ?? null;
+  const optionOf = (p: (typeof plans)[number]) => p.options?.find((o) => o.durationDays === (period[p.code] ?? p.quote.periodDays)) ?? p.options?.[0];
+  const storeProductOf = (p: (typeof plans)[number]) => { const id = idOf(optionOf(p)); return id ? products[id] : undefined; };
+  useEffect(() => {
+    if (!storeMode) return;
+    const ids = plans.flatMap((p) => (p.options ?? []).map(idOf)).filter((x): x is string => !!x);
+    loadStoreProducts([...new Set(ids)]).then(setProducts).catch(() => setStoreMsg({ tone: "alert", text: `Couldn't load prices from ${storeName}. Check your connection.` }));
+  }, [storeMode, q.data]);
+  useEffect(() => onPurchaseResult((r) => {
+    setBuying(false);
+    if (r.ok) { setStoreMsg({ tone: "trust", text: "Premium is on. Thank you!" }); q.refetch(); }
+    else setStoreMsg({ tone: "alert", text: r.message });
+  }), []);
+
+  async function buyInStore() {
+    const p = plans.find((x) => x.code === choice);
+    const product = p ? storeProductOf(p) : undefined;
+    if (!product) { setStoreMsg({ tone: "alert", text: `This plan isn't available in ${storeName} yet.` }); return; }
+    setStoreMsg(null); setBuying(true); haptic.light();
+    try { await buyStoreProduct(product, { appleAccountToken: q.data?.store?.appleAccountToken, googleAccountId: q.data?.store?.googleAccountId }); }
+    catch (e: any) { setBuying(false); setStoreMsg({ tone: "alert", text: e.message }); }
+  }
+  async function restore() {
+    setStoreMsg(null); setBuying(true);
+    try {
+      const owned = await ownedStorePurchases();
+      if (!owned.tokens.length) { setStoreMsg({ tone: "alert", text: `No subscriptions found for this ${Platform.OS === "ios" ? "Apple ID" : "Google account"}.` }); return; }
+      const r = await api<{ restored: number; message: string }>("/api/billing/store/restore", { body: { platform: owned.platform, tokens: owned.tokens } });
+      if (r.restored) await owned.finishAll();
+      setStoreMsg({ tone: r.restored ? "trust" : "alert", text: r.message }); q.refetch();
+    } catch (e: any) { setStoreMsg({ tone: "alert", text: e.message }); } finally { setBuying(false); }
+  }
 
   const selected: Quote | null = useMemo(() => {
     if (!choice) return null;
@@ -111,7 +151,7 @@ export default function Premium() {
             </Animated.View>
           )}
 
-          {!subscribed && !freeUntil && featured?.quote.offer && featured.quote.offer.kind === "INTRO" && (
+          {!subscribed && !freeUntil && !storeMode && featured?.quote.offer && featured.quote.offer.kind === "INTRO" && (
             <Animated.View entering={FadeInDown.duration(380)} style={{ borderRadius: 28, overflow: "hidden", shadowColor: g.sunset[1], shadowOpacity: 0.35, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 8 }}>
               <Sunset style={{ padding: 20, gap: 6 }}>
                 <View style={{ alignSelf: "flex-start", backgroundColor: "rgba(255,255,255,0.25)", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
@@ -160,12 +200,12 @@ export default function Premium() {
                         <T v="caption" tone="muted">{p.features.dailyLikes < 0 ? "Unlimited likes" : `${p.features.dailyLikes} likes a day`} · {p.features.dailyPriorityLikes} priority likes{p.features.incognito ? " · incognito" : ""}</T>
                       </View>
                       <View style={{ alignItems: "flex-end" }}>
-                        <T v="headline">{money(qt.todayMinor, qt.currency)}</T>
-                        <T v="caption" tone="muted">today</T>
+                        <T v="headline">{storeMode ? storeProductOf(p)?.displayPrice ?? money(qt.regularMinor, qt.currency) : money(qt.todayMinor, qt.currency)}</T>
+                        <T v="caption" tone="muted">{storeMode ? `per ${per(qt.periodDays)}` : "today"}</T>
                       </View>
                     </View>
                     <T v="caption" tone="muted" style={{ marginLeft: 34 }}>
-                      {qt.introDays ? `${qt.introDays} days, then ` : qt.discountMinor ? `First ${per(qt.periodDays)}, then ` : "Then "}{money(qt.regularMinor, qt.currency)}/{per(qt.periodDays)} · renews automatically · cancel any time
+                      {storeMode ? `Billed by ${storeName} · renews every ${per(qt.periodDays)} · cancel any time in your ${storeName} subscriptions` : <>{qt.introDays ? `${qt.introDays} days, then ` : qt.discountMinor ? `First ${per(qt.periodDays)}, then ` : "Then "}{money(qt.regularMinor, qt.currency)}/{per(qt.periodDays)} · renews automatically · cancel any time</>}
                     </T>
                     {opts.length > 1 && (
                       <View accessibilityRole="radiogroup" accessibilityLabel={`${p.name} billing period`} style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 6, marginLeft: 34 }}>
@@ -178,7 +218,7 @@ export default function Premium() {
                               onPress={() => { haptic.tick(); setChoice(p.code); setCoupon(null); setCodeErr(""); setPeriod({ ...period, [p.code]: o.durationDays }); }}
                               style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, borderWidth: 1.5, borderColor: picked ? c.brand : c.line, backgroundColor: picked ? c.brandWash : c.raised, minWidth: 84 }}>
                               <T v="caption" strong>{o.label}</T>
-                              <T v="callout" strong>{money(o.quote.regularMinor, o.quote.currency)}</T>
+                              <T v="callout" strong>{(storeMode && products[idOf(o) ?? ""]?.displayPrice) || money(o.quote.regularMinor, o.quote.currency)}</T>
                               {o.durationDays > 31 && <T v="caption" tone="muted">{money(o.perMonthMinor, o.quote.currency)}/month</T>}
                               {save > 0 && <T v="caption" tone="brand" style={{ fontFamily: "Figtree_700Bold" }}>Save {save}%</T>}
                             </Pressable>
@@ -190,8 +230,8 @@ export default function Premium() {
                 );
               })}
 
-              {(q.data?.passes.length ?? 0) > 0 && <T v="headline" style={{ marginTop: 6 }}>Or just a few days</T>}
-              {q.data?.passes.map((p) => {
+              {!storeMode && (q.data?.passes.length ?? 0) > 0 && <T v="headline" style={{ marginTop: 6 }}>Or just a few days</T>}
+              {!storeMode && q.data?.passes.map((p) => {
                 const key = `pass:${p.offer?.id}`;
                 const on = choice === key;
                 return (
@@ -204,7 +244,7 @@ export default function Premium() {
                 );
               })}
 
-              {choice && !choice.startsWith("pass:") && (
+              {!storeMode && choice && !choice.startsWith("pass:") && (
                 showCode ? (
                   <View style={{ gap: 8 }}>
                     <View style={{ flexDirection: "row", gap: 8 }}>
@@ -237,7 +277,18 @@ export default function Premium() {
 
       {!subscribed && (
         <View style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 12, paddingBottom: Math.max(insets.bottom, 16), backgroundColor: c.bg, gap: 6, borderTopWidth: 1, borderTopColor: c.line }}>
-          {iosBlocked ? (
+          {storeMsg && <Banner tone={storeMsg.tone}>{storeMsg.text}</Banner>}
+          {storeMode && selected ? (
+            <>
+              <Button title={buying ? "Waiting for the store…" : `Continue — ${plans.find((x) => x.code === choice) && storeProductOf(plans.find((x) => x.code === choice)!)?.displayPrice || money(selected.regularMinor, selected.currency)}`} size="lg" full loading={buying} onPress={buyInStore} />
+              <T v="caption" tone="muted" center>Renews every {per(selected.periodDays)} until you cancel in your {storeName} subscriptions, at least 24 hours before renewal.</T>
+              <View style={{ flexDirection: "row", justifyContent: "center", gap: 16 }}>
+                <Pressable accessibilityRole="button" onPress={restore} disabled={buying}><T v="caption" tone="brand" strong>Restore purchases</T></Pressable>
+                <Pressable accessibilityRole="link" onPress={() => Linking.openURL(`${API_URL}/legal/terms`)}><T v="caption" tone="brand">Terms</T></Pressable>
+                <Pressable accessibilityRole="link" onPress={() => Linking.openURL(`${API_URL}/legal/privacy`)}><T v="caption" tone="brand">Privacy</T></Pressable>
+              </View>
+            </>
+          ) : iosBlocked ? (
             <Banner tone="info">Subscribing on iPhone isn't available yet. You can keep using everything that's free.</Banner>
           ) : selected ? (
             <>

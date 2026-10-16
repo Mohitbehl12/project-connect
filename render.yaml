@@ -54,3 +54,18 @@ services:
         sync: false
       - key: EMAIL_FROM
         sync: false
+      # In-app purchases (App Store / Google Play). Off until the store accounts and products exist.
+      - key: STORE_BILLING_ENABLED
+        value: "false"
+      - key: APPLE_BUNDLE_ID
+        sync: false
+      - key: APPLE_APP_ID
+        sync: false
+      - key: APPLE_ROOT_CERTS_B64
+        sync: false
+      - key: GOOGLE_PACKAGE_NAME
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON_B64
+        sync: false
+      - key: GOOGLE_RTDN_TOKEN
+        generateValue: true

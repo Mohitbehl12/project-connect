@@ -9,6 +9,7 @@ import * as SystemUI from "expo-system-ui";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { StoreBridge } from "@/components/StoreBridge";
 import { AuthProvider } from "@/lib/auth";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
 
@@ -56,6 +57,7 @@ export default function RootLayout() {
           <ThemeProvider>
             <AuthProvider>
               <Shell />
+              <StoreBridge />
             </AuthProvider>
           </ThemeProvider>
         </QueryClientProvider>

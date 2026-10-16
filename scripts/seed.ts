@@ -3,6 +3,7 @@
 // fictional sample people only if SEED_SAMPLE_USERS=true (private tests). Remove them before a public launch:
 // npm run db:remove-samples
 // All seeded people are fictional test data. Safe to re-run on an empty database.
+import { storeProductId } from "../src/lib/storeProducts";
 import "./env";
 import bcrypt from "bcryptjs";
 import { createClient } from "@libsql/client";
@@ -66,7 +67,10 @@ async function main() {
   for (const p of planDefs) {
     const [plan] = await db.insert(s.plans).values({ ...p, features: JSON.stringify(p.features) }).returning();
     for (const [country, currency, amountMinor, segment, durationDays] of priceTable[p.code] ?? [])
-      await db.insert(s.planPrices).values({ planId: plan.id, country, currency, amountMinor, durationDays: durationDays ?? 30, segment: segment ?? "*" });
+    {
+      const product = storeProductId(p.code, segment ?? "*", durationDays ?? 30);
+      await db.insert(s.planPrices).values({ planId: plan.id, country, currency, amountMinor, durationDays: durationDays ?? 30, segment: segment ?? "*", appleProductId: product, googleProductId: product });
+    }
   }
 
   console.log("Seeding offers and coupons…");

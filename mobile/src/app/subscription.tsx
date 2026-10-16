@@ -14,6 +14,7 @@ import { useAuth } from "@/lib/auth";
 import { money, niceDate, per } from "@/lib/format";
 import { haptic } from "@/lib/haptics";
 import type { Catalogue, PaymentRow, SubSummary } from "@/lib/types";
+import { openStoreSubscriptions } from "@/lib/store";
 import { useTheme } from "@/theme/ThemeProvider";
 
 const STATUS: Record<string, [string, "trust" | "warn" | "alert" | "info"]> = {
@@ -46,6 +47,7 @@ export default function Subscription() {
   }
 
   const st = s ? STATUS[s.status] : null;
+  const store = s?.provider === "APPLE" ? "the App Store" : s?.provider === "GOOGLE" ? "Google Play" : null;
   return (
     <Screen>
       <ScrollView contentContainerStyle={{ paddingBottom: 40, gap: 16 }}>
@@ -71,9 +73,14 @@ export default function Subscription() {
             ) : (
               <T tone="muted">{s.status === "REWARD" ? "Free reward days — nothing renews." : `Premium stays on until ${niceDate(s.endsAt)}. You won't be charged again.`}</T>
             )}
-            {s.status === "PAST_DUE" && <Banner tone="alert">We couldn't take your last payment. Premium stays on for a few days while we retry — check your UPI Autopay or card.</Banner>}
+            {s.status === "PAST_DUE" && <Banner tone="alert">{store ? `${store} couldn't take your last payment. Premium stays on for a few days — check the payment method in your ${store} account.` : "We couldn't take your last payment. Premium stays on for a few days while we retry — check your UPI Autopay or card."}</Banner>}
             {s.bankedDays > 0 && <T v="caption" tone="muted">🎁 {s.bankedDays} reward days saved — they start when this plan ends.</T>}
-            {s.renews && (
+            {store ? (
+              <View style={{ gap: 8 }}>
+                <T v="caption" tone="muted">Billed by {store}. Change or cancel it in your {store} subscriptions.</T>
+                <Button title={`Manage in ${store}`} v="outline" icon="card" full onPress={() => openStoreSubscriptions().catch((e) => setMsg({ tone: "alert", text: e.message }))} />
+              </View>
+            ) : s.renews && (
               <View style={{ gap: 8 }}>
                 <Button title="Change plan" v="outline" icon="sliders" full onPress={() => setSheet("change")} />
                 <Button title="Cancel subscription" v="ghost" full onPress={() => setSheet("cancel")} />
@@ -91,7 +98,7 @@ export default function Subscription() {
                 <Icon name="receipt" color={p.status === "FAILED" ? c.alert : c.brand} />
                 <View style={{ flex: 1 }}>
                   <T v="callout" strong>{money(p.amountMinor, p.currency)} · {p.planName}</T>
-                  <T v="caption" tone="muted">{niceDate(p.paidAt ?? p.createdAt)} · {p.status === "CAPTURED" ? (p.method ? p.method.toUpperCase() : "Paid") : p.status === "FAILED" ? "Failed" : p.status === "REFUNDED" ? "Refunded" : p.status === "PARTIALLY_REFUNDED" ? `${money(p.refundedMinor, p.currency)} refunded` : p.status.toLowerCase()}</T>
+                  <T v="caption" tone="muted">{niceDate(p.paidAt ?? p.createdAt)} · {p.status === "CAPTURED" ? (p.method === "app_store" ? "App Store" : p.method === "google_play" ? "Google Play" : p.method ? p.method.toUpperCase() : "Paid") : p.status === "FAILED" ? "Failed" : p.status === "REFUNDED" ? "Refunded" : p.status === "PARTIALLY_REFUNDED" ? `${money(p.refundedMinor, p.currency)} refunded` : p.status.toLowerCase()}</T>
                   {p.failureReason && <T v="caption" tone="muted">{p.failureReason}</T>}
                 </View>
                 {p.invoiceNo && <Pressable accessibilityRole="button" accessibilityLabel={`Download invoice ${p.invoiceNo}`} onPress={() => invoice(p.id)} hitSlop={8}><Icon name="download" color={c.brand} /></Pressable>}

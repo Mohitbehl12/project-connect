@@ -229,6 +229,10 @@ export const planPrices = sqliteTable("plan_prices", {
   // config billing.genderPricingCountries (they're unlawful in some places, e.g. the EU).
   segment: text("segment").notNull().default("*"),
   providerPlanId: text("provider_plan_id"), // Razorpay plan id, created on first checkout
+  // In-app purchase product ids (App Store Connect / Play Console). Same id in every country: the store
+  // sets the local price. Men's prices in India are separate products (e.g. premium_men_1m).
+  appleProductId: text("apple_product_id"),
+  googleProductId: text("google_product_id"),
   active: bool("active").notNull().default(true),
 }, (t) => [index("price_plan_country").on(t.planId, t.country)]);
 

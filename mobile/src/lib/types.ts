@@ -85,12 +85,14 @@ export type Catalogue = {
   plans: {
     code: string; name: string; features: Me["features"]; quote: Quote;
     /** Billing periods on offer (monthly, 3, 6, 12 months…), each with its own quote. */
-    options?: { durationDays: number; label: string; perMonthMinor: number; quote: Quote }[];
+    options?: { durationDays: number; label: string; perMonthMinor: number; quote: Quote; store?: { apple: string | null; google: string | null } | null }[];
   }[];
   passes: Quote[];
   subscription: SubSummary;
   provider: "MOCK" | "RAZORPAY" | "NONE";
   appleIap: { enabled: boolean };
+  /** In-app purchase through the App Store / Google Play, and the ids that tie a purchase to this account. */
+  store?: { enabled: boolean; appleAccountToken?: string; googleAccountId?: string };
 };
 export type PaymentRow = {
   id: string; status: string; purpose: string; planName: string; amountMinor: number; currency: string; discountMinor: number; couponCode: string | null;

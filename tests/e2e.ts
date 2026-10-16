@@ -580,6 +580,41 @@ async function main() {
   await fpAnon.post("/api/auth/forgot", { email: fpEmail });
   check("asking again cancels the older link", (await fpAnon.get(`/api/auth/reset?token=${tok2}`)).data?.valid === false);
 
+  section("In-app purchases (App Store / Google Play, test mode)");
+  const mockTok = (o: object) => "mock:" + Buffer.from(JSON.stringify(o)).toString("base64url");
+  const IAP = new Client("Iap-Buyer01");
+  await onboard(IAP, `iapman-${run}@test.local`, "MAN", "WOMAN", "Dev", answersB);
+  const catI = (await IAP.get("/api/billing/catalogue")).data;
+  const yearOpt = catI?.plans?.find((p: any) => p.code === "PREMIUM")?.options?.find((o: any) => o.durationDays === 365);
+  check("catalogue offers store products per billing period", catI?.store?.enabled === true && yearOpt?.store?.apple === "premium_men_12m" && yearOpt?.store?.google === "premium_men_12m", { store: catI?.store, yearOpt: yearOpt?.store });
+  const appleTok = catI?.store?.appleAccountToken;
+  const yearAhead = Date.now() + 365 * 86_400_000;
+  const buy = await IAP.post("/api/billing/store/verify", { platform: "ios", productId: "premium_men_12m", token: mockTok({ ref: `orig-${run}`, productId: "premium_men_12m", accountToken: appleTok, transactionId: `t1-${run}`, expiresAt: yearAhead, amountMinor: 100000, currency: "INR" }) });
+  check("iPhone purchase verified: Premium on for a year", buy.status === 200 && buy.data.subscription?.provider === "APPLE" && buy.data.subscription?.periodDays === 365 && buy.data.subscription?.renews === true, buy.data);
+  check("Premium features unlock after the store purchase", (await IAP.get("/api/me")).data?.features?.seeWhoLiked === true);
+  await IAP.post("/api/billing/store/verify", { platform: "ios", token: mockTok({ ref: `orig-${run}`, productId: "premium_men_12m", accountToken: appleTok, transactionId: `t1-${run}`, expiresAt: yearAhead }) });
+  const payI = (await IAP.get("/api/billing/subscription")).data?.payments ?? [];
+  check("sending the same purchase twice records one payment, with no invoice of ours", payI.length === 1 && payI[0].amountMinor === 100000 && !payI[0].invoiceNo, payI);
+  check("store plans can't be cancelled from our side", (await IAP.post("/api/billing/subscription", { action: "cancel" })).data?.code === "store_managed");
+  const thief = new Client("Iap-Other02");
+  await onboard(thief, `zoya-${run}@test.local`, "WOMAN", "MAN", "Zoya", answersA);
+  check("another account can't claim someone else's purchase", (await thief.post("/api/billing/store/verify", { platform: "ios", token: mockTok({ ref: `orig-${run}`, productId: "premium_men_12m", accountToken: appleTok, transactionId: `t1-${run}`, expiresAt: yearAhead }) })).data?.code === "store_other_account");
+  check("a purchase made for a different account is refused", (await thief.post("/api/billing/store/verify", { platform: "ios", token: mockTok({ ref: `orig2-${run}`, productId: "premium_1m", accountToken: appleTok, transactionId: `t9-${run}`, expiresAt: yearAhead }) })).data?.code === "store_other_account");
+  check("an unknown product is refused", (await thief.post("/api/billing/store/verify", { platform: "ios", token: mockTok({ ref: `orig3-${run}`, productId: "free_forever", transactionId: `t8-${run}`, expiresAt: yearAhead }) })).data?.code === "store_unknown_product");
+  check("a product that doesn't match the plan picked is refused", (await IAP.post("/api/billing/store/verify", { platform: "ios", productId: "premium_men_1m", token: mockTok({ ref: `orig-${run}`, productId: "premium_men_12m", accountToken: appleTok, transactionId: `t1-${run}`, expiresAt: yearAhead }) })).data?.code === "store_mismatch");
+  await IAP.post("/api/billing/store/verify", { platform: "ios", token: mockTok({ ref: `orig-${run}`, productId: "premium_men_12m", accountToken: appleTok, transactionId: `t2-${run}`, expiresAt: yearAhead * 1 + 365 * 86_400_000 }) });
+  check("a renewal adds a second payment", ((await IAP.get("/api/billing/subscription")).data?.payments ?? []).length === 2);
+  await IAP.post("/api/billing/store/verify", { platform: "ios", token: mockTok({ ref: `orig-${run}`, productId: "premium_men_12m", accountToken: appleTok, transactionId: `t2-${run}`, expiresAt: yearAhead, autoRenew: false }) });
+  check("turning off auto-renew in the store keeps Premium until the end", (await IAP.get("/api/billing/subscription")).data?.subscription?.renews === false && (await IAP.get("/api/me")).data?.features?.seeWhoLiked === true);
+  await IAP.post("/api/billing/store/restore", { platform: "ios", tokens: [mockTok({ ref: `orig-${run}`, productId: "premium_men_12m", accountToken: appleTok, transactionId: `t2-${run}`, expiresAt: yearAhead, status: "REVOKED" })] });
+  const afterRefund = (await IAP.get("/api/billing/subscription")).data;
+  check("a store refund ends Premium and marks the payment refunded", afterRefund?.subscription?.status !== "ACTIVE" && afterRefund?.payments?.some((p: any) => p.status === "REFUNDED") && (await IAP.get("/api/me")).data?.features?.seeWhoLiked === false, afterRefund);
+  const gTok = (await thief.get("/api/billing/catalogue")).data?.store?.googleAccountId;
+  const gBuy = await thief.post("/api/billing/store/verify", { platform: "android", token: mockTok({ ref: `gtok-${run}`, productId: "premium_12m", accountToken: gTok, transactionId: `GPA.${run}-0`, expiresAt: yearAhead }) });
+  check("Android purchase verified (women's yearly plan)", gBuy.status === 200 && gBuy.data.subscription?.provider === "GOOGLE" && gBuy.data.subscription?.regularMinor === 50000, gBuy.data);
+  check("Play notifications without the secret are refused", (await anon.post("/api/billing/google/notifications", { message: { data: "e30=" } })).status === 403);
+  check("unsigned App Store notifications are refused", (await anon.post("/api/billing/apple/notifications", { signedPayload: "not.a.jws" })).status === 400);
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) {
     console.log("Failed:\n - " + failures.join("\n - "));

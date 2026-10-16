@@ -75,7 +75,11 @@ export async function deleteMyMessages(user: User, matchId?: string) {
  */
 export async function deleteAccount(user: User) {
   const live = await liveSubscription(user.id);
-  if (live?.providerRef && live.kind === "RECURRING" && !live.cancelAtPeriodEnd) {
+  // App Store / Google Play subscriptions can only be cancelled by the member in the store.
+  const storeNote = live && (live.provider === "APPLE" || live.provider === "GOOGLE") && !live.cancelAtPeriodEnd
+    ? `Your ${live.provider === "APPLE" ? "App Store" : "Google Play"} subscription is not cancelled by deleting your account. Turn off auto-renew in your phone's subscription settings to stop being charged.`
+    : null;
+  if (live?.providerRef && live.kind === "RECURRING" && !live.cancelAtPeriodEnd && !storeNote) {
     // Never delete while a mandate might keep charging: stop it with the gateway first.
     try { await providerByName(live.provider)?.cancelAtCycleEnd(live.providerRef); }
     catch { throw new ApiError(503, "We couldn't stop your subscription with the bank just now, so we haven't deleted anything. Please try again in a few minutes.", "gateway_error"); }
@@ -88,7 +92,7 @@ export async function deleteAccount(user: User) {
   const hasPayments = (await db.select({ id: schema.payments.id }).from(schema.payments).where(eq(schema.payments.userId, user.id)).limit(1)).length > 0;
   if (!hasPayments) {
     await db.delete(schema.users).where(eq(schema.users.id, user.id)); // cascades everything
-    return { deleted: true, kept: [] as string[] };
+    return { deleted: true, kept: [] as string[], storeNote };
   }
 
   await deleteMyMessages(user);
@@ -112,7 +116,7 @@ export async function deleteAccount(user: User) {
     signupIp: null, signupInstallId: null, planCode: "FREE", planEndsAt: null,
   }).where(eq(schema.users.id, uid));
   await syncUserPlan(uid);
-  return { deleted: true, kept: ["Payment records and invoices (required for tax)", "Deleted messages for a limited safety-review period"] };
+  return { deleted: true, kept: ["Payment records and invoices (required for tax)", "Deleted messages for a limited safety-review period"], storeNote };
 }
 
 /** Scheduled clean-up of data we no longer have a reason to keep. */

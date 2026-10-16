@@ -3,7 +3,7 @@ import { File, Paths } from "expo-file-system";
 import { router } from "expo-router";
 import * as Sharing from "expo-sharing";
 import { useState } from "react";
-import { Platform, ScrollView, View } from "react-native";
+import { Alert, Platform, ScrollView, View } from "react-native";
 import { BottomSheet } from "@/components/BottomSheet";
 import { Button } from "@/components/Button";
 import { Header } from "@/components/Header";
@@ -69,8 +69,10 @@ export default function PrivacyCenter() {
   async function deleteAccount() {
     setBusy(true);
     try {
-      await api("/api/me", { method: "DELETE", body: { password: pw } });
+      const r = await api<{ storeNote?: string | null }>("/api/me", { method: "DELETE", body: { password: pw } });
       setSheet(null); await signOut(); router.replace("/welcome");
+      // A store subscription isn't stopped by deleting the account; tell the person how to stop it.
+      if (r?.storeNote) Alert.alert("One more step", r.storeNote);
     } catch (e: any) { setMsg({ tone: "alert", text: e.message }); setSheet(null); } finally { setBusy(false); }
   }
 
@@ -135,7 +137,7 @@ export default function PrivacyCenter() {
         <Button title="Delete my messages" v="danger" full loading={busy} onPress={deleteMessages} />
       </BottomSheet>
       <BottomSheet open={sheet === "delete"} onClose={() => setSheet(null)} title="Delete your account?">
-        <T tone="muted">Your profile, photos, likes and matches are deleted now and you'll be signed out everywhere. Any subscription stops renewing. We keep payment records because tax law requires it, and deleted messages briefly for safety reviews.</T>
+        <T tone="muted">Your profile, photos, likes and matches are deleted now and you'll be signed out everywhere. A subscription paid on our website stops renewing; one paid through the App Store or Google Play must be cancelled in your phone's subscription settings. We keep payment records because tax law requires it, and deleted messages briefly for safety reviews.</T>
         <Field label="Your password" value={pw} onChangeText={setPw} secureTextEntry />
         <Button title="Delete permanently" v="danger" size="lg" full disabled={!pw} loading={busy} onPress={deleteAccount} />
       </BottomSheet>

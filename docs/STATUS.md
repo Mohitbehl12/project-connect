@@ -155,3 +155,8 @@ Voice/video calls, voice messages, image and GIF sharing in chat, typing indicat
 ## Pricing v2 (India) and colour themes
 - Done and tested: billing periods per plan. Men pay ₹100/month, ₹250/3 months, ₹500/6 months or ₹1,000/year. Women and everyone else get 90 free days on finishing sign-up, then pay ₹50/month or ₹500/year. All of this is editable in Admin.
 - Done: 10 colour themes the member picks in Settings › Colour theme. The choice is saved on the phone. Every theme passes the AA contrast check (`npm --prefix mobile run check:themes`). The website uses Lilac + mint.
+
+## iPhone and Android apps (store-ready code)
+- Done and tested: App Store and Google Play subscriptions. The app buys through the store, the server verifies every purchase (Apple's signed transactions, Google's Play Developer API), and store notifications cover renewals, cancellations, grace periods and refunds. There is also Restore purchases, a "Manage in App Store / Google Play" link, and a store notice shown when an account is deleted. 8 unit checks cover Apple signature verification; 25 end-to-end checks run the whole flow using clearly labelled test tokens.
+- Done: native settings (no microphone or unused storage permissions, iOS privacy manifest, export-encryption flag), development/preview/production build profiles, and a development client for testing purchases. The native projects generate cleanly and the iOS and Android code compiles.
+- Not yet run against the real stores or built into installable apps: that needs the Expo, Apple and Google accounts. See docs/STORES.md for products, settings and notification URLs.
