@@ -13,9 +13,9 @@ import { Aurora } from "@/components/Ambient";
 
 /** Three tilted sample cards (illustrations, not real people) fanned around the brand arc. */
 const SAMPLES = [
-  { name: "Meera", age: 29, score: 87, g: ["#8F88F0", "#E2557A", "#F7B54C"], tag: "Trekking", rot: -9, x: -0.3, y: 0.06 },
-  { name: "Arjun", age: 31, score: 82, g: ["#3F7563", "#7FD1B0", "#F2E6C9"], tag: "Cooking", rot: 8, x: 0.3, y: 0.08 },
-  { name: "Sara", age: 27, score: 91, g: ["#F0864A", "#F7B54C", "#FDE7C4"], tag: "Live music", rot: 0, x: 0, y: 0 },
+  { name: "Meera", age: 29, score: 87, g: ["#C3A6FF", "#8E5BD8", "#7FD8BE"], tag: "Trekking", rot: -9, x: -0.3, y: 0.06 },
+  { name: "Arjun", age: 31, score: 82, g: ["#1F7A6B", "#7FD1B0", "#EEE8FF"], tag: "Cooking", rot: 8, x: 0.3, y: 0.08 },
+  { name: "Sara", age: 27, score: 91, g: ["#A98BEA", "#7FD8BE", "#DDF5EC"], tag: "Live music", rot: 0, x: 0, y: 0 },
 ] as const;
 
 function Collage({ size }: { size: number }) {
@@ -63,7 +63,7 @@ function MiniCard() {
         <CompatArc score={87} size={64} onDark />
         <View style={{ flex: 1 }}>
           <T v="headline" tone="white">Meera, 29</T>
-          <T v="caption" style={{ color: "#C9C4FF" }}>Bengaluru · About 5 km away</T>
+          <T v="caption" style={{ color: "#E3D6FF" }}>Bengaluru · About 5 km away</T>
         </View>
       </View>
       {["Looking for the same kind of relationship", "You both love trekking and coffee", "You both like to take things slow"].map((r) => (
@@ -84,10 +84,10 @@ function SafetyArt() {
         ["Your details stay yours", "No one sees your number, email or exact location."],
       ].map(([t, b], i) => (
         <View key={t} style={{ flexDirection: "row", gap: 12, alignItems: "center", backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 18, padding: 14 }}>
-          {i === 0 ? <VerifiedBadge size={28} /> : <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: i === 1 ? "#F5B656" : "#8F88F0" }} />}
+          {i === 0 ? <VerifiedBadge size={28} /> : <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: i === 1 ? "#7FD8BE" : "#C3A6FF" }} />}
           <View style={{ flex: 1 }}>
             <T v="callout" tone="white">{t}</T>
-            <T v="caption" style={{ color: "#C9C4FF" }}>{b}</T>
+            <T v="caption" style={{ color: "#E3D6FF" }}>{b}</T>
           </View>
         </View>
       ))}
@@ -108,13 +108,13 @@ export default function Welcome() {
   const art = Math.min(width * 0.6, height * 0.3);
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#12112A" }}>
+    <View style={{ flex: 1, backgroundColor: "#16112A" }}>
       <StatusBar style="light" />
-      <LinearGradient colors={["#2E2A6E", "#12112A"]} start={{ x: 0.2, y: 0 }} end={{ x: 0.5, y: 0.75 }} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
+      <LinearGradient colors={["#7B48CC", "#16112A"]} start={{ x: 0.2, y: 0 }} end={{ x: 0.5, y: 0.75 }} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
       <Aurora variant="match" style={{ opacity: 0.55 }} />
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 24, paddingTop: 8 }}>
-          <ArcMark size={28} left="#C9C4FF" right="#F5B656" />
+          <ArcMark size={28} left="#E3D6FF" right="#7FD8BE" />
           <T v="headline" tone="white" style={{ fontFamily: "BricolageGrotesque_800ExtraBold" }}>Project Connect</T>
         </View>
         <FlatList
@@ -139,7 +139,7 @@ export default function Welcome() {
         />
         <View style={{ paddingHorizontal: 24, gap: 12, paddingBottom: 12 }}>
           <View style={{ flexDirection: "row", gap: 6, justifyContent: "center", marginBottom: 8 }} accessibilityLabel={`Page ${page + 1} of 3`}>
-            {SLIDES.map((s, i) => <View key={s.title} style={{ height: 6, width: i === page ? 22 : 6, borderRadius: 3, backgroundColor: i === page ? "#F5B656" : "rgba(255,255,255,0.3)" }} />)}
+            {SLIDES.map((s, i) => <View key={s.title} style={{ height: 6, width: i === page ? 22 : 6, borderRadius: 3, backgroundColor: i === page ? "#7FD8BE" : "rgba(255,255,255,0.3)" }} />)}
           </View>
           <Button title="Find my match" v="accent" size="lg" full onPress={() => router.push("/sign-up")} />
           <Button title="I already have an account" v="ghost" textColor="#FFFFFF" full onPress={() => router.push("/sign-in")} />

@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "backgroundColor": "#F7F6FB",
+    "backgroundColor": "#F7F4FF",
     "ios": {
       "bundleIdentifier": "com.projectconnect.app",
       "supportsTablet": false,
@@ -21,7 +21,7 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "monochromeImage": "./assets/adaptive-icon-mono.png",
-        "backgroundColor": "#2E2A6E"
+        "backgroundColor": "#7B48CC"
       },
       "predictiveBackGestureEnabled": true
     },
@@ -41,10 +41,10 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 160,
           "resizeMode": "contain",
-          "backgroundColor": "#F7F6FB",
+          "backgroundColor": "#F7F4FF",
           "dark": {
             "image": "./assets/splash-icon.png",
-            "backgroundColor": "#12112A"
+            "backgroundColor": "#16112A"
           }
         }
       ],
@@ -59,7 +59,7 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#2E2A6E"
+          "color": "#7B48CC"
         }
       ],
       "expo-web-browser",

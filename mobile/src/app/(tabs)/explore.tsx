@@ -12,11 +12,11 @@ import { useTheme } from "@/theme/ThemeProvider";
 
 // Ways to browse beyond the main deck. Each opens a filtered list from the same matching engine.
 const COLLECTIONS: { key: string; title: string; sub: string; icon: IconName; g: [string, string] }[] = [
-  { key: "verified", title: "Verified only", sub: "Selfie-checked people", icon: "shield", g: ["#3F7563", "#7FD1B0"] },
-  { key: "new", title: "New this week", sub: "Just joined", icon: "sparkle", g: ["#6C5CE7", "#8F88F0"] },
-  { key: "intent", title: "Same goals", sub: "Want what you want", icon: "matches", g: ["#E2557A", "#F0864A"] },
-  { key: "compatibility", title: "Personality match", sub: "Think like you", icon: "likes", g: ["#2E2A6E", "#6C5CE7"] },
-  { key: "nearby", title: "Close by", sub: "Shortest distance first", icon: "pin", g: ["#F0864A", "#F7B54C"] },
+  { key: "verified", title: "Verified only", sub: "Selfie-checked people", icon: "shield", g: ["#1F7A6B", "#7FD1B0"] },
+  { key: "new", title: "New this week", sub: "Just joined", icon: "sparkle", g: ["#8E5BD8", "#C3A6FF"] },
+  { key: "intent", title: "Same goals", sub: "Want what you want", icon: "matches", g: ["#8E5BD8", "#A98BEA"] },
+  { key: "compatibility", title: "Personality match", sub: "Think like you", icon: "likes", g: ["#7B48CC", "#8E5BD8"] },
+  { key: "nearby", title: "Close by", sub: "Shortest distance first", icon: "pin", g: ["#A98BEA", "#7FD8BE"] },
 ];
 
 const POPULAR = ["travel", "coffee", "music_live", "food_trails", "films", "gym", "reading", "trekking", "photography", "cooking", "yoga", "gaming", "art", "dogs", "startups", "spirituality", "standup", "cricket"];

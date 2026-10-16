@@ -1,61 +1,63 @@
-// Project Connect design tokens. One brand idea — the Arc — and a restrained palette:
-// indigo is the brand, marigold is an accent only, sage means trust, rose means alert.
+// Project Connect design tokens. Calm and fresh: lilac is the brand, mint is the accent,
+// a deeper teal means trust, and red is kept only for errors. Text pairs meet WCAG AA (4.5:1+).
 
 export const palettes = {
   light: {
-    bg: "#F7F6FB",
+    bg: "#F7F4FF",
     surface: "#FFFFFF",
-    raised: "#EEECF7",
-    line: "#E2DFF0",
-    text: "#1C1B3A",
-    muted: "#5D5B82",
-    faint: "#8C8AAE",
-    brand: "#2E2A6E",
+    raised: "#EEE8FF",
+    line: "#E2DAF5",
+    text: "#2B1F45",
+    muted: "#625680",
+    faint: "#8A80A6",
+    brand: "#7B48CC",
     brandText: "#FFFFFF",
-    accent: "#F2A93B",
-    accentText: "#1C1B3A",
-    accentWash: "#FDF0DA",
-    trust: "#3F7563",
-    trustWash: "#E1EEE8",
-    alert: "#C8406A",
-    alertWash: "#F8E3EA",
-    scrim: "rgba(18,17,42,0.88)",
-    overlay: "rgba(18,17,42,0.45)",
+    brandWash: "#EEE6FF",
+    accent: "#7FD8BE",
+    accentText: "#173B33",
+    accentWash: "#DDF5EC",
+    trust: "#1F7A6B",
+    trustWash: "#DCF0EA",
+    alert: "#B3261E",
+    alertWash: "#FCE4E2",
+    scrim: "rgba(22,17,42,0.88)",
+    overlay: "rgba(22,17,42,0.45)",
     tab: "rgba(255,255,255,0.94)",
   },
   dark: {
-    bg: "#12112A",
-    surface: "#1D1C3A",
-    raised: "#28274A",
-    line: "#33325A",
-    text: "#F2F0FA",
-    muted: "#A8A6C8",
-    faint: "#7C7AA0",
-    brand: "#8F88F0",
-    brandText: "#12112A",
-    accent: "#F5B656",
-    accentText: "#12112A",
-    accentWash: "#3A2F1E",
-    trust: "#6FAF97",
-    trustWash: "#1D3A31",
-    alert: "#E7698C",
-    alertWash: "#3D1C29",
-    scrim: "rgba(10,9,26,0.9)",
+    bg: "#16112A",
+    surface: "#211A3A",
+    raised: "#2D2450",
+    line: "#3A3060",
+    text: "#F3EFFF",
+    muted: "#B9AED6",
+    faint: "#8F84AE",
+    brand: "#C3A6FF",
+    brandText: "#16112A",
+    brandWash: "#33285A",
+    accent: "#8EE3C8",
+    accentText: "#16112A",
+    accentWash: "#18392F",
+    trust: "#73C2A8",
+    trustWash: "#163A30",
+    alert: "#FF7A7A",
+    alertWash: "#45191C",
+    scrim: "rgba(10,8,22,0.9)",
     overlay: "rgba(0,0,0,0.55)",
-    tab: "rgba(29,28,58,0.96)",
+    tab: "rgba(33,26,58,0.96)",
   },
 } as const;
 
 export type Palette = { [K in keyof (typeof palettes)["light"]]: string };
 
-/** Premium surfaces. */
-export const dusk = ["#2E2A6E", "#6C5CE7"] as const;
-/** Warm action gradient — the Like button and match celebration only. */
-export const sunset = ["#F7B54C", "#F0864A", "#E2557A"] as const;
+/** Premium surfaces: deep lilac into lilac. */
+export const dusk = ["#5E33A8", "#8E5BD8"] as const;
+/** Fresh action gradient — the Like button and match celebration only: mint into lilac. */
+export const sunset = ["#7FD8BE", "#A98BEA", "#8E5BD8"] as const;
 /** Ambient light behind screens: three soft colour fields per theme. */
 export const aurora = {
-  light: ["rgba(143,136,240,0.30)", "rgba(242,169,59,0.22)", "rgba(226,85,122,0.14)"],
-  dark: ["rgba(108,92,231,0.42)", "rgba(242,169,59,0.16)", "rgba(226,85,122,0.20)"],
+  light: ["rgba(142,91,216,0.24)", "rgba(127,216,190,0.26)", "rgba(195,166,255,0.22)"],
+  dark: ["rgba(142,91,216,0.38)", "rgba(127,216,190,0.18)", "rgba(195,166,255,0.20)"],
 } as const;
 
 export const fonts = {

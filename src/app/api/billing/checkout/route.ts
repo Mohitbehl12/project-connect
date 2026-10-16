@@ -8,6 +8,7 @@ const Body = z.object({
   planCode: z.string().min(1).max(30),
   offerId: z.string().max(60).optional().nullable(),
   coupon: z.string().max(40).optional().nullable(),
+  durationDays: z.number().int().min(1).max(366).optional().nullable(), // billing period picked (default monthly)
   acceptTerms: z.literal(true, { message: "Please confirm you understand the subscription terms." }),
   expectedTodayMinor: z.number().int().nonnegative(), // the amount the person saw; must still be right
   returnTo: z.enum(["app", "web"]).default("web"),

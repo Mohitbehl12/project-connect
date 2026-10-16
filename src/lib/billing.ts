@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray, isNotNull, lte, ne, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { User } from "@/db/schema";
 import { audit } from "./audit";
@@ -9,7 +9,7 @@ import { notify } from "./notify";
 import { mockProvider } from "./payments/mock";
 import { razorpayProvider } from "./payments/razorpay";
 import { friendlyFailure, type BillingEvent, type PaymentProvider } from "./payments/types";
-import { buildQuote, eligibleOffers, formatDate, formatMoney, pickPrice, planName, type Buyer, type OfferRow, type PriceRow, type Quote } from "./pricing";
+import { buildQuote, eligibleOffers, formatDate, formatMoney, offersApplyTo, periodWord, pickPrice, planName, priceOptions, type Buyer, type OfferRow, type PriceRow, type Quote } from "./pricing";
 import { addRiskSignal } from "./risk";
 
 const DAY = 86_400_000;
@@ -95,14 +95,16 @@ async function couponByCode(code: string) {
   return (await db.query.coupons.findFirst({ where: eq(schema.coupons.code, code.trim().toUpperCase()) })) ?? null;
 }
 
-export async function quoteFor(user: User, planCode: string, opts: { coupon?: string | null; offerId?: string | null } = {}): Promise<Quote> {
+export async function quoteFor(user: User, planCode: string, opts: { coupon?: string | null; offerId?: string | null; durationDays?: number | null } = {}): Promise<Quote> {
   const [buyer, prices, offers, genderCountries, reminderDays] = await Promise.all([
     loadBuyer(user), priceRows(), offerRows(), getConfig("billing.genderPricingCountries"), getConfig("billing.reminderDays"),
   ]);
-  const price = pickPrice(prices, planCode, buyer, genderCountries);
-  if (!price || planCode === "FREE") throw new ApiError(404, "That plan isn't available in your country.", "not_found");
+  const price = pickPrice(prices, planCode, buyer, genderCountries, opts.durationDays);
+  if (!price || planCode === "FREE")
+    throw new ApiError(404, opts.durationDays ? "That billing period isn't available for this plan." : "That plan isn't available in your country.", "not_found");
   const now = new Date();
-  const eligible = eligibleOffers(offers, planCode, buyer, now, genderCountries);
+  // Passes are standalone; intro/discount offers only apply to the monthly price.
+  const eligible = eligibleOffers(offers, planCode, buyer, now, genderCountries).filter((o) => o.kind === "PASS" || offersApplyTo(price.durationDays));
   let offer: OfferRow | null;
   if (opts.offerId) {
     offer = eligible.find((o) => o.id === opts.offerId) ?? null;
@@ -121,7 +123,13 @@ export async function catalogue(user: User) {
   for (const p of plans) {
     try {
       const quote = await quoteFor(user, p.code);
-      out.push({ code: p.code, name: p.name, features: JSON.parse(p.features) as PlanFeatures, quote });
+      // Every billing period on offer (e.g. monthly, 3, 6 and 12 months), each with its own quote.
+      const options = [];
+      for (const pr of priceOptions(await priceRows(), p.code, await loadBuyer(user), await getConfig("billing.genderPricingCountries"))) {
+        const q = pr.id === quote.priceId ? quote : await quoteFor(user, p.code, { durationDays: pr.durationDays });
+        options.push({ durationDays: pr.durationDays, label: periodLabel(pr.durationDays), perMonthMinor: Math.round((pr.amountMinor * 30) / pr.durationDays), quote: q });
+      }
+      out.push({ code: p.code, name: p.name, features: JSON.parse(p.features) as PlanFeatures, quote, options });
     } catch { /* plan not sold in this country */ }
   }
   const [buyer, offers, genderCountries, reminderDays, prices] = await Promise.all([loadBuyer(user), offerRows(), getConfig("billing.genderPricingCountries"), getConfig("billing.reminderDays"), priceRows()]);
@@ -135,6 +143,11 @@ export async function catalogue(user: User) {
   return { plans: out, passes, subscription: await subscriptionSummary(user.id), provider: checkoutProviderName(), appleIap: { enabled: false } };
 }
 
+function periodLabel(d: number) {
+  const w = periodWord(d);
+  return w === "month" ? "1 month" : w === "year" ? "12 months" : w;
+}
+
 function checkoutProviderName() {
   try { return checkoutProvider().name; } catch { return "NONE"; }
 }
@@ -143,11 +156,11 @@ function checkoutProviderName() {
 // Checkout
 // ---------------------------------------------------------------------------
 
-export async function startCheckout(user: User, input: { planCode: string; offerId?: string | null; coupon?: string | null; acceptTerms: boolean; expectedTodayMinor: number }) {
+export async function startCheckout(user: User, input: { planCode: string; offerId?: string | null; coupon?: string | null; durationDays?: number | null; acceptTerms: boolean; expectedTodayMinor: number }) {
   if (!input.acceptTerms) throw new ApiError(422, "Please confirm you understand the subscription terms.", "terms_required");
   if (user.riskLevel === "HIGH" && user.selfieStatus !== "VERIFIED")
     throw new ApiError(403, "For your security, please complete selfie verification before subscribing.", "verification_required");
-  const quote = await quoteFor(user, input.planCode, { coupon: input.coupon, offerId: input.offerId });
+  const quote = await quoteFor(user, input.planCode, { coupon: input.coupon, offerId: input.offerId, durationDays: input.durationDays });
   if (input.coupon && quote.couponError) throw new ApiError(422, quote.couponError, "coupon_invalid");
   if (quote.todayMinor !== input.expectedTodayMinor)
     throw new ApiError(409, "The price changed since you opened this screen. Please review it again.", "price_changed");
@@ -422,7 +435,7 @@ async function pendingPrice(sub: typeof schema.subscriptions.$inferSelect) {
   const user = await db.query.users.findFirst({ where: eq(schema.users.id, sub.userId) });
   if (!user || !sub.pendingPlanCode) return null;
   const [buyer, prices, gc] = await Promise.all([loadBuyer(user), priceRows(), getConfig("billing.genderPricingCountries")]);
-  return pickPrice(prices, sub.pendingPlanCode, buyer, gc);
+  return pickPrice(prices, sub.pendingPlanCode, buyer, gc, sub.periodDays);
 }
 
 // ---------------------------------------------------------------------------
@@ -481,8 +494,8 @@ export async function changePlan(user: User, planCode: string) {
     return subscriptionSummary(user.id);
   }
   const [buyer, prices, gc] = await Promise.all([loadBuyer(user), priceRows(), getConfig("billing.genderPricingCountries")]);
-  const price = pickPrice(prices, planCode, buyer, gc);
-  if (!price) throw new ApiError(404, "That plan isn't available.", "not_found");
+  const price = pickPrice(prices, planCode, buyer, gc, s.periodDays); // keep the person's billing period
+  if (!price) throw new ApiError(404, `That plan isn't available with your current billing period (every ${periodWord(s.periodDays)}).`, "not_found");
   if (s.providerRef && s.provider === "RAZORPAY") {
     if (!price.providerPlanId) throw new ApiError(409, "That plan can't be switched to yet. Please contact support.", "plan_not_synced");
     await razorpayProvider.changePlanAtCycleEnd(s.providerRef, price.providerPlanId);
@@ -581,6 +594,35 @@ export async function grantPremiumDays(userId: string, days: number, reason: str
   await syncUserPlan(userId);
   await notify(userId, "SUBSCRIPTION", `You earned ${days} Premium days 🎉`, `Enjoy Premium until ${formatDate(endsAt)}. No payment needed and nothing renews.`, "/subscription");
   return "granted";
+}
+
+/**
+ * Free Premium for women and everyone who isn't a man, in gender-pricing countries (India), given once
+ * per account when sign-up is finished. No payment details and nothing renews. Length is set in
+ * Admin → Settings (0 turns it off). One gift per device too, so new accounts on the same phone don't
+ * each get one.
+ */
+export async function grantWelcomeGift(userId: string) {
+  const days = await getConfig("rewards.womenFreeDays");
+  if (days <= 0) return null;
+  const user = await db.query.users.findFirst({ where: eq(schema.users.id, userId) });
+  if (!user || user.welcomeGiftAt || user.status !== "ACTIVE") return null;
+  const profile = await db.query.profiles.findFirst({ where: eq(schema.profiles.userId, userId) });
+  if (!profile?.gender || profile.gender === "MAN") return null;
+  if (!(await getConfig("billing.genderPricingCountries")).includes(profile.country ?? "IN")) return null;
+  if (user.signupInstallId) {
+    const twin = await db.query.users.findFirst({ where: and(eq(schema.users.signupInstallId, user.signupInstallId), ne(schema.users.id, userId), isNotNull(schema.users.welcomeGiftAt)) });
+    if (twin) return null;
+  }
+  // Claim first so two requests can't both grant it.
+  const claimed = await db.update(schema.users).set({ welcomeGiftAt: new Date() }).where(and(eq(schema.users.id, userId), isNull(schema.users.welcomeGiftAt))).returning({ id: schema.users.id });
+  if (!claimed.length) return null;
+  const endsAt = new Date(Date.now() + days * DAY);
+  await db.insert(schema.subscriptions).values({ userId, planCode: "PREMIUM", provider: "REWARD", status: "ACTIVE", kind: "PASS", periodDays: days, cancelAtPeriodEnd: true, endsAt, couponCode: "WELCOME_FREE" });
+  await syncUserPlan(userId);
+  await notify(userId, "SUBSCRIPTION", `Premium is free for your first ${Math.round(days / 30)} months 🎁`, `Enjoy Premium until ${formatDate(endsAt)}. No payment details needed and nothing renews automatically.`, "/subscription");
+  await audit(null, "billing.welcome_gift", "user", userId, { days });
+  return endsAt;
 }
 
 async function currentRewardEnd(userId: string) {

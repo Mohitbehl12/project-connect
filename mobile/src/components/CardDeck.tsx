@@ -99,7 +99,7 @@ export const CardDeck = forwardRef<DeckHandle, Props>(function CardDeck({ top, n
       )}
       {top && (
         <GestureDetector gesture={gesture}>
-          <Animated.View key={`top-${top.id}`} style={[{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, borderRadius: 32, shadowColor: "#12112A", shadowOpacity: 0.28, shadowRadius: 24, shadowOffset: { width: 0, height: 10 }, elevation: 6 }, topStyle]}
+          <Animated.View key={`top-${top.id}`} style={[{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, borderRadius: 32, shadowColor: "#16112A", shadowOpacity: 0.28, shadowRadius: 24, shadowOffset: { width: 0, height: 10 }, elevation: 6 }, topStyle]}
             accessibilityActions={[{ name: "activate", label: "Open profile" }, { name: "magicTap", label: "Like" }, { name: "like", label: "Like" }, { name: "pass", label: "Pass" }]}
             onAccessibilityAction={(e) => {
               const n = e.nativeEvent.actionName;
@@ -118,7 +118,7 @@ export const CardDeck = forwardRef<DeckHandle, Props>(function CardDeck({ top, n
 
 const BURST = Array.from({ length: 12 }, (_, i) => {
   const a = (i / 12) * Math.PI * 2 + (i % 2 ? 0.2 : -0.1);
-  return { a, d: 110 + (i % 3) * 38, s: 14 + (i % 4) * 5, c: ["#F7B54C", "#F0864A", "#E2557A", "#8F88F0"][i % 4], heart: i % 3 === 0 };
+  return { a, d: 110 + (i % 3) * 38, s: 14 + (i % 4) * 5, c: ["#7FD8BE", "#A98BEA", "#8E5BD8", "#C3A6FF"][i % 4], heart: i % 3 === 0 };
 });
 
 /** A short, one-shot bloom of warm particles when you like someone. Off under Reduce Motion. */

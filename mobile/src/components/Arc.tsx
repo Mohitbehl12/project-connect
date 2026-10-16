@@ -57,7 +57,7 @@ export function CompatArc({ score, size = 56, live, onDark, label = true }: { sc
     const extra = live ? Math.max(0, live.value) * (1 - drawn.value) : 0; // a right swipe "closes" the ring
     return { strokeDashoffset: circ * (1 - Math.min(1, drawn.value + extra)) };
   });
-  const tone = score >= 80 ? (onDark ? "#7FD1B0" : c.trust) : score >= 65 ? c.accent : onDark ? "#C9C4FF" : c.faint;
+  const tone = score >= 80 ? (onDark ? "#7FD1B0" : c.trust) : score >= 65 ? c.accent : onDark ? "#E3D6FF" : c.faint;
   return (
     <View style={{ width: size, height: size }} accessible accessibilityLabel={`${score} percent compatible`}>
       <Svg width={size} height={size} style={{ transform: [{ rotate: "-90deg" }] }}>

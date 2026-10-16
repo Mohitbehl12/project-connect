@@ -45,26 +45,31 @@ export default function Premium() {
   const [coupon, setCoupon] = useState<{ plan: string; quote: Quote } | null>(null);
   const [codeErr, setCodeErr] = useState("");
   const [checking, setChecking] = useState(false);
+  const [period, setPeriod] = useState<Record<string, number>>({}); // billing period picked per plan
 
   const plans = q.data?.plans ?? [];
   const featured = plans.find((p) => p.quote.offer) ?? plans[0];
   useEffect(() => { if (featured && !choice) setChoice(featured.code); }, [featured?.code]);
   const sub = q.data?.subscription;
   const subscribed = !!sub && !["NONE", "REWARD", "EXPIRED"].includes(sub.status);
+  const freeUntil = sub?.status === "REWARD" ? sub.endsAt : null;
+  /** The quote for a plan at the billing period the person picked (monthly by default). */
+  const quoteOf = (p: (typeof plans)[number]) => p.options?.find((o) => o.durationDays === period[p.code])?.quote ?? p.quote;
   const iosBlocked = Platform.OS === "ios" && q.data?.provider === "RAZORPAY" && !q.data.appleIap.enabled;
 
   const selected: Quote | null = useMemo(() => {
     if (!choice) return null;
     if (choice.startsWith("pass:")) return q.data?.passes.find((p) => p.offer?.id === choice.slice(5)) ?? null;
     if (coupon && coupon.plan === choice) return coupon.quote;
-    return plans.find((p) => p.code === choice)?.quote ?? null;
-  }, [choice, coupon, q.data]);
+    const p = plans.find((x) => x.code === choice);
+    return p ? quoteOf(p) : null;
+  }, [choice, coupon, q.data, period]);
 
   async function applyCode() {
     if (!choice || choice.startsWith("pass:") || !code.trim()) return;
     setChecking(true); setCodeErr("");
     try {
-      const r = await api<{ quote: Quote }>("/api/billing/quote", { body: { planCode: choice, coupon: code.trim() } });
+      const r = await api<{ quote: Quote }>("/api/billing/quote", { body: { planCode: choice, coupon: code.trim(), durationDays: period[choice] ?? undefined } });
       if (r.quote.couponError) { setCodeErr(r.quote.couponError); setCoupon(null); haptic.warning(); }
       else { setCoupon({ plan: choice, quote: r.quote }); haptic.success(); }
     } catch (e: any) { setCodeErr(e.message); } finally { setChecking(false); }
@@ -73,7 +78,7 @@ export default function Premium() {
   function next() {
     if (!selected || !choice) return;
     haptic.light();
-    router.push({ pathname: "/checkout", params: { plan: selected.planCode, offerId: choice.startsWith("pass:") ? choice.slice(5) : "", coupon: coupon?.plan === choice ? coupon.quote.coupon?.code ?? "" : "" } });
+    router.push({ pathname: "/checkout", params: { plan: selected.planCode, offerId: choice.startsWith("pass:") ? choice.slice(5) : "", coupon: coupon?.plan === choice ? coupon.quote.coupon?.code ?? "" : "", duration: choice.startsWith("pass:") ? "" : String(selected.periodDays) } });
   }
 
   return (
@@ -99,8 +104,16 @@ export default function Premium() {
             </Animated.View>
           )}
 
-          {!subscribed && featured?.quote.offer && featured.quote.offer.kind === "INTRO" && (
-            <Animated.View entering={FadeInDown.duration(380)} style={{ borderRadius: 28, overflow: "hidden", shadowColor: "#F0864A", shadowOpacity: 0.35, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 8 }}>
+          {freeUntil && (
+            <Animated.View entering={FadeInDown} style={{ backgroundColor: c.surface, borderRadius: 26, padding: 18, gap: 6, borderWidth: 2, borderColor: c.brand }}>
+              <T v="caption" tone="brand" style={{ fontFamily: "Figtree_700Bold" }}>🎁 Your gift</T>
+              <T v="title">Premium is free until {niceDate(freeUntil)}</T>
+              <T tone="muted">Nothing to pay now and nothing renews automatically. To keep Premium after that, pick a plan below. A plan you choose starts the day you pay.</T>
+            </Animated.View>
+          )}
+
+          {!subscribed && !freeUntil && featured?.quote.offer && featured.quote.offer.kind === "INTRO" && (
+            <Animated.View entering={FadeInDown.duration(380)} style={{ borderRadius: 28, overflow: "hidden", shadowColor: "#A98BEA", shadowOpacity: 0.35, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 8 }}>
               <Sunset style={{ padding: 20, gap: 6 }}>
                 <View style={{ alignSelf: "flex-start", backgroundColor: "rgba(255,255,255,0.25)", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
                   <T v="caption" tone="white" style={{ fontFamily: "Figtree_700Bold" }}>{featured.quote.offer.badge ?? "Introductory offer"}</T>
@@ -128,7 +141,9 @@ export default function Premium() {
               <T v="headline" style={{ marginTop: 6 }}>Choose a plan</T>
               {plans.map((p) => {
                 const on = choice === p.code;
-                const qt = coupon?.plan === p.code ? coupon.quote : p.quote;
+                const qt = coupon?.plan === p.code ? coupon.quote : quoteOf(p);
+                const opts = p.options ?? [];
+                const monthly = opts.find((o) => o.durationDays <= 31);
                 return (
                   <Pressable key={p.code} accessibilityRole="radio" accessibilityState={{ selected: on }}
                     accessibilityLabel={`${p.name}. ${money(qt.todayMinor, qt.currency)} today, then ${money(qt.regularMinor, qt.currency)} per ${per(qt.periodDays)}.`}
@@ -151,8 +166,27 @@ export default function Premium() {
                       </View>
                     </View>
                     <T v="caption" tone="muted" style={{ marginLeft: 34 }}>
-                      {qt.introDays ? `${qt.introDays} days, then ` : qt.discountMinor ? "First month, then " : "Then "}{money(qt.regularMinor, qt.currency)}/{per(qt.periodDays)} · renews automatically · cancel any time
+                      {qt.introDays ? `${qt.introDays} days, then ` : qt.discountMinor ? `First ${per(qt.periodDays)}, then ` : "Then "}{money(qt.regularMinor, qt.currency)}/{per(qt.periodDays)} · renews automatically · cancel any time
                     </T>
+                    {opts.length > 1 && (
+                      <View accessibilityRole="radiogroup" accessibilityLabel={`${p.name} billing period`} style={{ flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 6, marginLeft: 34 }}>
+                        {opts.map((o) => {
+                          const picked = (period[p.code] ?? qt.periodDays) === o.durationDays;
+                          const save = monthly && o.durationDays > 31 ? Math.round((1 - o.perMonthMinor / monthly.perMonthMinor) * 100) : 0;
+                          return (
+                            <Pressable key={o.durationDays} accessibilityRole="radio" accessibilityState={{ selected: picked }}
+                              accessibilityLabel={`${o.label}, ${money(o.quote.regularMinor, o.quote.currency)}${save > 0 ? `, save ${save} percent` : ""}`}
+                              onPress={() => { haptic.tick(); setChoice(p.code); setCoupon(null); setCodeErr(""); setPeriod({ ...period, [p.code]: o.durationDays }); }}
+                              style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 14, borderWidth: 1.5, borderColor: picked ? c.brand : c.line, backgroundColor: picked ? c.brandWash : c.raised, minWidth: 84 }}>
+                              <T v="caption" strong>{o.label}</T>
+                              <T v="callout" strong>{money(o.quote.regularMinor, o.quote.currency)}</T>
+                              {o.durationDays > 31 && <T v="caption" tone="muted">{money(o.perMonthMinor, o.quote.currency)}/month</T>}
+                              {save > 0 && <T v="caption" tone="brand" style={{ fontFamily: "Figtree_700Bold" }}>Save {save}%</T>}
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    )}
                   </Pressable>
                 );
               })}

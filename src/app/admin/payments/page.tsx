@@ -55,8 +55,8 @@ function RevenueChart({ rows }: { rows: (Amt & { d: string })[] }) {
           <svg viewBox={`0 0 ${W + 44} ${H + 22}`} className="w-full" role="img" aria-label={`Daily revenue, highest ${formatMoney(Math.max(...series.map((s) => s.v)), "INR")}`}>
             {[0, 0.25, 0.5, 0.75, 1].map((f) => (
               <g key={f}>
-                <line x1={44} x2={W + 44} y1={H - f * H + 4} y2={H - f * H + 4} stroke="#ECEAF6" strokeWidth={1} />
-                <text x={38} y={H - f * H + 8} textAnchor="end" fontSize={10} fill="#8C8AAE">{f === 0 ? "0" : `₹${((top * f) / 100 >= 1000 ? `${Math.round((top * f) / 100000)}K` : Math.round((top * f) / 100))}`}</text>
+                <line x1={44} x2={W + 44} y1={H - f * H + 4} y2={H - f * H + 4} stroke="#EEE8FF" strokeWidth={1} />
+                <text x={38} y={H - f * H + 8} textAnchor="end" fontSize={10} fill="#8A80A6">{f === 0 ? "0" : `₹${((top * f) / 100 >= 1000 ? `${Math.round((top * f) / 100000)}K` : Math.round((top * f) / 100))}`}</text>
               </g>
             ))}
             {series.map((s, i) => {
@@ -65,13 +65,13 @@ function RevenueChart({ rows }: { rows: (Amt & { d: string })[] }) {
               return (
                 <g key={s.d} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
                   <rect x={44 + i * 22} y={0} width={22} height={H + 4} fill="transparent" />
-                  {h > 0 && <path d={`M${x},${H + 4} V${H + 4 - h + Math.min(4, h)} q0,-${Math.min(4, h)} ${Math.min(4, h)},-${Math.min(4, h)} H${x + w - Math.min(4, h)} q${Math.min(4, h)},0 ${Math.min(4, h)},${Math.min(4, h)} V${H + 4} Z`} fill={hover === i ? "#2E2A6E" : "#4F46B8"} />}
+                  {h > 0 && <path d={`M${x},${H + 4} V${H + 4 - h + Math.min(4, h)} q0,-${Math.min(4, h)} ${Math.min(4, h)},-${Math.min(4, h)} H${x + w - Math.min(4, h)} q${Math.min(4, h)},0 ${Math.min(4, h)},${Math.min(4, h)} V${H + 4} Z`} fill={hover === i ? "#5E33A8" : "#7B48CC"} />}
                 </g>
               );
             })}
-            <line x1={44} x2={W + 44} y1={H + 4} y2={H + 4} stroke="#DEDBEE" strokeWidth={1} />
-            <text x={46} y={H + 18} fontSize={10} fill="#8C8AAE">{days[0].slice(5)}</text>
-            <text x={W + 42} y={H + 18} fontSize={10} fill="#8C8AAE" textAnchor="end">today</text>
+            <line x1={44} x2={W + 44} y1={H + 4} y2={H + 4} stroke="#E2DAF5" strokeWidth={1} />
+            <text x={46} y={H + 18} fontSize={10} fill="#8A80A6">{days[0].slice(5)}</text>
+            <text x={W + 42} y={H + 18} fontSize={10} fill="#8A80A6" textAnchor="end">today</text>
           </svg>
           {hover !== null && (
             <div className="pointer-events-none absolute -top-2 rounded-lg bg-ink px-2.5 py-1.5 text-xs text-paper shadow" style={{ left: `${((44 + hover * 22 + 11) / (W + 44)) * 100}%`, transform: "translateX(-50%)" }}>
@@ -94,7 +94,7 @@ function Breakdown({ title, rows }: { title: string; rows: { label: string; amt:
         {rows.map((r) => (
           <li key={r.label + r.cur}>
             <div className="flex justify-between text-sm"><span>{r.label}</span><span className="font-semibold">{formatMoney(r.amt, r.cur)}{r.n ? <span className="font-normal text-ink-faint"> · {r.n}</span> : null}</span></div>
-            <div className="mt-1 h-2 rounded-full bg-paper-sunk"><div className="h-2 rounded-full bg-[#4F46B8]" style={{ width: `${(r.amt / max) * 100}%` }} /></div>
+            <div className="mt-1 h-2 rounded-full bg-paper-sunk"><div className="h-2 rounded-full bg-[#7B48CC]" style={{ width: `${(r.amt / max) * 100}%` }} /></div>
           </li>
         ))}
       </ul>

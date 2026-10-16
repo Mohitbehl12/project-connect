@@ -74,7 +74,7 @@ export default function ProfileTab() {
 
         <Pressable accessibilityRole="button" onPress={() => router.push(premium ? "/subscription" : "/premium")} style={{ marginHorizontal: 20, borderRadius: 22, overflow: "hidden" }}>
           <LinearGradient colors={[...dusk]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 18, gap: 4 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Icon name="sparkle" color="#F5B656" /><T v="headline" tone="white">{premium ? `You're on ${me?.user.planCode.replace("_", " ").toLowerCase()}` : "Premium"}</T></View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Icon name="sparkle" color="#7FD8BE" /><T v="headline" tone="white">{premium ? `You're on ${me?.user.planCode.replace("_", " ").toLowerCase()}` : "Premium"}</T></View>
             <T v="callout" tone="white" style={{ opacity: 0.85 }}>{premium ? "Manage your plan, payments and invoices." : "See who likes you, get more likes and finer filters. Free stays fully usable."}</T>
           </LinearGradient>
         </Pressable>

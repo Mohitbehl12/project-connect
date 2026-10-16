@@ -26,7 +26,7 @@ export const GET = publicRoute<{ id: string }>(async ({ req, params }) => {
     razorpay: p.provider === "RAZORPAY" && sub?.providerRef ? {
       keyId: process.env.RAZORPAY_KEY_ID, name: "Project Connect", description: name,
       ...(sub.kind === "PASS" ? { order_id: sub.providerRef, amount: p.amountMinor, currency: p.currency } : { subscription_id: sub.providerRef }),
-      prefill: { email: user?.email }, notes: { pc_payment_id: p.id }, theme: { color: "#2E2A6E" },
+      prefill: { email: user?.email }, notes: { pc_payment_id: p.id }, theme: { color: "#7B48CC" },
     } : null,
   });
 });

@@ -28,7 +28,7 @@ function LikesStrip() {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={total ? `${total} people like you. See all.` : "Likes you. Nobody yet."} onPress={() => router.push("/likes")}
       style={{ borderRadius: 24, overflow: "hidden", marginBottom: 14 }}>
-      <LinearGradient colors={total ? ["#F7B54C", "#F0864A", "#E2557A"] : [c.surface, c.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 14 }}>
+      <LinearGradient colors={total ? ["#7FD8BE", "#A98BEA", "#8E5BD8"] : [c.surface, c.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 14 }}>
         <View style={{ flexDirection: "row" }}>
           {total ? faces.map((f, i) => (
             <View key={f.key} style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 3, borderColor: "#FFF", marginLeft: i ? -16 : 0, overflow: "hidden", backgroundColor: c.raised }}>
@@ -80,13 +80,13 @@ export default function MatchesTab() {
             <Pressable accessibilityRole="button" accessibilityLabel={`${m.other.firstName}, ${m.score} percent compatible. Say hello.`}
               onPress={() => router.push({ pathname: "/chat/[id]", params: { id: m.id } })} style={{ width: w, height: w * 1.3, borderRadius: 22, overflow: "hidden" }}>
               <PhotoView photo={m.other.photo} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 } as any} />
-              <View style={{ position: "absolute", top: 8, right: 8, borderRadius: 30, padding: 4, backgroundColor: "rgba(18,17,42,0.4)" }}><CompatArc score={m.score} size={44} onDark /></View>
-              <LinearGradient colors={["transparent", "rgba(18,17,42,0.9)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: 12, paddingTop: 36 }}>
+              <View style={{ position: "absolute", top: 8, right: 8, borderRadius: 30, padding: 4, backgroundColor: "rgba(22,17,42,0.4)" }}><CompatArc score={m.score} size={44} onDark /></View>
+              <LinearGradient colors={["transparent", "rgba(22,17,42,0.9)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: 12, paddingTop: 36 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                   <T v="headline" tone="white" numberOfLines={1} style={{ flexShrink: 1 }}>{m.other.firstName}</T>
                   {m.other.verified && <VerifiedBadge size={16} />}
                 </View>
-                <T v="caption" style={{ color: "#F5B656" }}>Say hello</T>
+                <T v="caption" style={{ color: "#7FD8BE" }}>Say hello</T>
               </LinearGradient>
             </Pressable>
           )}

@@ -82,8 +82,8 @@ export function Segmented({ options, value, onChange }: { options: Record<string
 }
 
 const PALETTES = [
-  ["#F2A93B", "#C8406A"], ["#4F8270", "#1C1B3A"], ["#C8406A", "#4A4870"], ["#F2A93B", "#4F8270"],
-  ["#8C8AAE", "#1C1B3A"], ["#C9821A", "#C8406A"],
+  ["#7FD8BE", "#7B48CC"], ["#1F7A6B", "#2B1F45"], ["#7B48CC", "#625680"], ["#7FD8BE", "#1F7A6B"],
+  ["#8A80A6", "#2B1F45"], ["#8E5BD8", "#7B48CC"],
 ];
 
 /** Placeholder portrait until photo upload ships: initials on a two-tone field derived from the user id. */

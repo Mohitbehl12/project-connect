@@ -12,7 +12,7 @@ import { useTheme } from "@/theme/ThemeProvider";
  */
 export function Aurora({ variant = "top", style }: { variant?: "top" | "full" | "match"; style?: ViewStyle }) {
   const { dark } = useTheme();
-  const [a, b, c] = variant === "match" ? ["rgba(247,181,76,0.55)", "rgba(226,85,122,0.45)", "rgba(108,92,231,0.55)"] : aurora[dark ? "dark" : "light"];
+  const [a, b, c] = variant === "match" ? ["rgba(127,216,190,0.50)", "rgba(169,139,234,0.45)", "rgba(142,91,216,0.55)"] : aurora[dark ? "dark" : "light"];
   // Full-height canvas so no field is ever clipped into a hard edge; "top" just keeps the light high and fading out.
   const top = variant === "top";
   return (
@@ -44,7 +44,7 @@ export function Glass({ children, style, intensity = 40, tint, radius = 24, bord
       {Platform.OS === "android"
         ? <View style={[StyleSheet.absoluteFill, { backgroundColor: fallback }]} />
         : <BlurView intensity={intensity} tint={t === "dark" ? "dark" : "light"} style={StyleSheet.absoluteFill} />}
-      {Platform.OS !== "android" && <View style={[StyleSheet.absoluteFill, { backgroundColor: t === "dark" ? "rgba(18,17,42,0.35)" : "rgba(255,255,255,0.45)" }]} />}
+      {Platform.OS !== "android" && <View style={[StyleSheet.absoluteFill, { backgroundColor: t === "dark" ? "rgba(22,17,42,0.35)" : "rgba(255,255,255,0.45)" }]} />}
       {children}
     </View>
   );

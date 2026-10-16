@@ -39,11 +39,11 @@ export function TabBar({ state, navigation }: { state: any; navigation: any }) {
 
   return (
     <View style={{ backgroundColor: c.bg, paddingHorizontal: 14, paddingTop: 4, paddingBottom: Math.max(insets.bottom, 10) }}>
-      <Glass radius={32} intensity={60} style={{ shadowColor: "#12112A", shadowOpacity: dark ? 0.5 : 0.12, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 8 }}>
+      <Glass radius={32} intensity={60} style={{ shadowColor: "#16112A", shadowOpacity: dark ? 0.5 : 0.12, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 8 }}>
         <View accessibilityRole="tablist" onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ flexDirection: "row", height: 64 }}>
           {w > 0 && (
             <Animated.View pointerEvents="none" style={[{ position: "absolute", top: 7, left: 0, width: tabW, height: 50, alignItems: "center" }, lozenge]}>
-              <View style={{ width: Math.min(tabW - 8, 76), height: 50, borderRadius: 25, backgroundColor: dark ? "rgba(143,136,240,0.22)" : "rgba(46,42,110,0.08)" }} />
+              <View style={{ width: Math.min(tabW - 8, 76), height: 50, borderRadius: 25, backgroundColor: dark ? "rgba(195,166,255,0.22)" : "rgba(123,72,204,0.10)" }} />
             </Animated.View>
           )}
           {routes.map((route: any) => {

@@ -32,6 +32,7 @@ const Body = z.object({
     "referral.rewardDays": z.number().int().min(0).max(90).optional(),
     "referral.monthlyCap": z.number().int().min(0).max(100).optional(),
     "rewards.completeProfileBoostMinutes": z.number().int().min(0).max(1440).optional(),
+    "rewards.womenFreeDays": z.number().int().min(0).max(365).optional(),
     "rewards.verifiedPremiumDays": z.number().int().min(0).max(90).optional(),
     "retention.deletedMessageDays": z.number().int().min(7).max(3650).optional(),
     "retention.loginEventDays": z.number().int().min(30).max(3650).optional(),
@@ -77,7 +78,7 @@ export const PUT = route(async ({ req, user }) => {
         // A changed amount needs a new gateway plan; existing subscribers keep their price until they change plan.
         if (pr.id) {
           const before = await db.query.planPrices.findFirst({ where: eq(schema.planPrices.id, pr.id) });
-          if (before && before.amountMinor !== pr.amountMinor) Object.assign(vals, { providerPlanId: null });
+          if (before && (before.amountMinor !== pr.amountMinor || before.durationDays !== pr.durationDays)) Object.assign(vals, { providerPlanId: null });
         }
         if (pr.id) await db.update(schema.planPrices).set(vals).where(eq(schema.planPrices.id, pr.id));
         else await db.insert(schema.planPrices).values({ planId: p.id, ...vals });

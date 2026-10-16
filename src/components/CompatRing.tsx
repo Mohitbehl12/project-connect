@@ -4,11 +4,11 @@ export function CompatRing({ score, size = 84 }: { score: number; size?: number 
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const len = (Math.min(99, Math.max(0, score)) / 100) * c;
-  const tone = score >= 80 ? "#4F8270" : score >= 65 ? "#F2A93B" : "#8C8AAE";
+  const tone = score >= 80 ? "#1F7A6B" : score >= 65 ? "#7FD8BE" : "#8A80A6";
   return (
     <div className="relative shrink-0" style={{ width: size, height: size }} role="img" aria-label={`${score}% compatible`}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#ECEAF6" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#EEE8FF" strokeWidth={stroke} />
         <circle
           cx={size / 2} cy={size / 2} r={r} fill="none" stroke={tone} strokeWidth={stroke} strokeLinecap="round"
           strokeDasharray={`${len} ${c}`} className="arc-draw" style={{ ["--arc-len" as string]: `${len}` }}

@@ -49,7 +49,7 @@ export default function ProfileSheet() {
             <IconButton icon="close" label="Close profile" tone="glass" size={44} onPress={() => router.back()} />
             <IconButton icon="shield" label="Safety options" tone="glass" size={44} onPress={() => router.push({ pathname: "/report", params: { userId: card.id, name: card.firstName } })} />
           </View>
-          <LinearGradient pointerEvents="none" colors={["rgba(18,17,42,0.5)", "transparent"]} style={{ position: "absolute", left: 0, right: 0, top: 0, height: insets.top + 90 }} />
+          <LinearGradient pointerEvents="none" colors={["rgba(22,17,42,0.5)", "transparent"]} style={{ position: "absolute", left: 0, right: 0, top: 0, height: insets.top + 90 }} />
           <LinearGradient pointerEvents="none" colors={["transparent", "rgba(12,11,30,0.88)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: h * 0.42 }} />
           <View pointerEvents="none" style={{ position: "absolute", left: 20, right: 20, bottom: 30, gap: 4 }}>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
@@ -83,7 +83,7 @@ export default function ProfileSheet() {
         )}
 
         <Pressable accessibilityRole="button" accessibilityLabel="See full compatibility breakdown" onPress={() => router.push({ pathname: "/compatibility/[id]", params: { id: card.id } })}
-          style={{ marginHorizontal: 20, backgroundColor: c.surface, borderRadius: 26, padding: 18, gap: 16, shadowColor: "#2E2A6E", shadowOpacity: 0.1, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 3, borderWidth: 1, borderColor: c.line }}>
+          style={{ marginHorizontal: 20, backgroundColor: c.surface, borderRadius: 26, padding: 18, gap: 16, shadowColor: "#7B48CC", shadowOpacity: 0.1, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 3, borderWidth: 1, borderColor: c.line }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
             <CompatArc score={compat.data?.overall ?? card.score ?? 0} size={76} />
             <View style={{ flex: 1, gap: 4 }}>

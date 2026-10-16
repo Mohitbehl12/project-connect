@@ -6,12 +6,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: { DEFAULT: "#1C1B3A", soft: "#4A4870", faint: "#8C8AAE" },
-        paper: { DEFAULT: "#F6F5FB", raised: "#FFFFFF", sunk: "#ECEAF6" },
-        mist: "#DEDBEE",
-        marigold: { DEFAULT: "#F2A93B", deep: "#C9821A", wash: "#FDF0DA" },
-        rose: { DEFAULT: "#C8406A", wash: "#F8E3EA" },
-        sage: { DEFAULT: "#4F8270", wash: "#E1EEE8" },
+        // Calm and fresh: lilac brand, mint accent, deep-violet text. AA contrast checked.
+        ink: { DEFAULT: "#2B1F45", soft: "#625680", faint: "#8A80A6" },
+        paper: { DEFAULT: "#F7F4FF", raised: "#FFFFFF", sunk: "#EEE8FF" },
+        mist: "#E2DAF5",
+        berry: { DEFAULT: "#7B48CC", deep: "#5E33A8", wash: "#EEE6FF" }, // brand (lilac)
+        marigold: { DEFAULT: "#7FD8BE", deep: "#2E9E7E", wash: "#DDF5EC" }, // mint accent (name kept so classes still work)
+        rose: { DEFAULT: "#B3261E", wash: "#FCE4E2" }, // errors only
+        sage: { DEFAULT: "#1F7A6B", wash: "#DCF0EA" },
       },
       fontFamily: {
         display: ["'Bricolage Grotesque'", "system-ui", "sans-serif"],

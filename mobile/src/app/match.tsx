@@ -64,19 +64,19 @@ export default function MatchMoment() {
   const starter = match.data?.starters[picked];
 
   return (
-    <Animated.View entering={FadeIn.duration(200)} style={{ flex: 1, backgroundColor: "#12112A" }}>
+    <Animated.View entering={FadeIn.duration(200)} style={{ flex: 1, backgroundColor: "#16112A" }}>
       <Aurora variant="match" />
       <Pressable style={{ flex: 1 }} onPress={skip} accessibilityLabel={`It's a match with ${name}`}>
         <SafeAreaView style={{ flex: 1, justifyContent: "center", alignItems: "center", gap: 22, paddingHorizontal: 24 }}>
           <Animated.View style={[{ width: ring, height: ring, alignItems: "center", justifyContent: "center" }, popStyle]}>
-            <Animated.View pointerEvents="none" style={[{ position: "absolute", width: ring * 1.25, height: ring * 1.25, borderRadius: ring, backgroundColor: "rgba(240,134,74,0.22)", shadowColor: "#F0864A", shadowOpacity: 0.9, shadowRadius: 60 }, glowStyle]} />
+            <Animated.View pointerEvents="none" style={[{ position: "absolute", width: ring * 1.25, height: ring * 1.25, borderRadius: ring, backgroundColor: "rgba(240,134,74,0.22)", shadowColor: "#A98BEA", shadowOpacity: 0.9, shadowRadius: 60 }, glowStyle]} />
             <LikeBurst progress={burst} top="50%" spread={1.9} />
             <Svg width={ring} height={ring} style={{ position: "absolute", transform: [{ rotate: "-90deg" }] }}>
-              <AnimatedCircle cx={ring / 2} cy={ring / 2} r={r} stroke="#F5B656" strokeWidth={6} strokeLinecap="round" fill="none" strokeDasharray={`${circ} ${circ}`} animatedProps={ringProps} />
+              <AnimatedCircle cx={ring / 2} cy={ring / 2} r={r} stroke="#7FD8BE" strokeWidth={6} strokeLinecap="round" fill="none" strokeDasharray={`${circ} ${circ}`} animatedProps={ringProps} />
             </Svg>
             <View style={{ flexDirection: "row", gap: 8 }}>
-              <Animated.View style={leftStyle}><PhotoView photo={mine.data?.photos[0]} rounded={size / 2} style={{ width: size, height: size, borderWidth: 3, borderColor: "#C9C4FF" }} /></Animated.View>
-              <Animated.View style={rightStyle}><PhotoView photo={other?.photos[0]} rounded={size / 2} style={{ width: size, height: size, borderWidth: 3, borderColor: "#F5B656" }} /></Animated.View>
+              <Animated.View style={leftStyle}><PhotoView photo={mine.data?.photos[0]} rounded={size / 2} style={{ width: size, height: size, borderWidth: 3, borderColor: "#E3D6FF" }} /></Animated.View>
+              <Animated.View style={rightStyle}><PhotoView photo={other?.photos[0]} rounded={size / 2} style={{ width: size, height: size, borderWidth: 3, borderColor: "#7FD8BE" }} /></Animated.View>
             </View>
           </Animated.View>
 
@@ -87,12 +87,12 @@ export default function MatchMoment() {
 
           {!!match.data?.starters.length && (
             <Animated.View entering={FadeInDown.delay(reduced ? 0 : 850).duration(320)} style={{ alignSelf: "stretch", gap: 8 }}>
-              <T v="caption" style={{ color: "#C9C4FF", fontFamily: "Figtree_700Bold", letterSpacing: 0.3 }}>Start with something easy</T>
+              <T v="caption" style={{ color: "#E3D6FF", fontFamily: "Figtree_700Bold", letterSpacing: 0.3 }}>Start with something easy</T>
               {match.data.starters.slice(0, 3).map((st, i) => (
                 <Pressable key={st.text} accessibilityRole="button" accessibilityLabel={`Use starter: ${st.text}`}
                   onPress={() => { haptic.tick(); setPicked(i); }}
-                  style={{ backgroundColor: picked === i ? "rgba(245,182,86,0.18)" : "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: picked === i ? "#F5B656" : "rgba(255,255,255,0.12)", borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, gap: 2 }}>
-                  <T v="caption" style={{ color: "#C9C4FF" }}>{st.tip}</T>
+                  style={{ backgroundColor: picked === i ? "rgba(245,182,86,0.18)" : "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: picked === i ? "#7FD8BE" : "rgba(255,255,255,0.12)", borderRadius: 18, paddingHorizontal: 14, paddingVertical: 10, gap: 2 }}>
+                  <T v="caption" style={{ color: "#E3D6FF" }}>{st.tip}</T>
                   <T v="callout" tone="white">{st.text}</T>
                 </Pressable>
               ))}

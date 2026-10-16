@@ -34,6 +34,7 @@ export const users = sqliteTable("users", {
   deletedAt: ts("deleted_at"), // account deletion requested → anonymised
   boostUntil: ts("boost_until"), // shown higher in Discover until then (rewards / boosts)
   completionRewardedAt: ts("completion_rewarded_at"),
+  welcomeGiftAt: ts("welcome_gift_at"), // free-months gift given (once per account)
   signupIp: text("signup_ip"),
   signupInstallId: text("signup_install_id"),
   createdAt: now("created_at"),

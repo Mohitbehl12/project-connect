@@ -52,21 +52,28 @@ async function main() {
   // All prices are editable in Admin → Pricing. India uses price groups: men pay the "gender:MAN" price,
   // everyone else (women, non-binary, not stated) pays the "*" price. Groups only apply in countries
   // listed in billing.genderPricingCountries (IN by default) — they're unlawful in some places.
-  const priceTable: Record<string, [string, string, number, string?][]> = {
-    PREMIUM: [["IN", "INR", 10000, "gender:MAN"], ["IN", "INR", 5000], ["US", "USD", 1499], ["GB", "GBP", 1199], ["*", "USD", 1499]],
+  // [country, currency, amountMinor, segment?, durationDays?] — Premium in India: men ₹100/month,
+  // ₹250/3 months, ₹500/6 months, ₹1,000/year; everyone else ₹50/month or ₹500/year (after 3 free months).
+  const priceTable: Record<string, [string, string, number, string?, number?][]> = {
+    PREMIUM: [
+      ["IN", "INR", 10000, "gender:MAN", 30], ["IN", "INR", 25000, "gender:MAN", 90], ["IN", "INR", 50000, "gender:MAN", 180], ["IN", "INR", 100000, "gender:MAN", 365],
+      ["IN", "INR", 5000, "*", 30], ["IN", "INR", 50000, "*", 365],
+      ["US", "USD", 1499], ["GB", "GBP", 1199], ["*", "USD", 1499],
+    ],
     PREMIUM_PLUS: [["IN", "INR", 24900, "gender:MAN"], ["IN", "INR", 14900], ["US", "USD", 2499], ["GB", "GBP", 1999], ["*", "USD", 2499]],
     VIP: [["IN", "INR", 99900, "gender:MAN"], ["IN", "INR", 59900], ["US", "USD", 4999], ["*", "USD", 4999]],
   };
   for (const p of planDefs) {
     const [plan] = await db.insert(s.plans).values({ ...p, features: JSON.stringify(p.features) }).returning();
-    for (const [country, currency, amountMinor, segment] of priceTable[p.code] ?? [])
-      await db.insert(s.planPrices).values({ planId: plan.id, country, currency, amountMinor, durationDays: 30, segment: segment ?? "*" });
+    for (const [country, currency, amountMinor, segment, durationDays] of priceTable[p.code] ?? [])
+      await db.insert(s.planPrices).values({ planId: plan.id, country, currency, amountMinor, durationDays: durationDays ?? 30, segment: segment ?? "*" });
   }
 
   console.log("Seeding offers and coupons…");
   await db.insert(s.offers).values([
     { name: "Welcome ₹1 — men", kind: "INTRO", headline: "Try Premium for ₹1", badge: "Welcome offer", planCode: "PREMIUM", country: "IN", genders: "MAN", audience: "NEW", priceMinor: 100, days: 15, priority: 10 },
-    { name: "Welcome ₹1 — everyone else", kind: "INTRO", headline: "Try Premium for ₹1", badge: "Welcome offer", planCode: "PREMIUM", country: "IN", genders: "", audience: "NEW", priceMinor: 100, days: 30, priority: 10 },
+    // Women and everyone else get 3 free months on sign-up instead (rewards.womenFreeDays); kept off for reference.
+    { name: "Welcome ₹1 — everyone else", kind: "INTRO", headline: "Try Premium for ₹1", badge: "Welcome offer", planCode: "PREMIUM", country: "IN", genders: "", audience: "NEW", priceMinor: 100, days: 30, priority: 10, active: false },
     { name: "Welcome back", kind: "DISCOUNT", headline: "Welcome back — 40% off your first month", badge: "Welcome back", planCode: "PREMIUM", country: "IN", audience: "RETURNING", discountPct: 40, priority: 5 },
     { name: "Weekend Dating Pass", kind: "PASS", headline: "Weekend Dating Pass", badge: "3 days", planCode: "PREMIUM", country: "IN", priceMinor: 4900, days: 3, oncePerUser: false, priority: 1 },
     { name: "Diwali Special 2026", kind: "DISCOUNT", headline: "Diwali Special — 50% off your first month", badge: "Festival offer", planCode: "PREMIUM", country: "IN", discountPct: 50, priority: 20, startsAt: new Date("2026-11-01T00:00:00+05:30"), endsAt: new Date("2026-11-12T00:00:00+05:30"), active: false },

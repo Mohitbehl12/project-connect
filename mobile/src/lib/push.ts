@@ -15,7 +15,7 @@ export async function registerForPush() {
     const projectId = (Constants.expoConfig?.extra as any)?.eas?.projectId ?? (Constants as any).easConfig?.projectId;
     if (!projectId) return;
     if (Platform.OS === "android") {
-      await Notifications.setNotificationChannelAsync("default", { name: "Matches and messages", importance: Notifications.AndroidImportance.HIGH, lightColor: "#F2A93B" });
+      await Notifications.setNotificationChannelAsync("default", { name: "Matches and messages", importance: Notifications.AndroidImportance.HIGH, lightColor: "#5CC9A7" });
     }
     let { status } = await Notifications.getPermissionsAsync();
     if (status !== "granted") status = (await Notifications.requestPermissionsAsync()).status;

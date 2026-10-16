@@ -55,7 +55,7 @@ export function IconButton({ icon, label, onPress, size = 48, tone = "surface", 
 }) {
   const { c } = useTheme();
   const press = usePressScale();
-  const bg = { surface: c.surface, brand: c.brand, accent: c.accent, glass: "rgba(18,17,42,0.35)", none: "transparent" }[tone];
+  const bg = { surface: c.surface, brand: c.brand, accent: c.accent, glass: "rgba(22,17,42,0.35)", none: "transparent" }[tone];
   const col = iconColor ?? { surface: c.text, brand: c.brandText, accent: c.accentText, glass: "#FFFFFF", none: c.text }[tone];
   return (
     <Animated.View style={press.style}>

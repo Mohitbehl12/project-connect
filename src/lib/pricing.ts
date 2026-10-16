@@ -37,17 +37,34 @@ export function genderPricingOn(country: string, genderCountries: string[]) {
   return genderCountries.includes(country);
 }
 
-/** The buyer's price for a plan: their country (or "*"), then their group within it (or "*"). */
-export function pickPrice<T extends PriceRow>(prices: T[], planCode: string, buyer: Buyer, genderCountries: string[]): T | null {
+/**
+ * The prices a buyer can choose for a plan (one per billing period), shortest first.
+ * Country first (or "*"); then, in gender-pricing countries, the buyer's group — and if their group
+ * has its own prices for this plan, only those are offered (they never fall back to another group's).
+ */
+export function priceOptions<T extends PriceRow>(prices: T[], planCode: string, buyer: Buyer, genderCountries: string[]): T[] {
   const forPlan = prices.filter((p) => p.planCode === planCode);
   const local = forPlan.filter((p) => p.country === buyer.country);
   const pool = local.length ? local : forPlan.filter((p) => p.country === "*");
+  let rows = pool.filter((p) => p.segment === "*");
   if (genderPricingOn(buyer.country, genderCountries) && buyer.gender) {
-    const grouped = pool.find((p) => p.segment === `gender:${buyer.gender}`);
-    if (grouped) return grouped;
+    const grouped = pool.filter((p) => p.segment === `gender:${buyer.gender}`);
+    if (grouped.length) rows = grouped;
   }
-  return pool.find((p) => p.segment === "*") ?? null;
+  const byPeriod = new Map<number, T>();
+  for (const r of rows) if (!byPeriod.has(r.durationDays)) byPeriod.set(r.durationDays, r);
+  return [...byPeriod.values()].sort((a, b) => a.durationDays - b.durationDays);
 }
+
+/** One price: the requested billing period, or by default the monthly one (else the shortest). */
+export function pickPrice<T extends PriceRow>(prices: T[], planCode: string, buyer: Buyer, genderCountries: string[], durationDays?: number | null): T | null {
+  const opts = priceOptions(prices, planCode, buyer, genderCountries);
+  if (durationDays) return opts.find((p) => p.durationDays === durationDays) ?? null;
+  return opts.find((p) => p.durationDays === 30 || p.durationDays === 31) ?? opts[0] ?? null;
+}
+
+/** Introductory and discount offers are written for the monthly price ("first month"), so only apply there. */
+export const offersApplyTo = (durationDays: number) => durationDays <= 31;
 
 function audienceOk(audience: string, buyer: Buyer) {
   if (audience === "NEW") return !buyer.everPaid;
@@ -137,7 +154,8 @@ export function formatDate(d: Date) {
 }
 
 const days = (n: number) => n * 86_400_000;
-const periodWord = (d: number) => (d === 30 || d === 31 ? "month" : d === 7 ? "week" : d === 365 ? "year" : `${d} days`);
+export const periodWord = (d: number) =>
+  d === 30 || d === 31 ? "month" : d === 7 ? "week" : d === 365 || d === 366 ? "year" : d % 30 === 0 ? `${d / 30} months` : `${d} days`;
 
 /**
  * Builds the quote. `offer` is the best eligible offer (or null); `coupon` is what the person typed.

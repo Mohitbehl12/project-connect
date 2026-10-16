@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   description: "Dating built around intent, compatibility and safety.",
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#1C1B3A" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#7B48CC" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

@@ -9,4 +9,5 @@ export function niceDate(d: string | Date | null | undefined) {
   return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
-export const per = (days?: number) => (days === 30 || days === 31 ? "month" : days === 7 ? "week" : days === 365 ? "year" : `${days} days`);
+export const per = (days?: number) =>
+  days === 30 || days === 31 ? "month" : days === 7 ? "week" : days === 365 || days === 366 ? "year" : days && days % 30 === 0 ? `${days / 30} months` : `${days} days`;

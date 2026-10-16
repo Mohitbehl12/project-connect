@@ -45,8 +45,8 @@ export default function ExploreList() {
             <Pressable accessibilityRole="button" accessibilityLabel={`${cd.firstName}, ${cd.age}, ${cd.score} percent compatible`} onPress={() => router.push({ pathname: "/profile/[id]", params: { id: cd.id } })}
               style={{ width: w, height: w * 1.35, borderRadius: 22, overflow: "hidden" }}>
               <PhotoView photo={cd.photos[0]} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 } as any} />
-              {cd.score !== undefined && <View style={{ position: "absolute", top: 8, right: 8, borderRadius: 30, padding: 3, backgroundColor: "rgba(18,17,42,0.4)" }}><CompatArc score={cd.score} size={40} onDark /></View>}
-              <LinearGradient colors={["transparent", "rgba(18,17,42,0.9)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: 12, paddingTop: 36 }}>
+              {cd.score !== undefined && <View style={{ position: "absolute", top: 8, right: 8, borderRadius: 30, padding: 3, backgroundColor: "rgba(22,17,42,0.4)" }}><CompatArc score={cd.score} size={40} onDark /></View>}
+              <LinearGradient colors={["transparent", "rgba(22,17,42,0.9)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: 12, paddingTop: 36 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                   <T v="headline" tone="white" numberOfLines={1} style={{ flexShrink: 1 }}>{cd.firstName}, {cd.age}</T>
                   {cd.verified && <VerifiedBadge size={16} />}

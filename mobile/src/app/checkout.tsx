@@ -29,8 +29,9 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
 export default function Checkout() {
   const { c } = useTheme();
   const qc = useQueryClient();
-  const { plan, offerId, coupon } = useLocalSearchParams<{ plan: string; offerId?: string; coupon?: string }>();
-  const q = useQuery({ queryKey: ["quote", plan, offerId, coupon], queryFn: () => api<{ quote: Quote }>("/api/billing/quote", { body: { planCode: plan, offerId: offerId || undefined, coupon: coupon || undefined } }) });
+  const { plan, offerId, coupon, duration } = useLocalSearchParams<{ plan: string; offerId?: string; coupon?: string; duration?: string }>();
+  const durationDays = duration ? Number(duration) : undefined;
+  const q = useQuery({ queryKey: ["quote", plan, offerId, coupon, duration], queryFn: () => api<{ quote: Quote }>("/api/billing/quote", { body: { planCode: plan, offerId: offerId || undefined, coupon: coupon || undefined, durationDays } }) });
   const cat = qc.getQueryData<Catalogue>(["catalogue"]);
   const [agree, setAgree] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -43,7 +44,7 @@ export default function Checkout() {
     setBusy(true); setErr("");
     try {
       const r = await api<{ paymentId: string; payUrl: string }>("/api/billing/checkout", {
-        body: { planCode: quote.planCode, offerId: offerId || undefined, coupon: coupon || undefined, acceptTerms: true, expectedTodayMinor: quote.todayMinor, returnTo: "app" },
+        body: { planCode: quote.planCode, offerId: offerId || undefined, coupon: coupon || undefined, durationDays: isPass ? undefined : quote.periodDays, acceptTerms: true, expectedTodayMinor: quote.todayMinor, returnTo: "app" },
       });
       haptic.light();
       if (Platform.OS === "web") {
@@ -76,7 +77,7 @@ export default function Checkout() {
                 <Row label="Premium until" value={niceDate(quote.accessUntil)} />
               ) : (
                 <>
-                  <Row label={quote.introDays ? "After the intro" : "After the first month"} value={`${money(quote.regularMinor, quote.currency)}/${per(quote.periodDays)}`} />
+                  <Row label={quote.introDays ? "After the intro" : `After the first ${per(quote.periodDays)}`} value={`${money(quote.regularMinor, quote.currency)}/${per(quote.periodDays)}`} />
                   <Row label="Next billing date" value={niceDate(quote.nextChargeAt)} />
                 </>
               )}

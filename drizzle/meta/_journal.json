@@ -15,6 +15,13 @@
       "when": 1791990468319,
       "tag": "0001_password_resets",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792146541342,
+      "tag": "0002_pricing_v2",
+      "breakpoints": true
     }
   ]
 }

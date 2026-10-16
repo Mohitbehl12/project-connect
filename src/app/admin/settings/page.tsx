@@ -83,6 +83,7 @@ function Settings() {
             ["referral.rewardDays", "Premium days per verified referral", ""],
             ["referral.monthlyCap", "Max referral rewards per person per month", "Limits farming."],
             ["rewards.completeProfileBoostMinutes", "Boost for a 100% profile (minutes)", "0 turns it off."],
+            ["rewards.womenFreeDays", "Free Premium for women (days)", "Given once when sign-up is finished, in gender-pricing countries. 0 turns it off."],
             ["rewards.verifiedPremiumDays", "Premium days for completing verification", "0 turns it off."],
             ["retention.deletedMessageDays", "Keep deleted messages for safety review (days)", "Then the text is purged."],
             ["retention.loginEventDays", "Keep sign-in history (days)", ""],
@@ -94,7 +95,7 @@ function Settings() {
             </div>
           ))}
         </div>
-        <button className="btn-primary mt-4" disabled={!staff.permissions.includes("config.edit")} onClick={() => save({ config: Object.fromEntries(["billing.genderPricingCountries", "billing.reminderDays", "billing.graceDays", "referral.rewardDays", "referral.monthlyCap", "rewards.completeProfileBoostMinutes", "rewards.verifiedPremiumDays", "retention.deletedMessageDays", "retention.loginEventDays"].map((k) => [k, cfg[k]])) }, "Billing settings")}>Save billing settings</button>
+        <button className="btn-primary mt-4" disabled={!staff.permissions.includes("config.edit")} onClick={() => save({ config: Object.fromEntries(["billing.genderPricingCountries", "billing.reminderDays", "billing.graceDays", "referral.rewardDays", "referral.monthlyCap", "rewards.completeProfileBoostMinutes", "rewards.womenFreeDays", "rewards.verifiedPremiumDays", "retention.deletedMessageDays", "retention.loginEventDays"].map((k) => [k, cfg[k]])) }, "Billing settings")}>Save billing settings</button>
       </section>
 
       <h2 className="mb-3 mt-10 text-2xl font-extrabold">Plans and prices</h2>

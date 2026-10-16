@@ -233,6 +233,13 @@ async function main() {
   check("author cannot publish own draft (four-eyes)", selfPub.status === 403, selfPub.data);
   await admin.post(`/api/admin/legal/${draft.data.id}`, { action: "back_to_draft" });
 
+  section("Free months for women (India)");
+  const giftA = (await A.get("/api/billing/subscription")).data?.subscription;
+  const giftDays = giftA?.endsAt ? Math.round((new Date(giftA.endsAt).getTime() - Date.now()) / 86_400_000) : 0;
+  check("woman gets Premium free for 3 months on finishing sign-up", giftA?.status === "REWARD" && giftDays >= 89 && giftDays <= 90, giftA);
+  check("the free months need no payment", ((await A.get("/api/billing/subscription")).data?.payments ?? []).length === 0);
+  check("free months unlock Premium features", (await A.get("/api/me")).data?.features?.seeWhoLiked === true);
+
   section("Subscriptions (mock provider)");
   const plans = await A.get("/api/plans");
   const premium = plans.data?.plans?.find((p: any) => p.code === "PREMIUM");
@@ -330,14 +337,31 @@ async function main() {
   const { totpAt } = await import("../src/lib/totp");
 
   const catB = await M.get("/api/billing/catalogue");
+  check("men don't get the free months", catB.data?.subscription?.status === "NONE", catB.data?.subscription);
+  const optsB = catB.data?.plans?.find((p: any) => p.code === "PREMIUM")?.options ?? [];
+  check("man in India: monthly ₹100, 3 months ₹250, 6 months ₹500, 1 year ₹1,000", JSON.stringify(optsB.map((o: any) => [o.durationDays, o.quote.regularMinor])) === JSON.stringify([[30, 10000], [90, 25000], [180, 50000], [365, 100000]]), optsB.map((o: any) => [o.durationDays, o.quote?.regularMinor]));
+  check("longer plans are charged in full today (the ₹1 intro is monthly only)", optsB.filter((o: any) => o.durationDays > 31).every((o: any) => o.quote.todayMinor === o.quote.regularMinor && !o.quote.introDays), optsB.map((o: any) => o.quote?.todayMinor));
+  check("yearly plan reads 'every year' and shows the monthly equivalent", /every year/.test(optsB.find((o: any) => o.durationDays === 365)?.quote.terms.join(" ") ?? "") && optsB.find((o: any) => o.durationDays === 365)?.perMonthMinor === 8219, optsB.find((o: any) => o.durationDays === 365));
   const qB = catB.data?.plans?.find((p: any) => p.code === "PREMIUM")?.quote;
   check("man in India: ₹1 today", qB?.todayMinor === 100, qB);
   check("man in India: 15-day intro, then ₹100/month", qB?.introDays === 15 && qB?.nextChargeMinor === 10000 && qB?.currency === "INR", qB);
   check("quote states the renewal price and date in words", /Then ₹100 every month, starting \d+ \w+ 20\d\d/.test((qB?.terms ?? []).join(" ")), qB?.terms);
   check("quote says how to avoid being charged", /Cancel any time before/.test((qB?.terms ?? []).join(" ")));
   const subA = await A.get("/api/billing/subscription");
-  check("woman in India got ₹1 for a month, then ₹50/month", subA.data?.subscription?.status === "TRIALING" && subA.data.subscription.nextChargeMinor === 5000, subA.data?.subscription);
-  check("A's ₹1 payment is in the history with an invoice number", subA.data?.payments?.[0]?.amountMinor === 100 && /^PC\/\d{4}-\d{2}\/\d{6}$/.test(subA.data.payments[0].invoiceNo ?? ""), subA.data?.payments);
+  check("woman in India pays ₹50/month (no ₹1 intro: she has free months instead)", subA.data?.subscription?.status === "ACTIVE" && subA.data.subscription.nextChargeMinor === 5000, subA.data?.subscription);
+  check("A's ₹50 payment is in the history with an invoice number", subA.data?.payments?.[0]?.amountMinor === 5000 && /^PC\/\d{4}-\d{2}\/\d{6}$/.test(subA.data.payments[0].invoiceNo ?? ""), subA.data?.payments);
+
+  section("Billing: women's plans and choosing a billing period");
+  const W2 = new Client("Women-Two2");
+  await onboard(W2, `meera-${run}@test.local`, "WOMAN", "MAN", "Meera", answersA);
+  const catW = await W2.get("/api/billing/catalogue");
+  const optsW = catW.data?.plans?.find((p: any) => p.code === "PREMIUM")?.options ?? [];
+  check("woman in India: ₹50/month or ₹500/year", JSON.stringify(optsW.map((o: any) => [o.durationDays, o.quote.regularMinor])) === JSON.stringify([[30, 5000], [365, 50000]]), optsW.map((o: any) => [o.durationDays, o.quote?.regularMinor]));
+  check("a woman can't pick a period that isn't offered to her", (await W2.post("/api/billing/quote", { planCode: "PREMIUM", durationDays: 90 })).status === 404);
+  const M3 = new Client("Man-Yearly3");
+  await onboard(M3, `arjun-${run}@test.local`, "MAN", "WOMAN", "Arjun", answersB);
+  const coY = await M3.post("/api/billing/checkout", { planCode: "PREMIUM", durationDays: 365, acceptTerms: true, expectedTodayMinor: 100000 });
+  check("man checks out the 1-year plan for ₹1,000", coY.status === 201 && coY.data.quote.periodDays === 365 && coY.data.quote.todayMinor === 100000, coY.data);
 
   const qc = await M.post("/api/billing/quote", { planCode: "PREMIUM", coupon: "welcome50" });
   check("a coupon replaces the intro offer (no stacking)", qc.data?.quote?.offer === null && qc.data.quote.coupon?.code === "WELCOME50" && qc.data.quote.todayMinor === 5000, qc.data?.quote);
@@ -438,7 +462,7 @@ async function main() {
   const dsp = await hook({ event: "payment.dispute.created", payload: { dispute: { entity: { payment_id: `pay_renew2_${run}`, amount: 10000 } } } }, `evt_dsp_${run}`);
   check("chargebacks are recorded", dsp.data?.results?.[0] === "disputed", dsp.data);
   const stats = await finance.get("/api/admin/billing/stats");
-  check("payments dashboard: revenue by currency, trials, refunds, chargebacks", stats.status === 200 && stats.data.revenue.total.some((x: any) => x.currency === "INR") && stats.data.trialing >= 1 && stats.data.chargebacks >= 1 && stats.data.refunds.length >= 1, stats.data);
+  check("payments dashboard: revenue by currency, trials, refunds, chargebacks", stats.status === 200 && stats.data.revenue.total.some((x: any) => x.currency === "INR") && stats.data.trialToPaid?.endedIntros >= 1 && stats.data.chargebacks >= 1 && stats.data.refunds.length >= 1, stats.data);
 
   section("Offers, coupons and prices (admin)");
   const gb = await finance.post("/api/admin/billing/offers", { name: "UK men", kind: "INTRO", headline: "Try for £1", planCode: "PREMIUM", country: "GB", genders: ["MAN"], priceMinor: 100, days: 7 });

@@ -10,21 +10,21 @@
     line-height: 1.55;
   }
   h1, h2, h3 { @apply font-display text-ink; letter-spacing: -0.02em; line-height: 1.1; }
-  :focus-visible { outline: 3px solid #F2A93B; outline-offset: 2px; border-radius: 6px; }
-  ::selection { background: #FDF0DA; }
+  :focus-visible { outline: 3px solid #7B48CC; outline-offset: 2px; border-radius: 6px; }
+  ::selection { background: #EFE8FF; }
 }
 
 @layer components {
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-pill px-5 py-2.5 font-semibold text-[15px] transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
   }
-  .btn-primary { @apply btn bg-ink text-paper hover:bg-ink-soft; }
+  .btn-primary { @apply btn bg-berry text-white hover:bg-berry-deep; }
   .btn-accent { @apply btn bg-marigold text-ink hover:bg-marigold-deep hover:text-paper; }
   .btn-ghost { @apply btn bg-transparent text-ink hover:bg-paper-sunk; }
   .btn-outline { @apply btn border border-mist bg-paper-raised text-ink hover:border-ink-faint; }
   .btn-danger { @apply btn bg-rose text-white hover:bg-rose/90; }
   .input {
-    @apply w-full rounded-xl border border-mist bg-paper-raised px-3.5 py-2.5 text-[15px] text-ink placeholder:text-ink-faint focus:border-ink focus:outline-none;
+    @apply w-full rounded-xl border border-mist bg-paper-raised px-3.5 py-2.5 text-[15px] text-ink placeholder:text-ink-faint focus:border-berry focus:outline-none;
   }
   .label { @apply mb-1.5 block text-sm font-semibold text-ink-soft; }
   .panel { @apply rounded-card bg-paper-raised border border-mist; }

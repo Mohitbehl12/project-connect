@@ -82,7 +82,11 @@ export type SubSummary = {
   pendingPlanCode?: string | null; pendingPlanName?: string | null; bankedDays: number;
 };
 export type Catalogue = {
-  plans: { code: string; name: string; features: Me["features"]; quote: Quote }[];
+  plans: {
+    code: string; name: string; features: Me["features"]; quote: Quote;
+    /** Billing periods on offer (monthly, 3, 6, 12 months…), each with its own quote. */
+    options?: { durationDays: number; label: string; perMonthMinor: number; quote: Quote }[];
+  }[];
   passes: Quote[];
   subscription: SubSummary;
   provider: "MOCK" | "RAZORPAY" | "NONE";

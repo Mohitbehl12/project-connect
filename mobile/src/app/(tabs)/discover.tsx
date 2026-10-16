@@ -192,7 +192,7 @@ export default function Discover() {
 function Orb({ icon, label, size, onPress, like, tint, disabled }: { icon: IconName; label: string; size: number; onPress: () => void; like?: boolean; tint?: string; disabled?: boolean }) {
   const { c, dark } = useTheme();
   const press = usePressScale();
-  const glow = like ? "#F0864A" : tint ?? (dark ? "#000" : "#2E2A6E");
+  const glow = like ? "#A98BEA" : tint ?? (dark ? "#000" : "#7B48CC");
   return (
     <Animated.View style={[press.style, { opacity: disabled ? 0.4 : 1, borderRadius: size / 2, shadowColor: glow, shadowOpacity: like ? 0.55 : dark ? 0.5 : 0.14, shadowRadius: like ? 22 : 14, shadowOffset: { width: 0, height: like ? 10 : 6 }, elevation: like ? 10 : 5 }]}>
       <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled}
