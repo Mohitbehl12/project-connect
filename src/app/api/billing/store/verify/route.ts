@@ -12,7 +12,7 @@ const Body = z.object({
 
 /** The phone just bought (or renewed) through the store: verify it with the store, then turn Premium on. */
 export const POST = route(async ({ req, user }) => {
-  rateLimit(`store-verify:${user.id}`, 30, 60 * 60_000);
+  await rateLimit(`store-verify:${user.id}`, 30, 60 * 60_000);
   const b = await parseBody(req, Body);
   const state = b.platform === "ios" ? await verifyAppleTransaction(b.token) : await googleSubscription(b.token);
   if (b.productId && b.productId !== state.productId) throw new ApiError(400, "That purchase doesn't match the plan you picked.", "store_mismatch");

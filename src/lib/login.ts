@@ -29,8 +29,8 @@ async function record(userId: string | null, ok: boolean, reason: string, ctx: L
 export async function authenticate(email: string, password: string, ipOrCtx: string | LoginContext): Promise<User> {
   const ctx: LoginContext = typeof ipOrCtx === "string" ? { ip: ipOrCtx } : ipOrCtx;
   const ip = ctx.ip;
-  rateLimit(`login:${ip}`, 30, 15 * 60_000);
-  rateLimit(`login:${email}`, 10, 15 * 60_000);
+  await rateLimit(`login:${ip}`, 30, 15 * 60_000);
+  await rateLimit(`login:${email}`, 10, 15 * 60_000);
 
   const user = await db.query.users.findFirst({ where: eq(schema.users.email, email) });
   const generic = new ApiError(401, "That email and password don't match.", "bad_credentials");
@@ -63,7 +63,7 @@ export async function authenticate(email: string, password: string, ipOrCtx: str
       await record(user.id, false, "totp_required", ctx);
       throw new ApiError(401, "Enter the 6-digit code from your authenticator app.", "totp_required");
     }
-    rateLimit(`totp:${user.id}`, 8, 15 * 60_000);
+    await rateLimit(`totp:${user.id}`, 8, 15 * 60_000);
     const step = totpStep(open(user.totpSecret), ctx.totp);
     if (step === null || (user.totpLastStep !== null && step <= user.totpLastStep)) {
       await record(user.id, false, "bad_totp", ctx);

@@ -7,7 +7,7 @@ export const GET = route(async () => ok(await backupStatus()), { permission: "co
 
 /** "Back up now". */
 export const POST = route(async ({ user }) => {
-  rateLimit(`backup-now:${user.id}`, 6, 60 * 60_000);
+  await rateLimit(`backup-now:${user.id}`, 6, 60 * 60_000);
   const r = await runBackup();
   await audit(user.id, "ops.backup_now", "backup", r.ran ? r.key : "none", r);
   return ok(r);

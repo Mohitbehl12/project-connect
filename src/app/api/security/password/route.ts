@@ -11,7 +11,7 @@ const Body = z.object({ current: z.string().min(1).max(128), next: z.string().mi
 
 /** Change password; signs out every device (including this one) so a stolen session can't linger. */
 export const POST = route(async ({ req, user }) => {
-  rateLimit(`pwchange:${user.id}`, 5, 15 * 60_000);
+  await rateLimit(`pwchange:${user.id}`, 5, 15 * 60_000);
   const b = await parseBody(req, Body);
   if (!(await verifyPassword(b.current, user.passwordHash))) throw new ApiError(401, "Your current password isn't right.", "bad_credentials");
   if (!passwordOk(b.next)) throw new ApiError(422, PASSWORD_RULES, "weak_password");

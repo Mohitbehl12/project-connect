@@ -24,7 +24,7 @@ function startOfUtcDay() {
 }
 
 export const POST = route(async ({ req, user }) => {
-  rateLimit(`like:${user.id}`, 120, 60_000);
+  await rateLimit(`like:${user.id}`, 120, 60_000);
   const b = await parseBody(req, Body);
   if (b.toId === user.id) throw new ApiError(400, "You can't like your own profile.", "self");
   if (user.onboardingStep < 3) throw new ApiError(409, "Finish setting up your profile first.", "onboarding");

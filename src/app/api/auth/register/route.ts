@@ -26,7 +26,7 @@ const Body = z.object({
 
 export const POST = publicRoute(async ({ req }) => {
   const ip = await clientIp();
-  rateLimit(`register:${ip}`, 10, 60 * 60_000);
+  await rateLimit(`register:${ip}`, 10, 60 * 60_000);
   const body = await parseBody(req, Body);
 
   if (!passwordOk(body.password)) throw new ApiError(422, `Password: ${PASSWORD_RULES}`, "weak_password");

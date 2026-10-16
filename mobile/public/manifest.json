@@ -1,0 +1,17 @@
+{
+  "name": "Project Connect",
+  "short_name": "Connect",
+  "description": "Meet people who fit your values, safely.",
+  "id": "/app/",
+  "start_url": "/app/",
+  "scope": "/app/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F7F4FF",
+  "theme_color": "#7B48CC",
+  "icons": [
+    { "src": "/app/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/app/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/app/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -7,6 +7,6 @@ export const GET = route(async ({ user }) => ok(await verificationStatus(user)))
 
 /** Starts verification: returns a random pose to do in the selfie (valid 15 minutes). */
 export const POST = route(async ({ user }) => {
-  rateLimit(`verify-start:${user.id}`, 10, 60 * 60_000);
+  await rateLimit(`verify-start:${user.id}`, 10, 60 * 60_000);
   return ok(await startVerification(user));
 });

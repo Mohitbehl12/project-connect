@@ -20,7 +20,7 @@ export const GET = route(async ({ user }) => ok({ enabled: !!user.totpSecret }))
 
 export const POST = route(async ({ req, user }) => {
   const b = await parseBody(req, Body);
-  rateLimit(`totp-setup:${user.id}`, 10, 15 * 60_000);
+  await rateLimit(`totp-setup:${user.id}`, 10, 15 * 60_000);
   if (b.action === "start") {
     if (user.totpSecret) throw new ApiError(409, "2-step verification is already on.", "already_on");
     const secret = newTotpSecret();

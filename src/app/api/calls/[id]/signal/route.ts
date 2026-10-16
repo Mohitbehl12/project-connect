@@ -7,7 +7,7 @@ import { rateLimit } from "@/lib/ratelimit";
 const Body = z.object({ type: z.enum(["offer", "answer", "ice"]), data: z.unknown() });
 
 export const POST = route<{ id: string }>(async ({ req, user, params }) => {
-  rateLimit(`signal:${user.id}`, 300, 60_000);
+  await rateLimit(`signal:${user.id}`, 300, 60_000);
   const b = await parseBody(req, Body);
   return ok(await sendSignal(user, params.id, b.type, b.data));
 });

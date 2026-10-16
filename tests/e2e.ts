@@ -787,6 +787,76 @@ async function main() {
     const missed = (await W2.get("/api/notifications")).data?.notifications ?? [];
     check("a cancelled ring leaves a missed-call notice", missed.some((n: any) => /Missed voice call/.test(n.title)), missed.slice(0, 2));
 
+    section("Notifications on the web app (Web Push)");
+    if (process.env.PUSH_TEST_CERT && process.env.PUSH_TEST_PORT) {
+      // A stand-in for Apple's/Google's push service on this machine: records what the server sends and
+      // decrypts it with the "browser" keys, exactly as a phone would.
+      const https = await import("node:https"), nodeCrypto = await import("node:crypto"), fs = await import("node:fs");
+      // @ts-expect-error http_ece (used by web-push) ships no types
+      const ece = (await import("http_ece")).default as any;
+      const got: { path: string; headers: any; body: Buffer }[] = [];
+      let reply = 201;
+      const srv = https.createServer({ cert: fs.readFileSync(process.env.PUSH_TEST_CERT), key: fs.readFileSync(process.env.PUSH_TEST_KEY!) }, (req, res) => {
+        const chunks: Buffer[] = [];
+        req.on("data", (c) => chunks.push(c));
+        req.on("end", () => { got.push({ path: req.url ?? "", headers: req.headers, body: Buffer.concat(chunks) }); res.statusCode = reply; res.end(); });
+      });
+      await new Promise<void>((r) => srv.listen(Number(process.env.PUSH_TEST_PORT), "127.0.0.1", () => r()));
+      const ecdh = nodeCrypto.createECDH("prime256v1"); ecdh.generateKeys();
+      const auth = nodeCrypto.randomBytes(16).toString("base64url");
+      const endpoint = `https://127.0.0.1:${process.env.PUSH_TEST_PORT}/push/m3-${run}`;
+      const sub = { endpoint, keys: { p256dh: ecdh.getPublicKey().toString("base64url"), auth } };
+      const read = (i: number) => JSON.parse(ece.decrypt(got[i].body, { version: "aes128gcm", privateKey: ecdh, authSecret: auth }).toString());
+      const waitFor = async (n: number) => { for (let i = 0; i < 40 && got.length < n; i++) await new Promise((r) => setTimeout(r, 100)); return got.length >= n; };
+
+      const key = await M3.get("/api/push/web");
+      check("the app gets the public key for notifications", key.data?.enabled === true && /^[A-Za-z0-9_-]{80,}$/.test(key.data.publicKey ?? ""), key.data);
+      check("the key stays the same", (await W2.get("/api/push/web")).data?.publicKey === key.data?.publicKey);
+      check("only real push services are accepted (no requests to other servers)", (await M3.post("/api/push/web", { ...sub, endpoint: "https://internal.example.com/x" })).data?.code === "push_endpoint");
+      check("plain http push addresses are refused", (await M3.post("/api/push/web", { ...sub, endpoint: `http://127.0.0.1:${process.env.PUSH_TEST_PORT}/x` })).status === 422);
+      check("turning notifications on", (await M3.post("/api/push/web", sub)).status === 201);
+
+      await W2.post(`/api/matches/${rtMatch}/messages`, { body: "Secret plans for Saturday" });
+      const reply1 = M3.post(`/api/matches/${rtMatch}/messages`, { body: "Tell me!" });
+      check("a new message sends a notification at once", await waitFor(1), got.length);
+      const p1 = got[0] ? read(0) : null;
+      check("it's encrypted for this phone and signed by our server", got[0]?.headers["content-encoding"] === "aes128gcm" && /^vapid t=.+, k=.+/.test(got[0]?.headers.authorization ?? "") && !got[0].body.includes(Buffer.from("New message")), got[0]?.headers);
+      check("it opens the right chat and never contains the message text", p1?.title === "New message" && p1.link === `/matches/${rtMatch}` && !JSON.stringify(p1).includes("Saturday"), p1);
+
+      const ring = await W2.post(`/api/matches/${rtMatch}/call`, { kind: "AUDIO" });
+      await waitFor(2);
+      const p2 = got[1] ? read(1) : null;
+      check("an incoming call notifies at once, marked urgent", /is calling$/.test(p2?.title ?? "") && got[1]?.headers.urgency === "high", { p2, h: got[1]?.headers });
+      if (ring.data?.call?.id) await W2.post(`/api/calls/${ring.data.call.id}`, { action: "end" });
+      await waitFor(3); // the missed-call notice
+
+      await reply1;
+      reply = 410; // the phone removed the app: the push service says the address is gone
+      const before = got.length;
+      await W2.post(`/api/matches/${rtMatch}/messages`, { body: "Are you there?" });
+      await waitFor(before + 1);
+      reply = 201;
+      await M3.post(`/api/matches/${rtMatch}/messages`, { body: "Yes, here" });
+      await new Promise((r) => setTimeout(r, 300));
+      await W2.post(`/api/matches/${rtMatch}/messages`, { body: "Hello?" });
+      await new Promise((r) => setTimeout(r, 1500));
+      check("addresses the push service says are gone are forgotten", got.length === before + 1, got.length - before);
+
+      await M3.post(`/api/matches/${rtMatch}/messages`, { body: "Ok" });
+      await M3.post("/api/push/web", sub);
+      await W2.del("/api/push/web", { endpoint }); // someone else can't turn yours off
+      const n1 = got.length;
+      await W2.post(`/api/matches/${rtMatch}/messages`, { body: "Still on?" });
+      check("someone else can't turn off your notifications", await waitFor(n1 + 1));
+      await M3.post(`/api/matches/${rtMatch}/messages`, { body: "Yes" });
+      check("turning notifications off", (await M3.del("/api/push/web", { endpoint })).status === 200);
+      const n0 = got.length;
+      await W2.post(`/api/matches/${rtMatch}/messages`, { body: "Last one" });
+      await new Promise((r) => setTimeout(r, 1500));
+      check("…and nothing is sent afterwards", got.length === n0);
+      srv.close();
+    } else console.log("  (skipped: set PUSH_TEST_CERT, PUSH_TEST_KEY and PUSH_TEST_PORT to run the fake push service)");
+
     const c4 = await W2.post(`/api/matches/${rtMatch}/call`, { kind: "VIDEO" });
     await M3.post(`/api/calls/${c4.data.call.id}`, { action: "accept" });
     await M3.post("/api/blocks", { userId: w2Id });

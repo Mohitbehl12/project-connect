@@ -7,6 +7,6 @@ const Body = z.object({ planCode: z.string().min(1).max(30), coupon: z.string().
 
 export const POST = route(async ({ req, user }) => {
   const b = await parseBody(req, Body);
-  if (b.coupon) rateLimit(`coupon:${user.id}`, 20, 60 * 60_000); // stops guessing codes
+  if (b.coupon) await rateLimit(`coupon:${user.id}`, 20, 60 * 60_000); // stops guessing codes
   return ok({ quote: await quoteFor(user, b.planCode, { coupon: b.coupon, offerId: b.offerId, durationDays: b.durationDays }) });
 });

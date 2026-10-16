@@ -4,6 +4,7 @@ import { FlatList, Pressable, RefreshControl, View } from "react-native";
 import { VerifiedBadge } from "@/components/Icon";
 import { Ring } from "@/components/Ambient";
 import { ScrollView } from "react-native";
+import { PushPrompt } from "@/components/PushPrompt";
 import { T } from "@/components/Text";
 import { EmptyState, ErrorState, PhotoView, Screen, Skeleton } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -28,6 +29,7 @@ export default function MessagesTab() {
   return (
     <Screen pad={false} ambient="top">
       <View style={{ paddingTop: 6, paddingBottom: 8, paddingHorizontal: 20 }}><T v="title">Messages</T></View>
+      <PushPrompt />
       {q.isLoading && <View style={{ padding: 20, gap: 16 }}>{[0, 1, 2, 3].map((i) => <Skeleton key={i} h={56} />)}</View>}
       {q.error && <ErrorState message={(q.error as Error).message} onRetry={() => q.refetch()} />}
       {fresh.length > 0 && (

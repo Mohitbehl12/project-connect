@@ -12,7 +12,7 @@ export const GET = publicRoute(async ({ req }) => {
 });
 
 export const POST = publicRoute(async ({ req }) => {
-  rateLimit(`reset:${await clientIp()}`, 20, 60 * 60_000);
+  await rateLimit(`reset:${await clientIp()}`, 20, 60 * 60_000);
   const b = await parseBody(req, Body);
   await completePasswordReset(b.token, b.password);
   return ok({ reset: true });

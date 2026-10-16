@@ -20,7 +20,7 @@ const Body = z.object({
 });
 
 export const POST = route(async ({ req, user }) => {
-  rateLimit(`report:${user.id}`, 20, 60 * 60_000);
+  await rateLimit(`report:${user.id}`, 20, 60 * 60_000);
   const b = await parseBody(req, Body);
   if (b.reportedId === user.id) throw new ApiError(400, "You can't report yourself.", "self");
   const target = await db.query.users.findFirst({ where: eq(schema.users.id, b.reportedId) });

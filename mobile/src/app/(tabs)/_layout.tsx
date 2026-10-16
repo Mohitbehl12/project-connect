@@ -2,12 +2,13 @@ import { Redirect, Tabs, router } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { useEffect } from "react";
 import { registerForPush } from "@/lib/push";
+import { prepareWebPush } from "@/lib/webPush";
 import { TabBar } from "@/components/TabBar";
 import { useAuth } from "@/lib/auth";
 
 export default function TabsLayout() {
   const { status, me } = useAuth();
-  useEffect(() => { if (status === "signedIn") registerForPush(); }, [status]);
+  useEffect(() => { if (status === "signedIn") { registerForPush(); prepareWebPush(); } }, [status]);
   // Tapping a push opens the right screen (links use the web paths the server stores).
   useEffect(() => {
     const sub = Notifications.addNotificationResponseReceivedListener((r) => {

@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import Constants from "expo-constants";
 import { Platform } from "react-native";
+import { disableWebPush } from "./webPush";
 import { api, tokens } from "./api";
 import type { Me } from "./types";
 
@@ -57,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     const rt = await tokens.refreshToken();
+    await disableWebPush();
     try { await api("/api/auth/logout", { body: { refreshToken: rt }, auth: false }); } catch { /* offline sign-out still clears the device */ }
     await tokens.clear();
     qc.clear();

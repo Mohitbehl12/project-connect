@@ -13,7 +13,7 @@ const Body = z.object({
 
 /** A formal complaint to the Grievance Officer. Open to anyone, signed in or not (rate-limited). */
 export const POST = publicRoute(async ({ req }) => {
-  rateLimit(`grievance:${await clientIp()}`, 5, 60 * 60_000);
+  await rateLimit(`grievance:${await clientIp()}`, 5, 60 * 60_000);
   const b = await parseBody(req, Body);
   const user = await currentUser().catch(() => null);
   return ok(await fileGrievance({ ...b, userId: user?.id ?? null }), 201);

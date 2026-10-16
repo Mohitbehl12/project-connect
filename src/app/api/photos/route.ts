@@ -28,7 +28,7 @@ export const GET = route(async ({ user }) => ok({ photos: await myPhotos(user.id
  * (lib/photoScreen): explicit photos are refused, borderline ones wait for staff review.
  */
 export const POST = route(async ({ req, user }) => {
-  rateLimit(`photo:${user.id}`, 30, 60 * 60_000);
+  await rateLimit(`photo:${user.id}`, 30, 60 * 60_000);
   const [{ n }] = await db.select({ n: count() }).from(schema.photos).where(eq(schema.photos.userId, user.id));
   if (n >= MAX_PHOTOS) throw new ApiError(409, `You can have up to ${MAX_PHOTOS} photos. Remove one to add another.`, "photo_limit");
 

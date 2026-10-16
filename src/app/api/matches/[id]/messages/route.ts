@@ -56,7 +56,7 @@ export const GET = route<{ id: string }>(async ({ req, user, params }) => {
 const Body = z.object({ body: z.string().trim().min(1, "Write a message first").max(2000) });
 
 export const POST = route<{ id: string }>(async ({ req, user, params }) => {
-  rateLimit(`msg:${user.id}`, 30, 60_000);
+  await rateLimit(`msg:${user.id}`, 30, 60_000);
   const { match, otherId } = await requireMatch(params.id, user.id);
   if (await isBlockedBetween(user.id, otherId)) throw new ApiError(410, "This match has ended.", "match_ended");
   const { body } = await parseBody(req, Body);

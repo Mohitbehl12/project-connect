@@ -572,3 +572,14 @@ export const calls = sqliteTable("calls", {
   answeredAt: ts("answered_at"),
   endedAt: ts("ended_at"),
 }, (t) => [index("calls_match").on(t.matchId, t.createdAt), index("calls_callee").on(t.calleeId, t.state)]);
+
+/** Browser push subscriptions (the home-screen web app on iPhone, Android browsers). One row per device. */
+export const webPushSubscriptions = sqliteTable("web_push_subscriptions", {
+  id: id(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: now("created_at"),
+  lastOkAt: ts("last_ok_at"),
+}, (t) => [uniqueIndex("webpush_endpoint").on(t.endpoint), index("webpush_user").on(t.userId)]);

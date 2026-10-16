@@ -5,7 +5,7 @@ import { submitSelfie } from "@/lib/verification";
 
 /** The selfie for an open pose (multipart: "file" and "attemptId"). */
 export const POST = route(async ({ req, user }) => {
-  rateLimit(`verify-selfie:${user.id}`, 12, 60 * 60_000);
+  await rateLimit(`verify-selfie:${user.id}`, 12, 60 * 60_000);
   let form: FormData;
   try { form = await req.formData(); } catch { throw new ApiError(400, "Send the selfie as form data.", "bad_form"); }
   const file = form.get("file"), attemptId = String(form.get("attemptId") ?? "");

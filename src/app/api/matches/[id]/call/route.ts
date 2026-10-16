@@ -15,7 +15,7 @@ const Body = z.object({ kind: z.enum(["AUDIO", "VIDEO"]) });
 
 /** Rings the other person. */
 export const POST = route<{ id: string }>(async ({ req, user, params }) => {
-  rateLimit(`call:${user.id}`, 10, 10 * 60_000);
+  await rateLimit(`call:${user.id}`, 10, 10 * 60_000);
   const { kind } = await parseBody(req, Body);
   const c = await startCall(user, params.id, kind);
   return ok({ call: callView(c, user.id), ice: iceConfig(user.id) }, 201);

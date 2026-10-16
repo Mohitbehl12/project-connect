@@ -99,6 +99,12 @@ services:
         sync: false
       - key: TURN_CREDENTIAL
         sync: false
+      # Several servers only (docs/SCALING.md). Leave unset on one server.
+      - key: REDIS_URL
+        sync: false
+      # Web app notifications: keys are created automatically; this is the contact address push services see.
+      - key: PUSH_CONTACT_EMAIL
+        sync: false
       # In-app purchases (App Store / Google Play). Off until the store accounts and products exist.
       - key: STORE_BILLING_ENABLED
         value: "false"

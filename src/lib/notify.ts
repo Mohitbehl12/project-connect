@@ -1,6 +1,7 @@
 import "server-only";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { sendWebPush, type PushMessage } from "./webpush";
 
 type NotifType = "MATCH" | "MESSAGE" | "LIKE" | "VERIFICATION" | "DATE" | "SUBSCRIPTION" | "SECURITY" | "REPORT" | "MODERATION";
 
@@ -20,6 +21,13 @@ export async function notify(userId: string, type: NotifType, title: string, bod
   }
   await db.insert(schema.notifications).values({ userId, type, title, body, link });
   void sendPush(userId, title, body, link);
+  void sendWebPush(userId, { title, body, link, tag: type === "MESSAGE" && link ? `chat:${link}` : undefined });
+}
+
+/** A push without an in-app notification (an incoming call: it's only useful in the moment). */
+export async function pushNow(userId: string, msg: PushMessage) {
+  void sendPush(userId, msg.title, msg.body, msg.link);
+  void sendWebPush(userId, msg);
 }
 
 /**

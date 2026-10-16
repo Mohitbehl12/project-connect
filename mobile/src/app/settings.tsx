@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
+import { PushPrompt } from "@/components/PushPrompt";
 import { useState } from "react";
 import { Alert, Linking, Platform, Pressable, ScrollView, View } from "react-native";
 import { Button } from "@/components/Button";
@@ -57,6 +58,7 @@ export default function Settings() {
           <LinkRow icon="gift" label="Invite & earn" sub="Premium days for every verified friend" href="/referrals" />
         </Group>
         <Group title="Notifications">
+          <PushPrompt always />
           <Toggle label="New matches" value={p?.notifyMatches !== false} onChange={(v) => set("notifyMatches", v)} />
           <Toggle label="New messages" value={p?.notifyMessages !== false} onChange={(v) => set("notifyMessages", v)} />
           <Toggle label="New likes" value={p?.notifyLikes !== false} onChange={(v) => set("notifyLikes", v)} />

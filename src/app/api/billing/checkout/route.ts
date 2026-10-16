@@ -15,7 +15,7 @@ const Body = z.object({
 });
 
 export const POST = route(async ({ req, user }) => {
-  rateLimit(`checkout:${user.id}`, 10, 15 * 60_000);
+  await rateLimit(`checkout:${user.id}`, 10, 15 * 60_000);
   const b = await parseBody(req, Body);
   const r = await startCheckout(user, b);
   const t = await signScoped("pay", user.id, r.paymentId);

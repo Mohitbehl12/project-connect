@@ -11,7 +11,7 @@ const Body = z.object({
 
 /** "Restore purchases": the phone sends every subscription the store says this Apple/Google account owns. */
 export const POST = route(async ({ req, user }) => {
-  rateLimit(`store-restore:${user.id}`, 10, 60 * 60_000);
+  await rateLimit(`store-restore:${user.id}`, 10, 60 * 60_000);
   const b = await parseBody(req, Body);
   let restored = 0;
   let otherAccount = false;

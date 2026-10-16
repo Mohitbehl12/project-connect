@@ -189,3 +189,20 @@ Voice/video calls, voice messages, image and GIF sharing in chat, typing indicat
   - **Off in production until a TURN relay is set up.** Not yet tried on real phones.
   - Phones only ring while the app is open, until push notifications are set up.
 - Tests: 68 unit, 407 end-to-end.
+
+## Notifications, multiple servers, sample data, iPhone photos
+- **Web app notifications.** New messages, matches, likes and incoming calls send a notification to the home-screen app on iPhone (iOS 16.4+) and to Android browsers, with no Apple or Google account needed. The app explains how to turn them on (on iPhone: Add to Home Screen first).
+  - The keys are created automatically and stored encrypted.
+  - Notifications contain only the in-app notification text, never message contents.
+  - They go only to the real push services, so the server can't be used to send requests elsewhere.
+  - Addresses the push service reports as gone are forgotten.
+  - Signing out stops notifications on that phone.
+  - 13 end-to-end checks use a stand-in push service and decrypt what the server sends.
+  - **Not yet tried on a real iPhone.**
+- **Several servers (docs/SCALING.md).** With `REDIS_URL` set, chat changes, typing, calls and rate limits are shared between servers.
+  - Tested with two servers and one person on each: 8 checks. All 421 end-to-end checks also pass with Redis on.
+  - Moving off the single disk also needs a shared database (Turso/libSQL) and object storage (S3/R2).
+- **Database:** waits briefly for locks instead of failing, and uses write-ahead logging.
+- **Sample data** for testing: matches, chats and likes for the demo accounts (`scripts/sample-data.ts`). Remove it before launch.
+- **iPhone photos:** photos and selfies are converted to JPEG on the phone before upload. iPhone HEIC photos and photos over 10 MB used to fail.
+- Tests: 68 unit, 421 end-to-end, 8 two-server.

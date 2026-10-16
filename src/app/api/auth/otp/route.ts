@@ -18,7 +18,7 @@ export const POST = route(async ({ req, user }) => {
   const body = await parseBody(req, Body);
 
   if (body.action === "send") {
-    rateLimit(`otp:${user.id}`, 5, 60 * 60_000);
+    await rateLimit(`otp:${user.id}`, 5, 60 * 60_000);
     let destination = user.email;
     if (body.channel === "PHONE") {
       if (!body.phone) throw new ApiError(422, "phone: Enter your mobile number.", "validation");

@@ -24,6 +24,13 @@ async function main() {
     await db.update(s.users).set({ totpSecret: seal(open(u.totp)) }).where(eq(s.users.id, u.id));
     secrets++;
   }
+  // The browser-push private key (scripts can't import the server module, so this mirrors src/lib/webpush.ts).
+  const vapidKey = "secret:webpush.vapid";
+  const vapidRow = await db.query.appConfig.findFirst({ where: eq(s.appConfig.key, vapidKey) });
+  if (vapidRow) {
+    const v = JSON.parse(vapidRow.value);
+    if (keyIdOf(v.privateKey) !== active) await db.update(s.appConfig).set({ value: JSON.stringify({ ...v, privateKey: seal(open(v.privateKey, vapidKey), vapidKey) }) }).where(eq(s.appConfig.key, vapidKey));
+  }
   console.log(`Re-encrypted ${msgs} messages and ${secrets} 2-step secrets with key ${active}.`);
 }
 main().catch((e) => { console.error(e); process.exit(1); });
