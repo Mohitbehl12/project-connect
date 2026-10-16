@@ -9,6 +9,7 @@ import * as SystemUI from "expo-system-ui";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { IncomingCall } from "@/components/IncomingCall";
 import { StoreBridge } from "@/components/StoreBridge";
 import { AuthProvider } from "@/lib/auth";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
@@ -38,7 +39,9 @@ function Shell() {
         <Stack.Screen name="date/[matchId]" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
         <Stack.Screen name="premium" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
         <Stack.Screen name="notifications" />
+        <Stack.Screen name="call/[id]" options={{ animation: "fade", gestureEnabled: false }} />
       </Stack>
+      <IncomingCall />
     </>
   );
 }

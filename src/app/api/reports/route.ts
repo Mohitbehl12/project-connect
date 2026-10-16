@@ -1,3 +1,4 @@
+import { endCallsBetween } from "@/lib/calls";
 import { z } from "zod";
 import { and, eq, gte, isNotNull, or } from "drizzle-orm";
 import { db, schema } from "@/db";
@@ -44,6 +45,7 @@ export const POST = route(async ({ req, user }) => {
     const [a, z2] = orderedPair(user.id, b.reportedId);
     await db.update(schema.matches).set({ status: "UNMATCHED", unmatchedBy: user.id })
       .where(and(eq(schema.matches.userAId, a), eq(schema.matches.userBId, z2)));
+    await endCallsBetween(user.id, b.reportedId);
   }
 
   // Auto-suspend pending review when several different people report the same account.

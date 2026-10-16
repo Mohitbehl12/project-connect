@@ -33,6 +33,7 @@ export default function Chat() {
   const qc = useQueryClient();
   const [text, setText] = useState(draft ?? "");
   const [err, setErr] = useState("");
+  const [callNote, setCallNote] = useState("");
   const [menu, setMenu] = useState(false);
   const [plus, setPlus] = useState(false);
   const [msgAction, setMsgAction] = useState<Message | null>(null);
@@ -111,6 +112,16 @@ export default function Chat() {
     detail.refetch(); msgs.refetch();
   }
 
+  async function startCall(kind: "AUDIO" | "VIDEO") {
+    const who = detail.data?.other;
+    if (!who) return;
+    try {
+      const r = await api<{ call: { id: string } }>(`/api/matches/${id}/call`, { body: { kind } });
+      haptic.light();
+      router.push({ pathname: "/call/[id]", params: { id: r.call.id, name: who.firstName, photo: who.photos[0]?.url ?? "", userId: who.id } });
+    } catch (e: any) { setCallNote(e.message); setTimeout(() => setCallNote(""), 5000); }
+  }
+
   if (detail.error) return <View style={{ flex: 1, backgroundColor: c.bg, paddingTop: insets.top }}><ErrorState message={(detail.error as Error).message} onRetry={() => router.back()} /></View>;
   const o = detail.data?.other;
   const nextDate = detail.data?.dates.find((d) => d.status !== "CANCELLED" && new Date(d.startsAt) > new Date());
@@ -133,7 +144,8 @@ export default function Chat() {
               <T v="caption" tone={o?.online ? "trust" : "faint"}>{o?.online ? "Active now" : o?.city ?? ""}</T>
             </View>
           </Pressable>
-          <IconButton icon="calendar" label="Suggest a date" tone="none" disabled={ended} onPress={() => router.push({ pathname: "/date/[matchId]", params: { matchId: id, name: o?.firstName ?? "" } })} />
+          <IconButton icon="call" label="Voice call" tone="none" disabled={ended} onPress={() => startCall("AUDIO")} />
+          <IconButton icon="video" label="Video call" tone="none" disabled={ended} onPress={() => startCall("VIDEO")} />
           <IconButton icon="shield" label="Safety and options" tone="none" onPress={() => setMenu(true)} />
         </View>
         {nextDate && (
@@ -197,6 +209,7 @@ export default function Chat() {
       />
 
       {err ? <View style={{ paddingHorizontal: 14 }}><Banner tone="alert">{err}</Banner></View> : null}
+      {callNote ? <View style={{ paddingHorizontal: 14 }}><Banner tone="info">{callNote}</Banner></View> : null}
       {ended ? (
         <View style={{ padding: 18, paddingBottom: insets.bottom + 18 }}><T tone="muted" center>This conversation has ended.</T></View>
       ) : (

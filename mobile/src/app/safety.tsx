@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, View } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { ActivityIndicator, Platform, Pressable, ScrollView, View } from "react-native";
 import { REPORT_CATEGORIES } from "@shared/constants";
 import { Button } from "@/components/Button";
 import { Header } from "@/components/Header";
@@ -30,9 +31,41 @@ export default function Safety() {
   const blocks = useQuery({ queryKey: ["blocks"], queryFn: () => api<{ blocked: { id: string; firstName: string }[] }>("/api/blocks") });
   const status = me?.user.selfieStatus;
 
+  const [pose, setPose] = useState<{ attemptId: string; text: string; emoji: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  // Step 1: get a random pose. Step 2: a front-camera selfie doing it. The server checks for one face
+  // and compares it with the profile photos; a person on the team makes the final decision.
   async function verify() {
-    try { await api("/api/verification", { method: "POST" }); haptic.success(); setMsg("Thanks! We'll review your selfie shortly."); refetchMe(); }
-    catch (e: any) { setMsg(e.message); }
+    setMsg("");
+    try {
+      const r = await api<{ attemptId: string; pose: { text: string; emoji: string } }>("/api/verification", { method: "POST" });
+      setPose({ attemptId: r.attemptId, ...r.pose });
+    } catch (e: any) { setMsg(e.message); }
+  }
+  async function takeSelfie() {
+    if (!pose) return;
+    setMsg("");
+    if (Platform.OS !== "web") {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) { setMsg("Allow camera access in Settings to take your verification selfie."); return; }
+    }
+    const shot = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], cameraType: ImagePicker.CameraType.front, quality: 0.85 });
+    if (shot.canceled || !shot.assets?.[0]) return;
+    const asset = shot.assets[0];
+    setBusy(true);
+    try {
+      const form = new FormData();
+      form.append("attemptId", pose.attemptId);
+      if (Platform.OS === "web") form.append("file", await (await fetch(asset.uri)).blob(), "selfie.jpg");
+      else form.append("file", { uri: asset.uri, name: "selfie.jpg", type: asset.mimeType ?? "image/jpeg" } as any);
+      const r = await api<{ state: "RETAKE" | "PENDING"; message: string }>("/api/verification/selfie", { form });
+      setMsg(r.message);
+      if (r.state === "PENDING") { haptic.success(); setPose(null); refetchMe(); } else haptic.warning();
+    } catch (e: any) {
+      setMsg(e.message);
+      if (e.code === "expired" || e.code === "not_found" || e.code === "already_sent") setPose(null);
+    } finally { setBusy(false); }
   }
 
   return (
@@ -45,7 +78,16 @@ export default function Safety() {
             <T v="headline" style={{ flex: 1 }}>{status === "VERIFIED" ? "You're verified" : status === "PENDING" ? "Verification under review" : "Verify your profile"}</T>
           </View>
           <T v="callout" tone="muted">{status === "VERIFIED" ? "Your profile shows the sage ring." : status === "PENDING" ? "We'll let you know as soon as it's done." : "A quick selfie check earns the sage ring and more trust from matches."}</T>
-          {(status === "NONE" || status === "REJECTED") && <Button title="Verify me" onPress={verify} />}
+          {(status === "NONE" || status === "REJECTED") && !pose && <Button title="Verify me" onPress={verify} />}
+          {pose && status !== "PENDING" ? (
+            <View style={{ backgroundColor: c.surface, borderRadius: 18, padding: 14, gap: 8, alignItems: "center" }}>
+              <T v="callout" tone="muted">Take a selfie with the front camera while you:</T>
+              <T style={{ fontSize: 44 }} accessibilityElementsHidden>{pose.emoji}</T>
+              <T v="headline" style={{ textAlign: "center" }}>{pose.text}</T>
+              <T v="caption" tone="muted" style={{ textAlign: "center" }}>Just you, face clearly visible, good light, no sunglasses. A person on our team compares it with your profile photos, then the selfie is deleted.</T>
+              {busy ? <ActivityIndicator color={c.brand} /> : <Button title="Take selfie" onPress={takeSelfie} />}
+            </View>
+          ) : null}
           {msg ? <T v="callout">{msg}</T> : null}
         </View>
 

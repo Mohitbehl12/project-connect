@@ -16,6 +16,8 @@ export type PlanFeatures = {
 export const CONFIG_DEFAULTS = {
   "matching.weights": DEFAULT_WEIGHTS as Weights,
   "chat.maxUnansweredMessages": 4, // messages a person can send before the other replies
+  "calls.enabled": true, // voice and video calls between matches (also needs a TURN relay in production; see docs/CALLS.md)
+  "calls.minMessagesEach": 1, // both people must have sent at least this many messages before either can call
   "discovery.batchSize": 20,
   "safety.autoSuspendReportThreshold": 5, // distinct reporters within 30 days → auto-suspend pending review
   // Billing

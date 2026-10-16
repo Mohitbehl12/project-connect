@@ -173,3 +173,19 @@ Voice/video calls, voice messages, image and GIF sharing in chat, typing indicat
 - Honest offers: urgency words ("today only", "ends soon"…) are refused unless the offer really ends within 48 hours. Discounted INR prices are rounded to whole rupees.
 - Gender change after sign-up adds a risk signal for staff review (prices differ by gender); it never blocks the change.
 - Tests: 66 unit, 339 end-to-end.
+
+## Safety and features round 2 (on-server checks, selfie verification, calls)
+- On-server photo check: bundled models, so no outside service. Clearly explicit photos are refused, borderline ones go to staff, and if the check can't run, photos go to staff. It needs about 300 MB of extra memory, so it's **off on the Render Starter plan** (`PHOTO_SCAN_LOCAL=false`). Turn it on after moving to Standard (2 GB) or larger.
+- Selfie verification:
+  - The member does a random pose with the front camera, and the server checks there's exactly one face.
+  - It then compares the face with their profile photos. "Strong" is under 0.45. Two different people scored 0.57 in testing, so a person always makes the final decision.
+  - Staff see the selfie, the pose and the profile photos side by side. The selfie is deleted once they decide.
+  - With the on-server check off, staff compare by eye ("Automatic check didn't run").
+  - 15 end-to-end checks.
+- Voice and video calls between matches (docs/CALLS.md):
+  - Locked until both people have messaged. Blocking ends a call. Missed-call notices.
+  - With a TURN relay, the call goes only through the relay, so neither person sees the other's IP address.
+  - 25 end-to-end checks, plus a real two-browser video call on the web app.
+  - **Off in production until a TURN relay is set up.** Not yet tried on real phones.
+  - Phones only ring while the app is open, until push notifications are set up.
+- Tests: 68 unit, 407 end-to-end.

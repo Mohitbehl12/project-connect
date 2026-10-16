@@ -1,5 +1,6 @@
 import { onVerified } from "@/lib/referrals";
 import { z } from "zod";
+import { closeVerification } from "@/lib/verification";
 import { and, count, desc, eq, or } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ApiError, ok, parseBody, route } from "@/lib/http";
@@ -77,11 +78,13 @@ export const POST = route<{ id: string }>(async ({ req, user, params }) => {
       break;
     case "VERIFY":
       await db.update(U).set({ selfieStatus: "VERIFIED" }).where(eq(U.id, target.id));
+      await closeVerification(target.id, true, user.id, b.reason); // deletes the selfie image
       await notify(target.id, "VERIFICATION", "You're verified", "Your profile now shows a verified badge.");
       await onVerified(target.id); // referral reward + optional verification reward
       break;
     case "REJECT_VERIFICATION":
       await db.update(U).set({ selfieStatus: "REJECTED" }).where(eq(U.id, target.id));
+      await closeVerification(target.id, false, user.id, b.reason); // deletes the selfie image
       await notify(target.id, "VERIFICATION", "Verification not approved", b.reason);
       break;
     case "SET_ROLE":

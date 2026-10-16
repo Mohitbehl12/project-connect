@@ -531,3 +531,44 @@ export const grievances = sqliteTable("grievances", {
   handledById: text("handled_by_id"),
   createdAt: now("created_at"),
 }, (t) => [index("grievances_status").on(t.status, t.resolveDueAt)]);
+
+/**
+ * Selfie verification attempts. The member gets a random pose, takes a selfie, and the server checks for one
+ * face and compares it with their profile photos; staff make the final decision. The selfie image is deleted
+ * as soon as staff decide — only the outcome and the match score are kept.
+ */
+export const verificationAttempts = sqliteTable("verification_attempts", {
+  id: id(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  pose: text("pose").notNull(),
+  state: text("state").notNull().default("CHALLENGE"), // CHALLENGE | RETAKE | PENDING | APPROVED | REJECTED
+  storageKey: text("storage_key"), // the selfie, until staff decide
+  faceCount: integer("face_count"),
+  bestDistance: real("best_distance"), // lowest face distance to a profile photo (lower = more alike)
+  profileFaces: integer("profile_faces"),
+  note: text("note"), // what the person was told on a retake, or staff's reason
+  expiresAt: ts("expires_at").notNull(),
+  submittedAt: ts("submitted_at"),
+  decidedAt: ts("decided_at"),
+  decidedById: text("decided_by_id"),
+  createdAt: now("created_at"),
+}, (t) => [index("verif_user").on(t.userId, t.state)]);
+
+/**
+ * Voice and video calls between matched members. Media goes person-to-person over WebRTC (through a TURN
+ * relay when one is set up, which also hides each person's IP address); the server only relays the
+ * connection setup and keeps this log, never audio or video.
+ */
+export const calls = sqliteTable("calls", {
+  id: id(),
+  matchId: text("match_id").notNull().references(() => matches.id, { onDelete: "cascade" }),
+  callerId: text("caller_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  calleeId: text("callee_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(), // AUDIO | VIDEO
+  state: text("state").notNull().default("RINGING"), // RINGING | ACTIVE | ENDED
+  endReason: text("end_reason"), // DECLINED | MISSED | HUNG_UP | CANCELLED | FAILED | BLOCKED
+  endedById: text("ended_by_id"),
+  createdAt: now("created_at"),
+  answeredAt: ts("answered_at"),
+  endedAt: ts("ended_at"),
+}, (t) => [index("calls_match").on(t.matchId, t.createdAt), index("calls_callee").on(t.calleeId, t.state)]);

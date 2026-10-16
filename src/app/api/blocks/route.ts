@@ -1,3 +1,4 @@
+import { endCallsBetween } from "@/lib/calls";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
@@ -15,6 +16,7 @@ export const POST = route(async ({ req, user }) => {
   await db.update(schema.matches).set({ status: "UNMATCHED", unmatchedBy: user.id })
     .where(and(eq(schema.matches.userAId, a), eq(schema.matches.userBId, b)));
   await audit(user.id, "user.block", "user", userId);
+  await endCallsBetween(user.id, userId);
   return ok({ blocked: true }, 201);
 }, { allowSuspended: true });
 

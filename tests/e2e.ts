@@ -29,6 +29,15 @@ class Client {
   put = (p: string, b: unknown) => this.call("PUT", p, b);
   patch = (p: string, b: unknown) => this.call("PATCH", p, b);
   del = (p: string, b?: unknown) => this.call("DELETE", p, b);
+  /** multipart upload with this client's session */
+  async upload(path: string, fields: Record<string, string | Buffer>) {
+    const form = new FormData();
+    for (const [k, v] of Object.entries(fields)) typeof v === "string" ? form.append(k, v) : form.append(k, new Blob([new Uint8Array(v)], { type: "image/jpeg" }), `${k}.jpg`);
+    const res = await fetch(BASE + path, { method: "POST", headers: { cookie: this.cookie, "x-forwarded-for": `10.0.0.${this.name.length}` }, body: form });
+    let data: any = null;
+    try { data = await res.json(); } catch { /* not json */ }
+    return { status: res.status, data };
+  }
 }
 
 function check(name: string, cond: unknown, detail?: unknown) {
@@ -69,7 +78,7 @@ async function onboard(c: Client, email: string, gender: string, seeking: string
   const pers = await c.put("/api/personality", { answers });
   check(`${c.name}: saves personality`, pers.status === 200, pers.data);
   const v = await c.post("/api/verification");
-  check(`${c.name}: requests selfie verification`, v.status === 200 && v.data.status === "PENDING", v.data);
+  check(`${c.name}: starting verification hands out a random pose`, v.status === 200 && v.data.status === "CHALLENGE" && !!v.data.pose?.text && !!v.data.attemptId, v.data);
   const me = await c.get("/api/me");
   check(`${c.name}: onboarding complete`, me.data?.user?.onboardingStep === 3, me.data?.user);
   check(`${c.name}: /me never returns coordinates`, me.data?.profile && !("lat" in me.data.profile), me.data?.profile);
@@ -660,6 +669,43 @@ async function main() {
   check("a refused photo is removed and the rest renumbered", !mineAfter.some((p: any) => p.id === upR2.data.photo.id) && mineAfter.every((p: any, i: number) => p.position === i), mineAfter.map((p: any) => [p.id.slice(0, 4), p.position, p.status]));
   await admin.put("/api/admin/config", { config: { "moderation.photoScreening": "auto" } });
 
+  section("Selfie verification (pose + face check + staff decision)");
+  {
+    // Test faces are crops of the face-api package's bundled demo photo (not real members).
+    const sample = (await import("node:fs")).readFileSync("node_modules/@vladmandic/face-api/demo/sample1.jpg");
+    const profileFace = await sharp(sample).extract({ left: 290, top: 220, width: 420, height: 520 }).jpeg().toBuffer();
+    const selfie = await sharp(sample).extract({ left: 260, top: 190, width: 480, height: 580 }).modulate({ brightness: 1.1 }).flop().jpeg().toBuffer();
+    const V = new Client("Verifier9"), O = new Client("OtherOne7");
+    const vId = await onboard(V, `verif-${run}@test.local`, "WOMAN", "MAN", "Ira", answersA);
+    await onboard(O, `verif2-${run}@test.local`, "MAN", "WOMAN", "Dev", answersB);
+    const ph = await V.upload("/api/photos", { file: profileFace });
+    check("profile photo with a face goes live", ph.status === 201 && ph.data.photo?.status === "LIVE", ph.data);
+    const st = await V.post("/api/verification");
+    check("a fresh pose each time", st.status === 200 && st.data.status === "CHALLENGE", st.data);
+    const att = st.data.attemptId;
+    const blank = await V.upload("/api/verification/selfie", { attemptId: att, file: Buffer.from(jpeg) });
+    check("a selfie with no face asks for a retake", blank.status === 200 && blank.data.state === "RETAKE" && /couldn't see your face/.test(blank.data.message), blank.data);
+    const group = await V.upload("/api/verification/selfie", { attemptId: att, file: sample });
+    check("a selfie with several people asks for a retake", group.data?.state === "RETAKE" && /Only you/.test(group.data.message), group.data);
+    check("someone else can't use your pose", (await O.upload("/api/verification/selfie", { attemptId: att, file: selfie })).status === 404);
+    const ok = await V.upload("/api/verification/selfie", { attemptId: att, file: selfie });
+    check("a clear selfie goes to staff", ok.status === 200 && ok.data.state === "PENDING", ok.data);
+    check("the same pose can't be sent twice", (await V.upload("/api/verification/selfie", { attemptId: att, file: selfie })).status === 409);
+    check("member sees it's under review", (await V.get("/api/verification")).data?.status === "PENDING");
+    check("can't start again while under review", (await V.post("/api/verification")).status === 409);
+    const q = await admin.get("/api/admin/verification");
+    const item = q.data?.queue?.find((x: any) => x.userId === vId);
+    check("staff see the selfie, pose, profile photos and a strong match", item && item.match === "STRONG" && item.distance < 0.45 && item.photos.length >= 1 && !!item.selfieUrl && !!item.pose?.text, item);
+    check("finance staff can't see selfies", (await finance.get("/api/admin/verification")).status === 403);
+    check("members can't see the queue", (await V.get("/api/admin/verification")).status === 403);
+    const selfieUrl = new URL(item?.selfieUrl ?? "/", BASE).toString();
+    check("the selfie is readable before the decision", (await fetch(selfieUrl, { headers: { cookie: admin.cookie } })).status === 200);
+    check("staff approve it", (await admin.post(`/api/admin/users/${vId}`, { action: "VERIFY", reason: "Same person, pose correct (e2e)" })).status === 200);
+    check("approved member is verified", (await V.get("/api/me")).data?.user?.selfieStatus === "VERIFIED");
+    check("the selfie is deleted after the decision", (await fetch(selfieUrl, { headers: { cookie: admin.cookie } })).status !== 200);
+    check("it leaves the queue", !(await admin.get("/api/admin/verification")).data?.queue?.some((x: any) => x.userId === vId));
+  }
+
   section("Offers: no false urgency");
   const fake = await admin.post("/api/admin/billing/offers", { name: `Fake urgency ${run}`, kind: "DISCOUNT", headline: "Hurry — 20% off", badge: "Today only", planCode: "VIP", country: "IN", discountPct: 20, active: false });
   check("\"Today only\" without a real end date is refused", fake.status === 422 && fake.data?.code === "false_urgency", fake.data);
@@ -686,6 +732,63 @@ async function main() {
   const got = await waiting2;
   check("a new message wakes the other phone at once (no polling delay)", got.data?.version > typed.data.version && got.data.typing === false && Date.now() - rt1 < 3000, got.data);
   check("outsiders can't listen to a chat", (await IAP.get(`/api/matches/${rtMatch}/wait?v=0&wait=0`)).status === 404);
+
+  section("Voice and video calls");
+  {
+    const locked = await W2.get(`/api/matches/${rtMatch}/call`);
+    check("calls stay locked until both people have messaged", locked.data?.canCall === false && locked.data.code === "calls_locked", locked.data);
+    check("ringing a locked chat is refused", (await W2.post(`/api/matches/${rtMatch}/call`, { kind: "VIDEO" })).data?.code === "calls_locked");
+    await W2.post(`/api/matches/${rtMatch}/messages`, { body: "Yes! Thursday?" });
+    check("calls unlock once both have messaged", (await W2.get(`/api/matches/${rtMatch}/call`)).data?.canCall === true);
+    check("outsiders can't call into the chat", (await IAP.post(`/api/matches/${rtMatch}/call`, { kind: "AUDIO" })).status === 404);
+
+    const incoming = M3.get("/api/calls/incoming?wait=10000");
+    await new Promise((r) => setTimeout(r, 300));
+    const t0 = Date.now();
+    const start = await W2.post(`/api/matches/${rtMatch}/call`, { kind: "VIDEO" });
+    check("W2 rings M3", start.status === 201 && start.data.call?.state === "RINGING" && start.data.call.incoming === false, start.data);
+    check("the app gets connection settings (never the relay secret)", !!start.data.ice && !JSON.stringify(start.data).includes(process.env.TURN_SECRET || "no-secret-set"), start.data.ice);
+    const callId = start.data.call?.id;
+    const ring = await incoming;
+    check("the other phone hears about it at once", ring.data?.call?.id === callId && ring.data.call.from?.name && Date.now() - t0 < 3000, ring.data);
+    check("the ring shows a first name and photo, nothing private", ring.data?.call && !("email" in ring.data.call.from) && !("phone" in ring.data.call.from), ring.data?.call?.from);
+    check("a second call while ringing is refused", (await M3.post(`/api/matches/${rtMatch}/call`, { kind: "AUDIO" })).data?.code === "busy");
+    check("the callee can't send an offer before answering", (await M3.post(`/api/calls/${callId}/signal`, { type: "offer", data: { type: "offer", sdp: "x" } })).status === 409);
+    check("the caller sends the offer", (await W2.post(`/api/calls/${callId}/signal`, { type: "offer", data: { type: "offer", sdp: "v=0 test" } })).status === 200);
+    await W2.post(`/api/calls/${callId}/signal`, { type: "ice", data: { candidate: "candidate:1 1 udp 1 10.0.0.1 9 typ host", sdpMid: "0" } });
+    check("outsiders can't read the call", (await IAP.get(`/api/calls/${callId}?wait=0`)).status === 404);
+    check("outsiders can't inject signals", (await IAP.post(`/api/calls/${callId}/signal`, { type: "ice", data: {} })).status === 404);
+    check("only the callee can answer", (await W2.post(`/api/calls/${callId}`, { action: "accept" })).status === 403);
+    const acc = await M3.post(`/api/calls/${callId}`, { action: "accept" });
+    check("M3 answers", acc.data?.call?.state === "ACTIVE" && !!acc.data.ice, acc.data);
+    const sig = await M3.get(`/api/calls/${callId}?after=0&wait=0`);
+    check("the callee receives the offer and candidate in order", sig.data?.signals?.map((x: any) => x.type).join(",") === "offer,ice", sig.data);
+    const waitAns = W2.get(`/api/calls/${callId}?after=0&wait=10000`);
+    await new Promise((r) => setTimeout(r, 300));
+    const t1 = Date.now();
+    await M3.post(`/api/calls/${callId}/signal`, { type: "answer", data: { type: "answer", sdp: "v=0 answer" } });
+    const ans = await waitAns;
+    check("the answer reaches the caller at once and the caller never sees their own signals", ans.data?.signals?.length === 1 && ans.data.signals[0].type === "answer" && Date.now() - t1 < 3000, ans.data);
+    check("signals that are too large are refused", (await W2.post(`/api/calls/${callId}/signal`, { type: "ice", data: "x".repeat(30_000) })).status === 413);
+    const hang = await W2.post(`/api/calls/${callId}`, { action: "end" });
+    check("hanging up ends it for both", hang.data?.call?.state === "ENDED" && hang.data.call.endReason === "HUNG_UP" && (await M3.get(`/api/calls/${callId}?wait=0`)).data?.call?.state === "ENDED", hang.data);
+    check("no signals after the call ends", (await M3.post(`/api/calls/${callId}/signal`, { type: "ice", data: {} })).status === 410);
+    const log = (await M3.get(`/api/matches/${rtMatch}/messages`)).data?.messages ?? [];
+    check("the chat shows the call happened", log.some((m: any) => m.kind === "SYSTEM" && /Video call · \d+:\d\d/.test(m.body)), log.slice(-3));
+
+    const c2 = await M3.post(`/api/matches/${rtMatch}/call`, { kind: "AUDIO" });
+    check("declining a call", (await W2.post(`/api/calls/${c2.data.call.id}`, { action: "decline" })).data?.call?.endReason === "DECLINED");
+    const c3 = await M3.post(`/api/matches/${rtMatch}/call`, { kind: "AUDIO" });
+    await M3.post(`/api/calls/${c3.data.call.id}`, { action: "end" });
+    const missed = (await W2.get("/api/notifications")).data?.notifications ?? [];
+    check("a cancelled ring leaves a missed-call notice", missed.some((n: any) => /Missed voice call/.test(n.title)), missed.slice(0, 2));
+
+    const c4 = await W2.post(`/api/matches/${rtMatch}/call`, { kind: "VIDEO" });
+    await M3.post(`/api/calls/${c4.data.call.id}`, { action: "accept" });
+    await M3.post("/api/blocks", { userId: w2Id });
+    check("blocking ends a call in progress", (await W2.get(`/api/calls/${c4.data.call.id}?wait=0`)).data?.call?.endReason === "BLOCKED");
+    check("blocked people can't call", (await W2.post(`/api/matches/${rtMatch}/call`, { kind: "AUDIO" })).status >= 400);
+  }
 
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) {

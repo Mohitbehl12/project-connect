@@ -13,8 +13,9 @@
       "supportsTablet": false,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "Choose photos for your profile.",
-        "NSCameraUsageDescription": "Take a profile photo or a verification selfie.",
-        "ITSAppUsesNonExemptEncryption": false
+        "NSCameraUsageDescription": "Take a profile photo or a verification selfie, and show your video in calls with your matches.",
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSMicrophoneUsageDescription": "Let your matches hear you in voice and video calls."
       },
       "privacyManifests": {
         "NSPrivacyTracking": false,
@@ -38,7 +39,6 @@
       },
       "predictiveBackGestureEnabled": true,
       "blockedPermissions": [
-        "android.permission.RECORD_AUDIO",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.SYSTEM_ALERT_WINDOW"
@@ -71,8 +71,7 @@
         "expo-image-picker",
         {
           "photosPermission": "Choose photos for your profile.",
-          "cameraPermission": "Take a profile photo or a verification selfie.",
-          "microphonePermission": false
+          "cameraPermission": "Take a profile photo or a verification selfie."
         }
       ],
       [
@@ -84,7 +83,14 @@
       ],
       "expo-web-browser",
       "expo-sharing",
-      "expo-iap"
+      "expo-iap",
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "Take a profile photo or a verification selfie, and show your video in calls with your matches.",
+          "microphonePermission": "Let your matches hear you in voice and video calls."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

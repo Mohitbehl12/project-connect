@@ -74,6 +74,23 @@ services:
         sync: false
       - key: SIGHTENGINE_SECRET
         sync: false
+      # On-server photo and face checks (nudity scan, selfie face match). They need ~300 MB extra memory,
+      # which the Starter plan (512 MB) can't spare: keep "false" until the service runs on Standard (2 GB)
+      # or larger, then set "true". While off, photos and selfies are checked by staff by eye.
+      - key: PHOTO_SCAN_LOCAL
+        value: "false"
+      - key: VISION_MEMORY_MB
+        value: "384"
+      # Voice and video calls: a TURN relay (keeps members' IP addresses private). Calls stay off until set.
+      # See docs/CALLS.md. TURN_SECRET for coturn-style short-lived credentials, or TURN_USERNAME/TURN_CREDENTIAL.
+      - key: TURN_URLS
+        sync: false
+      - key: TURN_SECRET
+        sync: false
+      - key: TURN_USERNAME
+        sync: false
+      - key: TURN_CREDENTIAL
+        sync: false
       # In-app purchases (App Store / Google Play). Off until the store accounts and products exist.
       - key: STORE_BILLING_ENABLED
         value: "false"
