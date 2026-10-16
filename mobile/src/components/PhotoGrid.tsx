@@ -3,6 +3,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 import { ActionSheetIOS, ActivityIndicator, Alert, Platform, Pressable, View, useWindowDimensions } from "react-native";
 import Animated, { FadeIn, ZoomIn } from "react-native-reanimated";
+import { appendPhoto } from "@/lib/photoFile";
 import { api } from "@/lib/api";
 import { haptic } from "@/lib/haptics";
 import type { MyPhoto } from "@/lib/types";
@@ -39,12 +40,7 @@ export function PhotoGrid({ onCountChange }: { onCountChange?: (n: number) => vo
     setUploading(true); setHint(null);
     try {
       const form = new FormData();
-      if (Platform.OS === "web") {
-        const blob = await (await fetch(asset.uri)).blob();
-        form.append("file", blob, "photo.jpg");
-      } else {
-        form.append("file", { uri: asset.uri, name: asset.fileName ?? "photo.jpg", type: asset.mimeType ?? "image/jpeg" } as any);
-      }
+      await appendPhoto(form, asset);
       const r = await api<{ photo: MyPhoto }>("/api/photos", { form });
       haptic.success();
       setHint({ tone: r.photo.status === "PENDING" ? "trust" : r.photo.quality === "GOOD" ? "trust" : "warn", text: r.photo.hint });

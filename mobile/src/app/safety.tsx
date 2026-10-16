@@ -10,6 +10,7 @@ import { Icon, VerifiedBadge } from "@/components/Icon";
 import { T } from "@/components/Text";
 import { Banner, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
+import { appendPhoto } from "@/lib/photoFile";
 import { useAuth } from "@/lib/auth";
 import { haptic } from "@/lib/haptics";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -57,8 +58,7 @@ export default function Safety() {
     try {
       const form = new FormData();
       form.append("attemptId", pose.attemptId);
-      if (Platform.OS === "web") form.append("file", await (await fetch(asset.uri)).blob(), "selfie.jpg");
-      else form.append("file", { uri: asset.uri, name: "selfie.jpg", type: asset.mimeType ?? "image/jpeg" } as any);
+      await appendPhoto(form, asset, "selfie.jpg");
       const r = await api<{ state: "RETAKE" | "PENDING"; message: string }>("/api/verification/selfie", { form });
       setMsg(r.message);
       if (r.state === "PENDING") { haptic.success(); setPose(null); refetchMe(); } else haptic.warning();

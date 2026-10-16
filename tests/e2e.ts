@@ -305,6 +305,10 @@ async function main() {
   check("dark photo is flagged as DARK (not rejected)", up2.status === 201 && up2.data.photo?.quality === "DARK", up2.data?.photo);
   const notImg = new FormData(); notImg.append("file", new Blob([new TextEncoder().encode("hello")], { type: "image/jpeg" }), "x.jpg");
   check("non-image upload is refused", (await bearer("POST", "/api/photos", undefined, tok, notImg)).status === 422);
+  const heicBytes = new Uint8Array(64); heicBytes.set(new TextEncoder().encode("\0\0\0\x18ftypheic"), 0);
+  const heic = new FormData(); heic.append("file", new Blob([heicBytes], { type: "image/heic" }), "IMG_0001.HEIC");
+  const heicRes = await bearer("POST", "/api/photos", undefined, tok, heic);
+  check("an old app sending an iPhone HEIC photo gets a clear message", heicRes.status === 422 && heicRes.data?.code === "heic", heicRes.data);
   const media = await fetch(BASE + up.data.photo.url);
   check("signed media link serves the image", media.status === 200 && media.headers.get("content-type") === "image/webp");
   const tampered = await fetch(BASE + up.data.photo.url.replace(/sig=[^&]+/, "sig=bad"));

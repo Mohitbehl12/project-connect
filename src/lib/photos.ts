@@ -20,13 +20,18 @@ export type PhotoQuality = "GOOD" | "DARK" | "BLURRY" | "SMALL";
  * resizes to 1080 px wide WebP, and computes a blurhash and simple quality hints.
  * Quality hints are about light and focus only — never about how someone looks.
  */
+const isHeic = (b: Buffer) => b.length > 12 && b.toString("latin1", 4, 8) === "ftyp" && /^(heic|heix|hevc|hevx|mif1|msf1)$/.test(b.toString("latin1", 8, 12));
+
 export async function processPhoto(input: Buffer) {
   let meta: Awaited<ReturnType<ReturnType<typeof sharp>["metadata"]>>;
   try {
     meta = await sharp(input).metadata();
   } catch {
-    throw new ApiError(422, "That file isn't a photo we can read. Try a JPEG or PNG.", "bad_image");
+    if (isHeic(input)) meta = { format: "heif" } as typeof meta;
+    else throw new ApiError(422, "That file isn't a photo we can read. Try a JPEG or PNG.", "bad_image");
   }
+  if (meta.format === "heif")
+    throw new ApiError(422, "This looks like an iPhone HEIC photo, which we can't read yet. Refresh the app and try again — it converts photos automatically.", "heic");
   if (!meta.format || !["jpeg", "png", "webp"].includes(meta.format))
     throw new ApiError(422, "Please upload a JPEG, PNG or WebP photo.", "bad_format");
   if (!meta.width || !meta.height || meta.width * meta.height > 50_000_000)
