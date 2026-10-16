@@ -12,6 +12,7 @@ import { useAuth } from "@/lib/auth";
 import { haptic } from "@/lib/haptics";
 import { useTheme, type ThemePref } from "@/theme/ThemeProvider";
 import { Group, LinkRow, Toggle } from "@/components/SettingsKit";
+import { ThemePicker } from "@/components/ThemePicker";
 
 export default function Settings() {
   const { me, refetchMe, signOut } = useAuth();
@@ -41,6 +42,10 @@ export default function Settings() {
           <View style={{ flexDirection: "row", gap: 8, paddingVertical: 12 }}>
             {(["SYSTEM", "LIGHT", "DARK"] as ThemePref[]).map((t) => <Chip key={t} label={t === "SYSTEM" ? "System" : t === "LIGHT" ? "Light" : "Dark"} selected={pref === t} onPress={() => theme(t)} />)}
           </View>
+        </Group>
+        <Group title="Colour theme">
+          <T v="caption" tone="muted" style={{ paddingTop: 10 }}>Pick the colours you like. It changes the whole app on this phone.</T>
+          <ThemePicker />
         </Group>
         <Group title="Account & safety">
           <LinkRow icon="eye" label="Privacy Center" sub="Who sees you, your data, deleting your account" href="/privacy" />

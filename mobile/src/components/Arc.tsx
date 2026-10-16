@@ -9,7 +9,7 @@ const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 /** The brand symbol: two open curves. `closed` (0..1) pulls them together into a ring. */
 export function ArcMark({ size = 48, left, right, stroke }: { size?: number; left?: string; right?: string; stroke?: number }) {
-  const { c } = useTheme();
+  const { c, g: glow } = useTheme();
   const w = stroke ?? size * 0.11;
   const r = size / 2 - w;
   const cx = size / 2;
@@ -44,7 +44,7 @@ export function ArcLoader({ size = 36, label = "Loading" }: { size?: number; lab
  * Compatibility meter. The arc draws in when shown; `live` lets a gesture drive it (swipe feedback).
  */
 export function CompatArc({ score, size = 56, live, onDark, label = true }: { score: number; size?: number; live?: SharedValue<number>; onDark?: boolean; label?: boolean }) {
-  const { c } = useTheme();
+  const { c, g: glow } = useTheme();
   const stroke = Math.max(4, size * 0.09);
   const r = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
@@ -57,7 +57,7 @@ export function CompatArc({ score, size = 56, live, onDark, label = true }: { sc
     const extra = live ? Math.max(0, live.value) * (1 - drawn.value) : 0; // a right swipe "closes" the ring
     return { strokeDashoffset: circ * (1 - Math.min(1, drawn.value + extra)) };
   });
-  const tone = score >= 80 ? (onDark ? "#7FD1B0" : c.trust) : score >= 65 ? c.accent : onDark ? "#E3D6FF" : c.faint;
+  const tone = score >= 80 ? (onDark ? "#7FD1B0" : c.trust) : score >= 65 ? c.accent : onDark ? glow.onNight : c.faint;
   return (
     <View style={{ width: size, height: size }} accessible accessibilityLabel={`${score} percent compatible`}>
       <Svg width={size} height={size} style={{ transform: [{ rotate: "-90deg" }] }}>

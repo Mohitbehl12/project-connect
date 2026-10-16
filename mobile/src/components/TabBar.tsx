@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "@/lib/api";
 import { haptic } from "@/lib/haptics";
 import type { MatchRow } from "@/lib/types";
+import { alpha } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
 import { Glass } from "./Ambient";
 import { Icon, type IconName } from "./Icon";
@@ -24,7 +25,7 @@ const TABS: Record<string, { label: string; icon: IconName }> = {
  * a small marigold arc sits above the selected icon — the brand mark in miniature.
  */
 export function TabBar({ state, navigation }: { state: any; navigation: any }) {
-  const { c, dark } = useTheme();
+  const { c, dark, g } = useTheme();
   const insets = useSafeAreaInsets();
   const [w, setW] = useState(0);
   const matches = useQuery({ queryKey: ["matches"], queryFn: () => api<{ matches: MatchRow[] }>("/api/matches"), staleTime: 30_000 });
@@ -39,11 +40,11 @@ export function TabBar({ state, navigation }: { state: any; navigation: any }) {
 
   return (
     <View style={{ backgroundColor: c.bg, paddingHorizontal: 14, paddingTop: 4, paddingBottom: Math.max(insets.bottom, 10) }}>
-      <Glass radius={32} intensity={60} style={{ shadowColor: "#16112A", shadowOpacity: dark ? 0.5 : 0.12, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 8 }}>
+      <Glass radius={32} intensity={60} style={{ shadowColor: g.night, shadowOpacity: dark ? 0.5 : 0.12, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 8 }}>
         <View accessibilityRole="tablist" onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ flexDirection: "row", height: 64 }}>
           {w > 0 && (
             <Animated.View pointerEvents="none" style={[{ position: "absolute", top: 7, left: 0, width: tabW, height: 50, alignItems: "center" }, lozenge]}>
-              <View style={{ width: Math.min(tabW - 8, 76), height: 50, borderRadius: 25, backgroundColor: dark ? "rgba(195,166,255,0.22)" : "rgba(123,72,204,0.10)" }} />
+              <View style={{ width: Math.min(tabW - 8, 76), height: 50, borderRadius: 25, backgroundColor: dark ? alpha(g.spark2, 0.22) : alpha(c.brand, 0.1) }} />
             </Animated.View>
           )}
           {routes.map((route: any) => {

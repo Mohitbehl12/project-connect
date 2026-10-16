@@ -151,3 +151,7 @@ Voice/video calls, voice messages, image and GIF sharing in chat, typing indicat
 ## Forgot password
 - Done and tested end-to-end (12 checks): same answer for unknown emails, single-use hashed tokens, 30-minute expiry, weak passwords refused, every session signed out, rate limits.
 - Not yet live-tested: actual email delivery via Resend (needs `RESEND_API_KEY` + `EMAIL_FROM`).
+
+## Pricing v2 (India) and colour themes
+- Done and tested: billing periods per plan. Men pay ₹100/month, ₹250/3 months, ₹500/6 months or ₹1,000/year. Women and everyone else get 90 free days on finishing sign-up, then pay ₹50/month or ₹500/year. All of this is editable in Admin.
+- Done: 10 colour themes the member picks in Settings › Colour theme. The choice is saved on the phone. Every theme passes the AA contrast check (`npm --prefix mobile run check:themes`). The website uses Lilac + mint.

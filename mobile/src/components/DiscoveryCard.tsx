@@ -2,11 +2,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { View } from "react-native";
 import Animated, { interpolate, useAnimatedStyle, useDerivedValue, type SharedValue } from "react-native-reanimated";
 import type { Card } from "@/lib/types";
-import { sunset } from "@/theme/tokens";
 import { CompatArc } from "./Arc";
 import { Icon, VerifiedBadge } from "./Icon";
 import { T } from "./Text";
 import { PhotoView } from "./ui";
+import { useTheme } from "@/theme/ThemeProvider";
+import { alpha } from "@/theme/themes";
 
 /**
  * Immersive card. The photo fills it; the compatibility arc glows top-right; name, intent, shared
@@ -16,6 +17,7 @@ import { PhotoView } from "./ui";
 export function DiscoveryCard({ card, drag, threshold, photoIndex = 0, bottomInset = 0 }: {
   card: Card; drag?: SharedValue<number>; threshold: number; photoIndex?: number; bottomInset?: number;
 }) {
+  const { c, g } = useTheme();
   const closing = useDerivedValue(() => (drag ? Math.max(0, Math.min(1, drag.value / threshold)) : 0));
   const likeGlow = useAnimatedStyle(() => ({ opacity: drag ? interpolate(drag.value, [0, threshold], [0, 1], "clamp") : 0 }));
   const likeGlyph = useAnimatedStyle(() => {
@@ -38,7 +40,7 @@ export function DiscoveryCard({ card, drag, threshold, photoIndex = 0, bottomIns
       accessible
       accessibilityLabel={`${card.firstName}, ${card.age}, ${card.city}${card.verified ? ", verified" : ""}, ${card.score ?? ""} percent compatible, ${card.intent}. ${reason ?? ""}`}
       accessibilityHint="Double tap to open profile. Tap the left or right side of the photo to see more photos."
-      style={{ flex: 1, borderRadius: 32, overflow: "hidden", backgroundColor: "#211A3A" }}>
+      style={{ flex: 1, borderRadius: 32, overflow: "hidden", backgroundColor: g.nightRaised }}>
       <PhotoView photo={photo} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 } as any} priority="high" />
       <LinearGradient colors={["rgba(22,17,42,0.45)", "transparent"]} style={{ position: "absolute", left: 0, right: 0, top: 0, height: 120 }} />
 
@@ -50,7 +52,7 @@ export function DiscoveryCard({ card, drag, threshold, photoIndex = 0, bottomIns
 
       {card.score !== undefined && (
         <View style={{ position: "absolute", top: 24, right: 14, alignItems: "center", gap: 2 }}>
-          <View style={{ borderRadius: 40, padding: 5, backgroundColor: "rgba(22,17,42,0.38)", shadowColor: "#5CC9A7", shadowOpacity: 0.35, shadowRadius: 14 }}>
+          <View style={{ borderRadius: 40, padding: 5, backgroundColor: alpha(g.night, 0.38), shadowColor: g.spark, shadowOpacity: 0.35, shadowRadius: 14 }}>
             <CompatArc score={card.score} size={62} live={closing} onDark />
           </View>
           <T v="caption" tone="white" style={{ fontSize: 10.5, letterSpacing: 0.3, opacity: 0.9, fontFamily: "Figtree_700Bold" }}>match</T>
@@ -70,7 +72,7 @@ export function DiscoveryCard({ card, drag, threshold, photoIndex = 0, bottomIns
           <T v="callout" tone="white" numberOfLines={4} style={{ opacity: 0.95 }}>{card.bio}</T>
         ) : page === 2 && card.prompts[1] ? (
           <View style={{ gap: 2 }}>
-            <T v="caption" style={{ color: "#7FD8BE" }}>{card.prompts[1].q}</T>
+            <T v="caption" style={{ color: g.spark }}>{card.prompts[1].q}</T>
             <T v="headline" tone="white" numberOfLines={3} style={{ fontFamily: "BricolageGrotesque_700Bold", fontSize: 21, lineHeight: 26 }}>{card.prompts[1].a}</T>
           </View>
         ) : (
@@ -80,8 +82,8 @@ export function DiscoveryCard({ card, drag, threshold, photoIndex = 0, bottomIns
               <T v="callout" tone="white" style={{ opacity: 0.88 }}>{card.city} · {card.distance}</T>
             </View>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: "rgba(247,181,76,0.95)" }}>
-                <T v="caption" style={{ color: "#2B1F45", fontFamily: "Figtree_700Bold" }}>{card.intent}</T>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: c.accent }}>
+                <T v="caption" style={{ color: c.accentText, fontFamily: "Figtree_700Bold" }}>{card.intent}</T>
               </View>
               {card.shared.slice(0, 3).map((s) => (
                 <View key={s.key} style={{ flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 11, paddingVertical: 6, borderRadius: 999, backgroundColor: "rgba(255,255,255,0.16)", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" }}>
@@ -105,14 +107,14 @@ export function DiscoveryCard({ card, drag, threshold, photoIndex = 0, bottomIns
       </LinearGradient>
 
       {/* drag feedback */}
-      <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, borderRadius: 32, borderWidth: 5, borderColor: "#7FD8BE" }, likeGlow]} />
-      <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: "#D9D0EE" }, passWash]} />
+      <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, borderRadius: 32, borderWidth: 5, borderColor: g.spark }, likeGlow]} />
+      <Animated.View pointerEvents="none" style={[{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: c.raised }, passWash]} />
       <Animated.View pointerEvents="none" style={[{ position: "absolute", top: "30%", left: 28, width: 96, height: 96, borderRadius: 48, overflow: "hidden", alignItems: "center", justifyContent: "center" }, likeGlyph]}>
-        <LinearGradient colors={[...sunset]} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
+        <LinearGradient colors={[...g.sunset]} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
         <Icon name="likes" size={48} color="#FFF" filled />
       </Animated.View>
       <Animated.View pointerEvents="none" style={[{ position: "absolute", top: "30%", right: 28, width: 96, height: 96, borderRadius: 48, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.92)" }, passGlyph]}>
-        <Icon name="pass" size={44} color="#2B1F45" stroke={2.6} />
+        <Icon name="pass" size={44} color={c.text} stroke={2.6} />
       </Animated.View>
     </View>
   );

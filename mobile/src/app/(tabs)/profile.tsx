@@ -9,11 +9,10 @@ import { PhotoView, ProgressBar, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import type { MyPhoto } from "@/lib/types";
-import { dusk } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeProvider";
 
 function RowLink({ icon, label, sub, onPress, tone }: { icon: IconName; label: string; sub?: string; onPress: () => void; tone?: "trust" | "alert" }) {
-  const { c } = useTheme();
+  const { c, g } = useTheme();
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={({ pressed }) => ({ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14, paddingHorizontal: 16, backgroundColor: pressed ? c.raised : c.surface })}>
       <Icon name={icon} color={tone ? c[tone] : c.text} />
@@ -37,7 +36,7 @@ function nextTip(me: ReturnType<typeof useAuth>["me"], photos: number) {
 
 export default function ProfileTab() {
   const { me } = useAuth();
-  const { c } = useTheme();
+  const { c, g } = useTheme();
   const photos = useQuery({ queryKey: ["photos"], queryFn: () => api<{ photos: MyPhoto[] }>("/api/photos") });
   const p = me?.profile;
   const age = me?.user.dob ? Math.floor((Date.now() - new Date(me.user.dob).getTime()) / (365.25 * 86400_000)) : null;
@@ -73,8 +72,8 @@ export default function ProfileTab() {
         </View>
 
         <Pressable accessibilityRole="button" onPress={() => router.push(premium ? "/subscription" : "/premium")} style={{ marginHorizontal: 20, borderRadius: 22, overflow: "hidden" }}>
-          <LinearGradient colors={[...dusk]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 18, gap: 4 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Icon name="sparkle" color="#7FD8BE" /><T v="headline" tone="white">{premium ? `You're on ${me?.user.planCode.replace("_", " ").toLowerCase()}` : "Premium"}</T></View>
+          <LinearGradient colors={[...g.dusk]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 18, gap: 4 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Icon name="sparkle" color={g.spark} /><T v="headline" tone="white">{premium ? `You're on ${me?.user.planCode.replace("_", " ").toLowerCase()}` : "Premium"}</T></View>
             <T v="callout" tone="white" style={{ opacity: 0.85 }}>{premium ? "Manage your plan, payments and invoices." : "See who likes you, get more likes and finer filters. Free stays fully usable."}</T>
           </LinearGradient>
         </Pressable>
@@ -85,6 +84,7 @@ export default function ProfileTab() {
           <RowLink icon="eye" label="Privacy Center" sub="Who sees you and your data" onPress={() => router.push("/privacy")} />
           <RowLink icon="sliders" label="Discovery preferences" sub="Who you see and how far" onPress={() => router.push("/preferences")} />
           <RowLink icon="bell" label="Notifications" onPress={() => router.push("/notifications")} />
+          <RowLink icon="sparkle" label="Colour theme" sub="Choose the colours you like" onPress={() => router.push("/settings")} />
           <RowLink icon="settings" label="Settings" sub="Security, subscription, appearance" onPress={() => router.push("/settings")} />
         </View>
       </ScrollView>

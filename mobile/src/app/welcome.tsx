@@ -10,27 +10,30 @@ import { VerifiedBadge } from "@/components/Icon";
 import { T } from "@/components/Text";
 import { ArcMark, CompatArc } from "@/components/Arc";
 import { Aurora } from "@/components/Ambient";
+import { useTheme } from "@/theme/ThemeProvider";
+import type { Glow, Palette } from "@/theme/themes";
 
 /** Three tilted sample cards (illustrations, not real people) fanned around the brand arc. */
-const SAMPLES = [
-  { name: "Meera", age: 29, score: 87, g: ["#C3A6FF", "#8E5BD8", "#7FD8BE"], tag: "Trekking", rot: -9, x: -0.3, y: 0.06 },
-  { name: "Arjun", age: 31, score: 82, g: ["#1F7A6B", "#7FD1B0", "#EEE8FF"], tag: "Cooking", rot: 8, x: 0.3, y: 0.08 },
-  { name: "Sara", age: 27, score: 91, g: ["#A98BEA", "#7FD8BE", "#DDF5EC"], tag: "Live music", rot: 0, x: 0, y: 0 },
+const samples = (c: Palette, g: Glow) => [
+  { name: "Meera", age: 29, score: 87, g: [g.spark2, g.sunset[2], g.spark], tag: "Trekking", rot: -9, x: -0.3, y: 0.06 },
+  { name: "Arjun", age: 31, score: 82, g: [c.trust, "#7FD1B0", c.raised], tag: "Cooking", rot: 8, x: 0.3, y: 0.08 },
+  { name: "Sara", age: 27, score: 91, g: [g.sunset[1], g.spark, c.accentWash], tag: "Live music", rot: 0, x: 0, y: 0 },
 ] as const;
 
 function Collage({ size }: { size: number }) {
+  const { c, g } = useTheme();
   const reduced = useReducedMotion();
   const p = useSharedValue(reduced ? 1 : 0);
   useEffect(() => { if (!reduced) p.value = withDelay(200, withTiming(1, { duration: 900, easing: Easing.out(Easing.back(1.3)) })); }, [p, reduced]);
   const w = size * 0.62, h = w * 1.32;
   return (
     <View style={{ width: size * 1.3, height: h * 1.12, alignItems: "center", justifyContent: "center" }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      {SAMPLES.map((s, i) => <SampleCard key={s.name} s={s} w={w} h={h} p={p} spread={size} hero={i === 2} />)}
+      {samples(c, g).map((s, i) => <SampleCard key={s.name} s={s} w={w} h={h} p={p} spread={size} hero={i === 2} />)}
     </View>
   );
 }
 
-function SampleCard({ s, w, h, p, spread, hero }: { s: (typeof SAMPLES)[number]; w: number; h: number; p: SharedValue<number>; spread: number; hero: boolean }) {
+function SampleCard({ s, w, h, p, spread, hero }: { s: ReturnType<typeof samples>[number]; w: number; h: number; p: SharedValue<number>; spread: number; hero: boolean }) {
   const style = useAnimatedStyle(() => ({
     opacity: Math.min(1, p.value * 1.5),
     transform: [{ translateX: s.x * spread * p.value }, { translateY: s.y * spread + (1 - p.value) * 40 }, { rotate: `${s.rot * p.value}deg` }, { scale: hero ? 1 : 0.9 }],
@@ -57,13 +60,14 @@ function SampleCard({ s, w, h, p, spread, hero }: { s: (typeof SAMPLES)[number];
 }
 
 function MiniCard() {
+  const { c, g } = useTheme();
   return (
     <View style={{ width: 280, borderRadius: 24, backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", padding: 18, gap: 14 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
         <CompatArc score={87} size={64} onDark />
         <View style={{ flex: 1 }}>
           <T v="headline" tone="white">Meera, 29</T>
-          <T v="caption" style={{ color: "#E3D6FF" }}>Bengaluru · About 5 km away</T>
+          <T v="caption" style={{ color: g.onNight }}>Bengaluru · About 5 km away</T>
         </View>
       </View>
       {["Looking for the same kind of relationship", "You both love trekking and coffee", "You both like to take things slow"].map((r) => (
@@ -76,6 +80,7 @@ function MiniCard() {
 }
 
 function SafetyArt() {
+  const { c, g } = useTheme();
   return (
     <View style={{ width: 280, gap: 12 }}>
       {[
@@ -84,10 +89,10 @@ function SafetyArt() {
         ["Your details stay yours", "No one sees your number, email or exact location."],
       ].map(([t, b], i) => (
         <View key={t} style={{ flexDirection: "row", gap: 12, alignItems: "center", backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 18, padding: 14 }}>
-          {i === 0 ? <VerifiedBadge size={28} /> : <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: i === 1 ? "#7FD8BE" : "#C3A6FF" }} />}
+          {i === 0 ? <VerifiedBadge size={28} /> : <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: i === 1 ? g.spark : g.spark2 }} />}
           <View style={{ flex: 1 }}>
             <T v="callout" tone="white">{t}</T>
-            <T v="caption" style={{ color: "#E3D6FF" }}>{b}</T>
+            <T v="caption" style={{ color: g.onNight }}>{b}</T>
           </View>
         </View>
       ))}
@@ -102,19 +107,20 @@ const SLIDES = [
 ];
 
 export default function Welcome() {
+  const { c, g } = useTheme();
   const { width, height } = useWindowDimensions();
   const [page, setPage] = useState(0);
   const list = useRef<FlatList>(null);
   const art = Math.min(width * 0.6, height * 0.3);
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#16112A" }}>
+    <View style={{ flex: 1, backgroundColor: g.night }}>
       <StatusBar style="light" />
-      <LinearGradient colors={["#7B48CC", "#16112A"]} start={{ x: 0.2, y: 0 }} end={{ x: 0.5, y: 0.75 }} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
+      <LinearGradient colors={[c.brand, g.night]} start={{ x: 0.2, y: 0 }} end={{ x: 0.5, y: 0.75 }} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
       <Aurora variant="match" style={{ opacity: 0.55 }} />
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 24, paddingTop: 8 }}>
-          <ArcMark size={28} left="#E3D6FF" right="#7FD8BE" />
+          <ArcMark size={28} left={g.onNight} right={g.spark} />
           <T v="headline" tone="white" style={{ fontFamily: "BricolageGrotesque_800ExtraBold" }}>Project Connect</T>
         </View>
         <FlatList
@@ -139,7 +145,7 @@ export default function Welcome() {
         />
         <View style={{ paddingHorizontal: 24, gap: 12, paddingBottom: 12 }}>
           <View style={{ flexDirection: "row", gap: 6, justifyContent: "center", marginBottom: 8 }} accessibilityLabel={`Page ${page + 1} of 3`}>
-            {SLIDES.map((s, i) => <View key={s.title} style={{ height: 6, width: i === page ? 22 : 6, borderRadius: 3, backgroundColor: i === page ? "#7FD8BE" : "rgba(255,255,255,0.3)" }} />)}
+            {SLIDES.map((s, i) => <View key={s.title} style={{ height: 6, width: i === page ? 22 : 6, borderRadius: 3, backgroundColor: i === page ? g.spark : "rgba(255,255,255,0.3)" }} />)}
           </View>
           <Button title="Find my match" v="accent" size="lg" full onPress={() => router.push("/sign-up")} />
           <Button title="I already have an account" v="ghost" textColor="#FFFFFF" full onPress={() => router.push("/sign-in")} />

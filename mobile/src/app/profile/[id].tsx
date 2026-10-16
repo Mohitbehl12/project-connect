@@ -27,7 +27,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 /** Immersive profile: gallery, compatibility up front, then the person in their own words. */
 export default function ProfileSheet() {
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
-  const { c } = useTheme();
+  const { c, g } = useTheme();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const card = cardCache.get(id);
@@ -83,7 +83,7 @@ export default function ProfileSheet() {
         )}
 
         <Pressable accessibilityRole="button" accessibilityLabel="See full compatibility breakdown" onPress={() => router.push({ pathname: "/compatibility/[id]", params: { id: card.id } })}
-          style={{ marginHorizontal: 20, backgroundColor: c.surface, borderRadius: 26, padding: 18, gap: 16, shadowColor: "#7B48CC", shadowOpacity: 0.1, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 3, borderWidth: 1, borderColor: c.line }}>
+          style={{ marginHorizontal: 20, backgroundColor: c.surface, borderRadius: 26, padding: 18, gap: 16, shadowColor: c.brand, shadowOpacity: 0.1, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 3, borderWidth: 1, borderColor: c.line }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
             <CompatArc score={compat.data?.overall ?? card.score ?? 0} size={76} />
             <View style={{ flex: 1, gap: 4 }}>

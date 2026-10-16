@@ -14,7 +14,6 @@ import { api } from "@/lib/api";
 import { money, niceDate, per } from "@/lib/format";
 import { haptic } from "@/lib/haptics";
 import type { Catalogue, Quote } from "@/lib/types";
-import { dusk } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeProvider";
 
 // Only benefits that exist today. Boosts and travel mode are marked as coming soon.
@@ -36,7 +35,7 @@ const TRUST: [string, string][] = [
 
 /** Calm, transparent upsell: real benefits, the price today and the price after, nothing pre-ticked. */
 export default function Premium() {
-  const { c } = useTheme();
+  const { c, g } = useTheme();
   const insets = useSafeAreaInsets();
   const q = useQuery({ queryKey: ["catalogue"], queryFn: () => api<Catalogue>("/api/billing/catalogue") });
   const [choice, setChoice] = useState<string | null>(null); // plan code or "pass:<offerId>"
@@ -84,7 +83,7 @@ export default function Premium() {
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 170 }}>
-        <LinearGradient colors={[...dusk]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 30, gap: 10, overflow: "hidden" }}>
+        <LinearGradient colors={[...g.dusk]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 30, gap: 10, overflow: "hidden" }}>
           <Aurora variant="match" style={{ opacity: 0.45 }} />
           <IconButton icon="close" label="Close" tone="glass" size={44} onPress={() => router.back()} />
           <T v="display" tone="white" style={{ fontSize: 36, lineHeight: 40 }}>Find better connections</T>
@@ -113,7 +112,7 @@ export default function Premium() {
           )}
 
           {!subscribed && !freeUntil && featured?.quote.offer && featured.quote.offer.kind === "INTRO" && (
-            <Animated.View entering={FadeInDown.duration(380)} style={{ borderRadius: 28, overflow: "hidden", shadowColor: "#A98BEA", shadowOpacity: 0.35, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 8 }}>
+            <Animated.View entering={FadeInDown.duration(380)} style={{ borderRadius: 28, overflow: "hidden", shadowColor: g.sunset[1], shadowOpacity: 0.35, shadowRadius: 22, shadowOffset: { width: 0, height: 10 }, elevation: 8 }}>
               <Sunset style={{ padding: 20, gap: 6 }}>
                 <View style={{ alignSelf: "flex-start", backgroundColor: "rgba(255,255,255,0.25)", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 }}>
                   <T v="caption" tone="white" style={{ fontFamily: "Figtree_700Bold" }}>{featured.quote.offer.badge ?? "Introductory offer"}</T>

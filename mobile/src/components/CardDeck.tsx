@@ -7,6 +7,7 @@ import { haptic } from "@/lib/haptics";
 import type { Card } from "@/lib/types";
 import { DiscoveryCard } from "./DiscoveryCard";
 import { Icon } from "./Icon";
+import { useTheme } from "@/theme/ThemeProvider";
 
 export type Decision = "LIKE" | "PASS";
 export type DeckHandle = { swipe: (d: Decision) => void };
@@ -26,6 +27,7 @@ type Props = {
  * button equivalent (see the action bar), so nothing depends on swiping.
  */
 export const CardDeck = forwardRef<DeckHandle, Props>(function CardDeck({ top, next, x, onDecision, onOpen, onOptions }, ref) {
+  const { g } = useTheme();
   const { width } = useWindowDimensions();
   const threshold = width * 0.3;
   const reduced = useReducedMotion();
@@ -99,7 +101,7 @@ export const CardDeck = forwardRef<DeckHandle, Props>(function CardDeck({ top, n
       )}
       {top && (
         <GestureDetector gesture={gesture}>
-          <Animated.View key={`top-${top.id}`} style={[{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, borderRadius: 32, shadowColor: "#16112A", shadowOpacity: 0.28, shadowRadius: 24, shadowOffset: { width: 0, height: 10 }, elevation: 6 }, topStyle]}
+          <Animated.View key={`top-${top.id}`} style={[{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, borderRadius: 32, shadowColor: g.night, shadowOpacity: 0.28, shadowRadius: 24, shadowOffset: { width: 0, height: 10 }, elevation: 6 }, topStyle]}
             accessibilityActions={[{ name: "activate", label: "Open profile" }, { name: "magicTap", label: "Like" }, { name: "like", label: "Like" }, { name: "pass", label: "Pass" }]}
             onAccessibilityAction={(e) => {
               const n = e.nativeEvent.actionName;
@@ -118,7 +120,7 @@ export const CardDeck = forwardRef<DeckHandle, Props>(function CardDeck({ top, n
 
 const BURST = Array.from({ length: 12 }, (_, i) => {
   const a = (i / 12) * Math.PI * 2 + (i % 2 ? 0.2 : -0.1);
-  return { a, d: 110 + (i % 3) * 38, s: 14 + (i % 4) * 5, c: ["#7FD8BE", "#A98BEA", "#8E5BD8", "#C3A6FF"][i % 4], heart: i % 3 === 0 };
+  return { a, d: 110 + (i % 3) * 38, s: 14 + (i % 4) * 5, ci: i % 4, heart: i % 3 === 0 };
 });
 
 /** A short, one-shot bloom of warm particles when you like someone. Off under Reduce Motion. */
@@ -131,6 +133,8 @@ export function LikeBurst({ progress, top = "42%", spread = 1 }: { progress: Sha
 }
 
 function Particle({ p, progress }: { p: (typeof BURST)[number]; progress: SharedValue<number> }) {
+  const { g } = useTheme();
+  const color = [g.spark, g.sunset[1], g.sunset[2], g.spark2][p.ci];
   const style = useAnimatedStyle(() => {
     const t = progress.value;
     const live = t > 0 && t < 1;
@@ -145,7 +149,7 @@ function Particle({ p, progress }: { p: (typeof BURST)[number]; progress: Shared
   });
   return (
     <Animated.View style={[{ position: "absolute", marginLeft: -p.s / 2, marginTop: -p.s / 2 }, style]}>
-      {p.heart ? <Icon name="likes" size={p.s + 6} color={p.c} filled /> : <View style={{ width: p.s * 0.6, height: p.s * 0.6, borderRadius: p.s, backgroundColor: p.c }} />}
+      {p.heart ? <Icon name="likes" size={p.s + 6} color={color} filled /> : <View style={{ width: p.s * 0.6, height: p.s * 0.6, borderRadius: p.s, backgroundColor: color }} />}
     </Animated.View>
   );
 }

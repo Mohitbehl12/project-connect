@@ -19,7 +19,7 @@ type Likes = { total: number; cards: Card[]; hidden: number; locked: { blurhash:
 
 /** "Likes you" lives at the top of Matches: faces for Premium, soft blurs (with the count) on Free. */
 function LikesStrip() {
-  const { c } = useTheme();
+  const { c, g } = useTheme();
   const q = useQuery({ queryKey: ["likes"], queryFn: () => api<Likes>("/api/likes") });
   useEffect(() => { if (q.data) cardCache.put(q.data.cards); }, [q.data]);
   const total = q.data?.total ?? 0;
@@ -28,7 +28,7 @@ function LikesStrip() {
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={total ? `${total} people like you. See all.` : "Likes you. Nobody yet."} onPress={() => router.push("/likes")}
       style={{ borderRadius: 24, overflow: "hidden", marginBottom: 14 }}>
-      <LinearGradient colors={total ? ["#7FD8BE", "#A98BEA", "#8E5BD8"] : [c.surface, c.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 14 }}>
+      <LinearGradient colors={total ? [g.spark, g.sunset[1], g.sunset[2]] : [c.surface, c.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flexDirection: "row", alignItems: "center", gap: 14, padding: 14 }}>
         <View style={{ flexDirection: "row" }}>
           {total ? faces.map((f, i) => (
             <View key={f.key} style={{ width: 52, height: 52, borderRadius: 26, borderWidth: 3, borderColor: "#FFF", marginLeft: i ? -16 : 0, overflow: "hidden", backgroundColor: c.raised }}>
@@ -48,7 +48,7 @@ function LikesStrip() {
 
 /** New matches you haven't talked to yet, with their compatibility, as a photo grid. */
 export default function MatchesTab() {
-  const { c } = useTheme();
+  const { c, g } = useTheme();
   const { width } = useWindowDimensions();
   const q = useQuery({ queryKey: ["matches"], queryFn: () => api<{ matches: MatchRow[] }>("/api/matches") });
   const fresh = (q.data?.matches ?? []).filter((m) => !m.lastMessage);
@@ -86,7 +86,7 @@ export default function MatchesTab() {
                   <T v="headline" tone="white" numberOfLines={1} style={{ flexShrink: 1 }}>{m.other.firstName}</T>
                   {m.other.verified && <VerifiedBadge size={16} />}
                 </View>
-                <T v="caption" style={{ color: "#7FD8BE" }}>Say hello</T>
+                <T v="caption" style={{ color: g.spark }}>Say hello</T>
               </LinearGradient>
             </Pressable>
           )}

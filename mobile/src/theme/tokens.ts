@@ -1,64 +1,14 @@
-// Project Connect design tokens. Calm and fresh: lilac is the brand, mint is the accent,
-// a deeper teal means trust, and red is kept only for errors. Text pairs meet WCAG AA (4.5:1+).
+// Project Connect design tokens. Colours come from the chosen colour theme (see ./themes.ts):
+// read them with useTheme() — `c` for the palette and `g` for gradients. The exports below are the
+// default theme, for the few places that run outside React.
+import { DEFAULT_THEME, themeById } from "./themes";
 
-export const palettes = {
-  light: {
-    bg: "#F7F4FF",
-    surface: "#FFFFFF",
-    raised: "#EEE8FF",
-    line: "#E2DAF5",
-    text: "#2B1F45",
-    muted: "#625680",
-    faint: "#8A80A6",
-    brand: "#7B48CC",
-    brandText: "#FFFFFF",
-    brandWash: "#EEE6FF",
-    accent: "#7FD8BE",
-    accentText: "#173B33",
-    accentWash: "#DDF5EC",
-    trust: "#1F7A6B",
-    trustWash: "#DCF0EA",
-    alert: "#B3261E",
-    alertWash: "#FCE4E2",
-    scrim: "rgba(22,17,42,0.88)",
-    overlay: "rgba(22,17,42,0.45)",
-    tab: "rgba(255,255,255,0.94)",
-  },
-  dark: {
-    bg: "#16112A",
-    surface: "#211A3A",
-    raised: "#2D2450",
-    line: "#3A3060",
-    text: "#F3EFFF",
-    muted: "#B9AED6",
-    faint: "#8F84AE",
-    brand: "#C3A6FF",
-    brandText: "#16112A",
-    brandWash: "#33285A",
-    accent: "#8EE3C8",
-    accentText: "#16112A",
-    accentWash: "#18392F",
-    trust: "#73C2A8",
-    trustWash: "#163A30",
-    alert: "#FF7A7A",
-    alertWash: "#45191C",
-    scrim: "rgba(10,8,22,0.9)",
-    overlay: "rgba(0,0,0,0.55)",
-    tab: "rgba(33,26,58,0.96)",
-  },
-} as const;
-
-export type Palette = { [K in keyof (typeof palettes)["light"]]: string };
-
-/** Premium surfaces: deep lilac into lilac. */
-export const dusk = ["#5E33A8", "#8E5BD8"] as const;
-/** Fresh action gradient — the Like button and match celebration only: mint into lilac. */
-export const sunset = ["#7FD8BE", "#A98BEA", "#8E5BD8"] as const;
-/** Ambient light behind screens: three soft colour fields per theme. */
-export const aurora = {
-  light: ["rgba(142,91,216,0.24)", "rgba(127,216,190,0.26)", "rgba(195,166,255,0.22)"],
-  dark: ["rgba(142,91,216,0.38)", "rgba(127,216,190,0.18)", "rgba(195,166,255,0.20)"],
-} as const;
+export type { Palette } from "./themes";
+const base = themeById(DEFAULT_THEME);
+export const palettes = { light: base.light, dark: base.dark } as const;
+export const dusk = base.g.dusk;
+export const sunset = base.g.sunset;
+export const aurora = base.g.aurora;
 
 export const fonts = {
   display: "BricolageGrotesque_800ExtraBold",

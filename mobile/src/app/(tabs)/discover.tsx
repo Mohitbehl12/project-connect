@@ -29,7 +29,7 @@ const MODES = [
 ] as const;
 
 export default function Discover() {
-  const { c } = useTheme();
+  const { c, g } = useTheme();
   const { me } = useAuth();
   const qc = useQueryClient();
   const [mode, setMode] = useState<string>("recommended");
@@ -190,9 +190,9 @@ export default function Discover() {
 
 /** Round action button with a soft coloured glow. The Like orb is the only sunset-filled control. */
 function Orb({ icon, label, size, onPress, like, tint, disabled }: { icon: IconName; label: string; size: number; onPress: () => void; like?: boolean; tint?: string; disabled?: boolean }) {
-  const { c, dark } = useTheme();
+  const { c, dark, g } = useTheme();
   const press = usePressScale();
-  const glow = like ? "#A98BEA" : tint ?? (dark ? "#000" : "#7B48CC");
+  const glow = like ? g.sunset[1] : tint ?? (dark ? "#000" : c.brand);
   return (
     <Animated.View style={[press.style, { opacity: disabled ? 0.4 : 1, borderRadius: size / 2, shadowColor: glow, shadowOpacity: like ? 0.55 : dark ? 0.5 : 0.14, shadowRadius: like ? 22 : 14, shadowOffset: { width: 0, height: like ? 10 : 6 }, elevation: like ? 10 : 5 }]}>
       <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled}

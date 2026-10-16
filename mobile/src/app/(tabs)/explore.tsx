@@ -8,21 +8,22 @@ import { T } from "@/components/Text";
 import { Screen } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 import { haptic } from "@/lib/haptics";
+import type { Glow, Palette } from "@/theme/themes";
 import { useTheme } from "@/theme/ThemeProvider";
 
 // Ways to browse beyond the main deck. Each opens a filtered list from the same matching engine.
-const COLLECTIONS: { key: string; title: string; sub: string; icon: IconName; g: [string, string] }[] = [
-  { key: "verified", title: "Verified only", sub: "Selfie-checked people", icon: "shield", g: ["#1F7A6B", "#7FD1B0"] },
-  { key: "new", title: "New this week", sub: "Just joined", icon: "sparkle", g: ["#8E5BD8", "#C3A6FF"] },
-  { key: "intent", title: "Same goals", sub: "Want what you want", icon: "matches", g: ["#8E5BD8", "#A98BEA"] },
-  { key: "compatibility", title: "Personality match", sub: "Think like you", icon: "likes", g: ["#7B48CC", "#8E5BD8"] },
-  { key: "nearby", title: "Close by", sub: "Shortest distance first", icon: "pin", g: ["#A98BEA", "#7FD8BE"] },
+const collections = (c: Palette, g: Glow): { key: string; title: string; sub: string; icon: IconName; g: [string, string] }[] => [
+  { key: "verified", title: "Verified only", sub: "Selfie-checked people", icon: "shield", g: [c.trust, "#7FD1B0"] },
+  { key: "new", title: "New this week", sub: "Just joined", icon: "sparkle", g: [g.sunset[2], g.spark2] },
+  { key: "intent", title: "Same goals", sub: "Want what you want", icon: "matches", g: [g.sunset[2], g.sunset[1]] },
+  { key: "compatibility", title: "Personality match", sub: "Think like you", icon: "likes", g: [c.brand, g.sunset[2]] },
+  { key: "nearby", title: "Close by", sub: "Shortest distance first", icon: "pin", g: [g.sunset[1], g.spark] },
 ];
 
 const POPULAR = ["travel", "coffee", "music_live", "food_trails", "films", "gym", "reading", "trekking", "photography", "cooking", "yoga", "gaming", "art", "dogs", "startups", "spirituality", "standup", "cricket"];
 
 export default function Explore() {
-  const { c } = useTheme();
+  const { c, g } = useTheme();
   const { me } = useAuth();
   const { width } = useWindowDimensions();
   const mine = (me?.profile?.interests ?? "").split(",").filter(Boolean);
@@ -38,7 +39,7 @@ export default function Explore() {
           <T v="caption" tone="muted">Browse by what matters to you</T>
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 20 }}>
-          {COLLECTIONS.map((col, i) => (
+          {collections(c, g).map((col, i) => (
             <Animated.View key={col.key} entering={FadeInDown.delay(i * 50).duration(300)}>
               <Pressable accessibilityRole="button" accessibilityLabel={`${col.title}. ${col.sub}`} onPress={() => open(col.key)} style={{ width: 168, height: 200, borderRadius: 26, overflow: "hidden" }}>
                 <LinearGradient colors={col.g} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ flex: 1, padding: 16, justifyContent: "space-between" }}>
