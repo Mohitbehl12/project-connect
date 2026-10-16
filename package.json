@@ -20,7 +20,9 @@
     "build:all": "npm --prefix mobile ci && npm run build:app-web && next build",
     "start:server": "sh scripts/start.sh",
     "db:migrate": "tsx scripts/migrate.ts",
-    "build:app-web": "npm --prefix mobile run export:server"
+    "build:app-web": "npm --prefix mobile run export:server",
+    "backup:restore": "tsx scripts/restore-backup.ts",
+    "reviewer:create": "tsx scripts/create-reviewer.ts"
   },
   "keywords": [],
   "author": "",

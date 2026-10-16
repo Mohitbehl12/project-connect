@@ -615,6 +615,33 @@ async function main() {
   check("Play notifications without the secret are refused", (await anon.post("/api/billing/google/notifications", { message: { data: "e30=" } })).status === 403);
   check("unsigned App Store notifications are refused", (await anon.post("/api/billing/apple/notifications", { signedPayload: "not.a.jws" })).status === 400);
 
+  section("Grievance Officer and published contacts");
+  const gAnon = new Client("Complainant1");
+  const g1 = await gAnon.post("/api/grievances", { name: "Riya", email: `riya-${run}@test.local`, category: "CONTENT", details: "Someone keeps sending me rude messages after I unmatched." });
+  check("anyone can file a complaint and gets a reference number", g1.status === 201 && /^GR-\d{6}-\d{6}$/.test(g1.data.refNo), g1.data);
+  check("normal complaints are due within 15 days", Math.round((Date.parse(g1.data.resolveDueAt) - Date.now()) / 86_400_000) === 15, g1.data);
+  const g2 = await gAnon.post("/api/grievances", { name: "Riya", email: `riya-${run}@test.local`, category: "INTIMATE_OR_IMPERSONATION", details: "A profile is using my photos and pretending to be me." });
+  check("intimate-image and impersonation complaints are due within 24 hours", Math.round((Date.parse(g2.data.resolveDueAt) - Date.now()) / 3_600_000) === 24, g2.data);
+  check("a complaint without details is refused", (await gAnon.post("/api/grievances", { name: "Riya", email: `riya-${run}@test.local`, category: "OTHER", details: "help" })).status === 422);
+  check("finance staff can't see complaints", (await finance.get("/api/admin/grievances")).status === 403);
+  const gl = await admin.get("/api/admin/grievances");
+  const mine = gl.data?.grievances?.find((x: any) => x.refNo === g1.data.refNo);
+  check("staff see the complaint, soonest deadline first", !!mine && mine.email === `riya-${run}@test.local` && gl.data.grievances[0].category === "INTIMATE_OR_IMPERSONATION", gl.data?.grievances?.slice(0, 2));
+  check("resolving needs a written reply", (await admin.post(`/api/admin/grievances/${mine?.id}`, { action: "resolve" })).status === 422);
+  check("staff resolve with a reply", (await admin.post(`/api/admin/grievances/${mine?.id}`, { action: "resolve", reply: "We reviewed the messages and suspended the account. Thank you for telling us." })).data?.status === "RESOLVED");
+  check("a closed complaint can't be changed", (await admin.post(`/api/admin/grievances/${mine?.id}`, { action: "reject", reply: "Trying to reopen this one." })).status === 409);
+  await admin.put("/api/admin/config", { config: { "legal.contacts": { companyName: "Test Co Pvt Ltd", supportEmail: "support@test.local", safetyEmail: "safety@test.local", privacyEmail: "privacy@test.local", grievanceOfficer: { name: `Officer ${run}`, designation: "Grievance Officer", email: "grievance@test.local", phone: "", address: "Delhi" } } } });
+  check("published contacts are public", (await anon.get("/api/public/contacts")).data?.contacts?.grievanceOfficer?.name === `Officer ${run}`);
+  const contactHtml = await fetch(`${BASE}/contact`).then((r) => r.text());
+  check("the Contact page shows the Grievance Officer", contactHtml.includes(`Officer ${run}`) && contactHtml.includes("grievance@test.local"));
+
+  section("Database backups");
+  const bk = await admin.post("/api/admin/backups", {});
+  check("an encrypted backup can be taken on demand", bk.status === 200 && bk.data.ran === true && bk.data.bytes > 1000, bk.data);
+  const bks = await admin.get("/api/admin/backups");
+  check("backup status lists it", bks.data?.configured === true && bks.data.recent?.[0]?.key === bk.data.key && !bks.data.last.error, bks.data);
+  check("finance staff can't take backups", (await finance.post("/api/admin/backups", {})).status === 403);
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) {
     console.log("Failed:\n - " + failures.join("\n - "));

@@ -32,6 +32,13 @@ export const CONFIG_DEFAULTS = {
   // Data retention
   "retention.deletedMessageDays": 90, // deleted messages are kept this long for safety review, then purged
   "retention.loginEventDays": 180,
+  // Last database backup (written by the backup job, shown in Admin → Settings).
+  "ops.lastBackup": { at: null, key: null, bytes: 0, error: null } as { at: string | null; key: string | null; bytes: number; error: string | null; failedAt?: string },
+  // Published contacts (Contact page, Grievance page, app). Empty officer name = shown as "being appointed".
+  "legal.contacts": {
+    companyName: "", supportEmail: "", safetyEmail: "", privacyEmail: "",
+    grievanceOfficer: { name: "", designation: "Grievance Officer", email: "", phone: "", address: "" },
+  } as { companyName: string; supportEmail: string; safetyEmail: string; privacyEmail: string; grievanceOfficer: { name: string; designation: string; email: string; phone: string; address: string } },
 };
 export type ConfigKey = keyof typeof CONFIG_DEFAULTS;
 

@@ -66,8 +66,8 @@ export default function Settings() {
             <T v="caption" tone="muted">Signed in as</T>
             <T>{me?.user.email}</T>
           </View>
-          {[["Terms of Service", "terms"], ["Privacy Policy", "privacy"], ["Community Guidelines", "guidelines"], ["Payment Terms", "payments"], ["Cancellation & Refund Policy", "refunds"]].map(([l, s]) => (
-            <Pressable key={s} accessibilityRole="link" onPress={() => Linking.openURL(`${API_URL}/legal/${s}`)} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12 }}>
+          {[["Terms of Service", "legal/terms"], ["Privacy Policy", "legal/privacy"], ["Community Guidelines", "legal/guidelines"], ["Payment Terms", "legal/payments"], ["Cancellation & Refund Policy", "legal/refunds"], ["Contact us", "contact"], ["File a complaint (Grievance Officer)", "grievance"]].map(([l, s]) => (
+            <Pressable key={s} accessibilityRole="link" onPress={() => Linking.openURL(`${API_URL}/${s}`)} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 12 }}>
               <T style={{ flex: 1 }}>{l}</T><Icon name="forward" size={18} />
             </Pressable>
           ))}

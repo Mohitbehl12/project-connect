@@ -69,6 +69,24 @@ function Settings() {
         </section>
       </div>
 
+      {staff.permissions.includes("config.edit") && <BackupsPanel />}
+
+      <section className="panel mt-6 p-5">
+        <h2 className="text-lg font-bold">Published contacts and Grievance Officer</h2>
+        <p className="mt-1 text-sm text-ink-soft">Shown on the Contact and Complaint pages and in the app. India&apos;s IT Rules require the Grievance Officer&apos;s name and contact to be published.</p>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          {([["companyName", "Company name"], ["supportEmail", "Support email"], ["safetyEmail", "Safety email"], ["privacyEmail", "Privacy email"]] as const).map(([k, label]) => (
+            <div key={k}><label className="label" htmlFor={`c-${k}`}>{label}</label>
+              <input id={`c-${k}`} className="input" value={cfg["legal.contacts"]?.[k] ?? ""} onChange={(e) => setCfg({ ...cfg, "legal.contacts": { ...cfg["legal.contacts"], [k]: e.target.value } })} /></div>
+          ))}
+          {([["name", "Grievance Officer name"], ["designation", "Designation"], ["email", "Grievance Officer email"], ["phone", "Phone (optional)"], ["address", "Postal address"]] as const).map(([k, label]) => (
+            <div key={k}><label className="label" htmlFor={`g-${k}`}>{label}</label>
+              <input id={`g-${k}`} className="input" value={cfg["legal.contacts"]?.grievanceOfficer?.[k] ?? ""} onChange={(e) => setCfg({ ...cfg, "legal.contacts": { ...cfg["legal.contacts"], grievanceOfficer: { ...cfg["legal.contacts"]?.grievanceOfficer, [k]: e.target.value } } })} /></div>
+          ))}
+        </div>
+        <button className="btn-primary mt-4" disabled={!staff.permissions.includes("config.edit")} onClick={() => save({ config: { "legal.contacts": cfg["legal.contacts"] } }, "Contacts")}>Save contacts</button>
+      </section>
+
       <section className="panel mt-6 p-5">
         <h2 className="text-lg font-bold">Billing, rewards and data retention</h2>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -118,7 +136,7 @@ function Settings() {
               </div>
               {p.code !== "FREE" && (
                 <table className="mt-3 w-full text-sm">
-                  <thead className="text-left text-ink-faint"><tr><th>Country</th><th>Price group</th><th>Currency</th><th>Price</th><th>Promo</th><th>Days</th><th></th></tr></thead>
+                  <thead className="text-left text-ink-faint"><tr><th>Country</th><th>Price group</th><th>Currency</th><th>Price</th><th>Promo</th><th>Days</th><th>Store product id</th><th></th></tr></thead>
                   <tbody>
                     {p.prices.map((pr: any, i: number) => (
                       <tr key={pr.id ?? i}>
@@ -132,6 +150,8 @@ function Settings() {
                         <td><input aria-label="Price" type="number" className="input px-2 py-1" value={pr.amountMinor} onChange={(e) => upd((x) => { x.prices[i].amountMinor = Number(e.target.value); })} /></td>
                         <td><input aria-label="Promo price" type="number" className="input px-2 py-1" value={pr.promoMinor ?? ""} onChange={(e) => upd((x) => { x.prices[i].promoMinor = e.target.value === "" ? null : Number(e.target.value); })} /></td>
                         <td><input aria-label="Days" type="number" className="input px-2 py-1" value={pr.durationDays} onChange={(e) => upd((x) => { x.prices[i].durationDays = Number(e.target.value); })} /></td>
+                        <td><input aria-label="App Store and Google Play product id" className="input px-2 py-1 font-mono text-xs" value={pr.appleProductId ?? ""} placeholder="e.g. premium_1m"
+                          onChange={(e) => upd((x) => { x.prices[i].appleProductId = e.target.value || null; x.prices[i].googleProductId = e.target.value.toLowerCase() || null; })} /></td>
                         <td className="pl-2 text-xs text-ink-faint">{/^[A-Z]{3}$/.test(pr.currency) ? formatMoney(pr.promoMinor ?? pr.amountMinor, pr.currency) : ""}</td>
                       </tr>
                     ))}
@@ -148,6 +168,35 @@ function Settings() {
         })}
       </div>
     </>
+  );
+}
+
+function BackupsPanel() {
+  const q = useApi<{ configured: boolean; where: string | null; everyHours: number; keepDays: number; last: { at: string | null; bytes: number; error: string | null; failedAt?: string }; recent: { key: string; size: number; at: string }[] }>("/api/admin/backups");
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  async function now() {
+    setBusy(true); setNote(null);
+    try { const r = await api("/api/admin/backups", { body: {} }); setNote(r.ran ? { tone: "success", text: `Backed up (${Math.round(r.bytes / 1024)} KB).` } : { tone: "error", text: r.reason }); q.reload(); }
+    catch (e: any) { setNote({ tone: "error", text: e.message }); } finally { setBusy(false); }
+  }
+  const d = q.data;
+  return (
+    <section className="panel mt-6 p-5">
+      <h2 className="text-lg font-bold">Database backups</h2>
+      {!d ? <p className="mt-2 text-sm text-ink-soft">Loading…</p> : !d.configured ? (
+        <p className="mt-2 text-sm text-ink-soft">Not set up yet. Add <code>BACKUP_KEY</code> and <code>BACKUP_DRIVER=s3</code> (with the cloud storage settings) in the server environment. Keep a copy of the key offline — without it no backup can be opened.</p>
+      ) : (
+        <>
+          <p className="mt-2 text-sm text-ink-soft">Encrypted copies go to {d.where} every {d.everyHours} hours and are kept for {d.keepDays} days. Last good backup: <strong>{d.last.at ? new Date(d.last.at).toLocaleString("en-IN") : "none yet"}</strong>.</p>
+          {d.last.error && <p className="mt-2 text-sm text-rose">Last attempt failed{d.last.failedAt ? ` (${new Date(d.last.failedAt).toLocaleString("en-IN")})` : ""}: {d.last.error}</p>}
+          {d.recent.length > 0 && <ul className="mt-3 space-y-1 font-mono text-xs text-ink-soft">{d.recent.map((o) => <li key={o.key}>{new Date(o.at).toLocaleString("en-IN")} · {Math.round(o.size / 1024)} KB · {o.key}</li>)}</ul>}
+          <button className="btn-outline mt-4" disabled={busy} onClick={now}>{busy ? "Backing up…" : "Back up now"}</button>
+          <p className="mt-2 text-xs text-ink-faint">To restore: <code>npm run backup:restore -- --latest --out ./restored.db</code>, then follow docs/DEPLOYMENT.md.</p>
+        </>
+      )}
+      {note && <div className="mt-3"><Alert tone={note.tone}>{note.text}</Alert></div>}
+    </section>
   );
 }
 

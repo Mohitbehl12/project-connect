@@ -54,6 +54,21 @@ services:
         sync: false
       - key: EMAIL_FROM
         sync: false
+      # SMS OTP (MSG91, DLT-approved template)
+      - key: MSG91_AUTH_KEY
+        sync: false
+      - key: MSG91_OTP_TEMPLATE_ID
+        sync: false
+      # Database backups. Starts as a folder on the disk (protects against bad changes, not disk loss);
+      # switch BACKUP_DRIVER to s3 once cloud storage is set up. Copy BACKUP_KEY somewhere safe offline.
+      - key: BACKUP_KEY
+        generateValue: true
+      - key: BACKUP_DRIVER
+        value: dir
+      - key: BACKUP_DIR
+        value: /var/data/backups
+      - key: BACKUP_KEEP_DAYS
+        value: "14"
       # In-app purchases (App Store / Google Play). Off until the store accounts and products exist.
       - key: STORE_BILLING_ENABLED
         value: "false"

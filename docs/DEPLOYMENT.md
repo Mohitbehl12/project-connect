@@ -130,3 +130,31 @@ Emails are only sent once both of these are set in Render → Environment:
 - `EMAIL_FROM` — e.g. `Project Connect <no-reply@yourdomain.com>`. The domain must be verified in Resend. Resend's shared test sender `onboarding@resend.dev` only delivers to the email that owns the Resend account.
 
 Until then, the request still answers normally but no email goes out (a warning is logged). The Resend sender has not yet been tested against a live account.
+
+## Database backups
+
+Every 6 hours the scheduled job copies the live database (safe while the app runs), compresses and encrypts
+it with `BACKUP_KEY`, and stores it. Admin → Settings shows the last backup and has "Back up now".
+
+- **Right now (from the blueprint):** `BACKUP_DRIVER=dir`, `BACKUP_DIR=/var/data/backups`, kept 14 days. This protects
+  against a bad change or a mistaken delete, but not against losing the disk.
+- **For launch:** set `BACKUP_DRIVER=s3` with the cloud-storage `S3_` settings (optionally `BACKUP_S3_BUCKET` for a
+  separate bucket), and `BACKUP_KEEP_DAYS=30`.
+- **Copy `BACKUP_KEY` (Render → Environment) somewhere safe offline.** Without it no backup can be opened.
+
+Restore (never touches the live database by itself):
+
+1. `npm run backup:restore -- --list`
+2. `npm run backup:restore -- --latest --out ./restored.db` (checks integrity and counts accounts)
+3. Suspend the service, move `/var/data/prod.db` aside, copy `restored.db` to `/var/data/prod.db`, resume.
+
+Test a restore on a staging copy at least once a month.
+
+## OTP codes, contacts and the reviewer account
+
+- Email codes use the Resend settings above. SMS codes use MSG91: `MSG91_AUTH_KEY` and `MSG91_OTP_TEMPLATE_ID`
+  (a DLT-approved template). Without them no code is sent. Untested against a live MSG91 account.
+- Admin → Settings → "Published contacts and Grievance Officer": fill these before launch. They appear on
+  /contact, /grievance and in the app. Complaints arrive in Admin → Complaints with their deadlines.
+- App Store / Play review account: `npm run reviewer:create -- appreview@yourbrand.in` (Render Shell). It prints a
+  new password once; paste it into App Store Connect and Play Console.

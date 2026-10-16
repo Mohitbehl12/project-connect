@@ -1,14 +1,14 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import Animated, { ZoomIn } from "react-native-reanimated";
 import { REPORT_CATEGORIES } from "@shared/constants";
 import { Button } from "@/components/Button";
 import { Icon } from "@/components/Icon";
 import { T } from "@/components/Text";
 import { Banner, Chip, Screen, SheetHeader } from "@/components/ui";
-import { api } from "@/lib/api";
+import { API_URL, api } from "@/lib/api";
 import { haptic } from "@/lib/haptics";
 import { useTheme } from "@/theme/ThemeProvider";
 
@@ -42,6 +42,7 @@ export default function Report() {
           </Animated.View>
           <T v="title" center>Thanks for telling us</T>
           <T tone="muted" center>{name} has been blocked, so you won't see each other again. Our safety team will review your report — {name} won't know it was you.</T>
+          <Pressable accessibilityRole="link" onPress={() => Linking.openURL(`${API_URL}/grievance`)}><T v="caption" tone="brand" center>Not happy with how a report was handled? File a formal complaint</T></Pressable>
         </View>
         <Button title="Done" size="lg" full onPress={() => { router.dismissAll?.(); router.replace("/discover"); }} />
       </Screen>

@@ -160,3 +160,9 @@ Voice/video calls, voice messages, image and GIF sharing in chat, typing indicat
 - Done and tested: App Store and Google Play subscriptions. The app buys through the store, the server verifies every purchase (Apple's signed transactions, Google's Play Developer API), and store notifications cover renewals, cancellations, grace periods and refunds. There is also Restore purchases, a "Manage in App Store / Google Play" link, and a store notice shown when an account is deleted. 8 unit checks cover Apple signature verification; 25 end-to-end checks run the whole flow using clearly labelled test tokens.
 - Done: native settings (no microphone or unused storage permissions, iOS privacy manifest, export-encryption flag), development/preview/production build profiles, and a development client for testing purchases. The native projects generate cleanly and the iOS and Android code compiles.
 - Not yet run against the real stores or built into installable apps: that needs the Expo, Apple and Google accounts. See docs/STORES.md for products, settings and notification URLs.
+
+## Grievances, backups, OTP delivery, app builds
+- Done and tested: Grievance Officer complaints (IT Rules 2021): public form, instant reference number and acknowledgement, 15-day deadline (24 hours for intimate images or impersonation), admin queue with deadlines and email replies, contacts editable in Admin and shown on /contact, /grievance and in the app. 11 end-to-end checks.
+- Done and tested: encrypted database backups every 6 hours (folder now, cloud storage once set up), retention, "Back up now", and a restore tool. A restore was tested here: integrity ok, all accounts present.
+- Done, untested live: OTP by email (Resend) and SMS (MSG91), switching on once keys are added.
+- Done: GitHub workflow that builds the apps on Expo once EXPO_TOKEN is added; reviewer demo-account script.

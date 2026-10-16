@@ -24,6 +24,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
             <li><Link href="/about" className="hover:text-ink">How it works</Link></li>
             <li><Link href="/safety" className="hover:text-ink">Safety</Link></li>
             <li><Link href="/contact" className="hover:text-ink">Contact</Link></li>
+            <li><Link href="/grievance" className="hover:text-ink">File a complaint</Link></li>
           </ul>
           <ul className="space-y-1.5">
             <li><Link href="/legal/terms" className="hover:text-ink">Terms of Service</Link></li>

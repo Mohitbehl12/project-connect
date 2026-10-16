@@ -12,6 +12,7 @@ export const useStaff = () => useContext(StaffCtx)!;
 const NAV: [string, string, string][] = [
   ["/admin", "Dashboard", "analytics.view"],
   ["/admin/reports", "Reports", "reports.view"],
+  ["/admin/grievances", "Complaints", "grievances.handle"],
   ["/admin/verification", "Verification", "users.verify"],
   ["/admin/users", "Users", "users.view"],
   ["/admin/matches", "Matches", "users.view"],

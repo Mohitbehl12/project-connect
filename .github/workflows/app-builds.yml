@@ -1,0 +1,69 @@
+# Builds the iPhone and Android apps on Expo's servers (EAS Build).
+#
+# One-time setup:
+#   1. Create an Expo account, then in mobile/ run `npx eas-cli init` once and note the project id.
+#   2. GitHub → Settings → Secrets and variables → Actions:
+#        secret   EXPO_TOKEN      (expo.dev → Account settings → Access tokens)
+#        variable EAS_PROJECT_ID  (from step 1)
+#   3. The first iPhone build needs your Apple account to create signing certificates: start it once from a
+#      computer (`npx eas-cli build -p ios --profile preview`) or set the credentials up on expo.dev.
+#
+# Run it: Actions → "App builds" → Run workflow, or push a tag like app-v0.2.0 (production builds).
+name: App builds
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Which app
+        type: choice
+        options: [android, ios, all]
+        default: android
+      profile:
+        description: "Build type: preview = installable test app, production = for the stores"
+        type: choice
+        options: [preview, production, development]
+        default: preview
+  push:
+    tags: ["app-v*"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      HAS_TOKEN: ${{ secrets.EXPO_TOKEN != '' }}
+      EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - name: Explain missing setup
+        if: env.HAS_TOKEN != 'true'
+        working-directory: .
+        run: echo "::notice::No EXPO_TOKEN secret yet — see the setup steps at the top of .github/workflows/app-builds.yml. Nothing was built."
+      - uses: actions/checkout@v4
+        if: env.HAS_TOKEN == 'true'
+      - uses: actions/setup-node@v4
+        if: env.HAS_TOKEN == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: expo/expo-github-action@v8
+        if: env.HAS_TOKEN == 'true'
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Install
+        if: env.HAS_TOKEN == 'true'
+        run: npm ci
+      - name: Typecheck
+        if: env.HAS_TOKEN == 'true'
+        run: npx tsc --noEmit
+      - name: Build
+        if: env.HAS_TOKEN == 'true'
+        run: |
+          PLATFORM="${{ github.event.inputs.platform || 'all' }}"
+          PROFILE="${{ github.event.inputs.profile || 'production' }}"
+          eas build --platform "$PLATFORM" --profile "$PROFILE" --non-interactive --no-wait
+          echo "::notice::Build started — follow it on expo.dev. Preview builds give an install link you can open on the phone."

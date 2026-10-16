@@ -508,3 +508,26 @@ export const passwordResets = sqliteTable("password_resets", {
   ip: text("ip"),
   createdAt: now("created_at"),
 }, (t) => [index("password_resets_user").on(t.userId)]);
+
+/**
+ * Formal complaints to the Grievance Officer (India IT Rules 2021): acknowledged within 24 hours,
+ * resolved within 15 days; complaints about intimate images or impersonation acted on within 24 hours.
+ * The complaint text and contact email are encrypted at rest.
+ */
+export const grievances = sqliteTable("grievances", {
+  id: id(),
+  refNo: text("ref_no").notNull().unique(),
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  name: text("name").notNull(),
+  email: text("email").notNull(), // sealed
+  category: text("category").notNull(), // ACCOUNT | CONTENT | INTIMATE_OR_IMPERSONATION | PRIVACY | PAYMENT | SAFETY | OTHER
+  details: text("details").notNull(), // sealed
+  status: text("status").notNull().default("ACKNOWLEDGED"), // ACKNOWLEDGED | IN_PROGRESS | RESOLVED | REJECTED
+  ackDueAt: ts("ack_due_at").notNull(),
+  resolveDueAt: ts("resolve_due_at").notNull(),
+  acknowledgedAt: ts("acknowledged_at"),
+  resolvedAt: ts("resolved_at"),
+  resolution: text("resolution"), // sealed; sent to the complainant
+  handledById: text("handled_by_id"),
+  createdAt: now("created_at"),
+}, (t) => [index("grievances_status").on(t.status, t.resolveDueAt)]);

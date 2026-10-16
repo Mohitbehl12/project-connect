@@ -36,6 +36,10 @@ const Body = z.object({
     "rewards.verifiedPremiumDays": z.number().int().min(0).max(90).optional(),
     "retention.deletedMessageDays": z.number().int().min(7).max(3650).optional(),
     "retention.loginEventDays": z.number().int().min(30).max(3650).optional(),
+    "legal.contacts": z.object({
+      companyName: z.string().max(120), supportEmail: z.string().max(120), safetyEmail: z.string().max(120), privacyEmail: z.string().max(120),
+      grievanceOfficer: z.object({ name: z.string().max(80), designation: z.string().max(80), email: z.string().max(120), phone: z.string().max(30), address: z.string().max(300) }),
+    }).optional(),
   }).optional(),
   plans: z.array(z.object({
     id: z.string(),
@@ -50,6 +54,8 @@ const Body = z.object({
       amountMinor: z.number().int().min(0), promoMinor: z.number().int().min(0).nullable().optional(),
       durationDays: z.number().int().min(1).max(366), active: z.boolean().default(true),
       segment: z.string().regex(/^(\*|gender:(MAN|WOMAN|NONBINARY))$/).default("*"),
+      appleProductId: z.string().regex(/^[A-Za-z0-9._]{1,100}$/).nullable().optional(),
+      googleProductId: z.string().regex(/^[a-z0-9][a-z0-9._]{0,99}$/).nullable().optional(),
     })).optional(),
   })).optional(),
 });
@@ -74,7 +80,8 @@ export const PUT = route(async ({ req, user }) => {
       if (p.features) set.features = JSON.stringify(p.features);
       if (Object.keys(set).length) await db.update(schema.plans).set(set).where(eq(schema.plans.id, p.id));
       for (const pr of p.prices ?? []) {
-        const vals = { country: pr.country, currency: pr.currency, amountMinor: pr.amountMinor, promoMinor: pr.promoMinor ?? null, durationDays: pr.durationDays, active: pr.active, segment: pr.segment };
+        const vals = { country: pr.country, currency: pr.currency, amountMinor: pr.amountMinor, promoMinor: pr.promoMinor ?? null, durationDays: pr.durationDays, active: pr.active, segment: pr.segment,
+          ...(pr.appleProductId !== undefined ? { appleProductId: pr.appleProductId || null } : {}), ...(pr.googleProductId !== undefined ? { googleProductId: pr.googleProductId || null } : {}) };
         // A changed amount needs a new gateway plan; existing subscribers keep their price until they change plan.
         if (pr.id) {
           const before = await db.query.planPrices.findFirst({ where: eq(schema.planPrices.id, pr.id) });
