@@ -14,7 +14,7 @@ export default function About() {
   return (
     <PublicShell>
       <div className="mx-auto max-w-3xl px-4 py-12 md:px-8">
-        <h1 className="text-5xl font-extrabold">How Project Connect works</h1>
+        <h1 className="text-5xl font-extrabold">How Kinara works</h1>
         <ol className="mt-12 space-y-10">
           {STEPS.map(([t, b], i) => (
             <li key={t} className="grid grid-cols-[3rem_1fr] gap-4">

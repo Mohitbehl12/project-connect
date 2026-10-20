@@ -100,7 +100,7 @@ export default function SignUp() {
                 <View style={{ flex: 1.4 }}><Field label="Year" placeholder="YYYY" value={yyyy} onChangeText={(t) => setYyyy(t.replace(/\D/g, "").slice(0, 4))} keyboardType="number-pad" maxLength={4} /></View>
               </View>
               {dob && "invalid" in dob && <Banner tone="alert">That date doesn't exist. Check the day and month.</Banner>}
-              {dob && !("invalid" in dob) && dob.age < 18 && <Banner tone="alert">Project Connect is only for people aged 18 and over.</Banner>}
+              {dob && !("invalid" in dob) && dob.age < 18 && <Banner tone="alert">Kinara is only for people aged 18 and over.</Banner>}
               {dob && !("invalid" in dob) && dob.age >= 18 && <T v="headline" tone="trust">You're {dob.age}. </T>}
             </>
           )}

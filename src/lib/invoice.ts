@@ -23,7 +23,7 @@ export async function invoicePdf(p: typeof schema.payments.$inferSelect, buyer: 
   const text = (s: string, x: number, size = 10, f = font, color = ink) => page.drawText(s, { x, y, size, font: f, color });
   const line = () => { page.drawLine({ start: { x: 50, y: y + 6 }, end: { x: 545, y: y + 6 }, thickness: 0.6, color: rgb(0.88, 0.87, 0.94) }); };
 
-  text("Project Connect", 50, 20, bold, brand); y -= 18;
+  text("Kinara", 50, 20, bold, brand); y -= 18;
   text("TAX INVOICE", 50, 11, bold, muted); y -= 30;
 
   text(seller.name, 50, 10, bold); text(`Invoice no.  ${p.invoiceNo}`, 340, 10, bold); y -= 14;
@@ -49,7 +49,7 @@ export async function invoicePdf(p: typeof schema.payments.$inferSelect, buyer: 
   if (p.refundedMinor) { text("Refunded", 300, 10, font, muted); text(`- ${money(p.refundedMinor, p.currency)}`, 462, 10, font, muted); y -= 16; }
   text(`Paid by ${p.method ? p.method.toUpperCase() : "online payment"} via ${p.provider === "MOCK" ? "TEST MODE (no money moved)" : p.provider === "RAZORPAY" ? "Razorpay" : p.provider}.`, 50, 9, font, muted); y -= 40;
 
-  text("Card numbers, UPI PINs and bank details are handled by the payment gateway and are never stored by Project Connect.", 50, 8, font, muted); y -= 12;
+  text("Card numbers, UPI PINs and bank details are handled by the payment gateway and are never stored by Kinara.", 50, 8, font, muted); y -= 12;
   text("Questions about this invoice? Write to us from Settings > Help.", 50, 8, font, muted);
   return doc.save();
 }

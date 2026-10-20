@@ -37,7 +37,7 @@ export async function exportMyData(user: User) {
   const { lat: _lat, lng: _lng, ...profileOut } = profile ?? ({} as any);
   return {
     exportedAt: new Date().toISOString(),
-    note: "Your Project Connect data. Exact location coordinates are stored only to calculate distances and are not included here; your city is.",
+    note: "Your Kinara data. Exact location coordinates are stored only to calculate distances and are not included here; your city is.",
     account: { email: user.email, phone: user.phone, dob: user.dob, createdAt: user.createdAt, emailVerified: user.emailVerified, phoneVerified: user.phoneVerified, selfieStatus: user.selfieStatus, referralCode: user.referralCode },
     profile: profile ? profileOut : null,
     preferences: prefs ?? null,

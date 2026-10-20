@@ -60,7 +60,7 @@ export function AppShell({ children, bare = false }: { children: ReactNode; bare
   return (
     <div className="min-h-dvh md:flex">
       <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-40 border-t border-mist bg-paper-raised/95 backdrop-blur md:sticky md:top-0 md:h-dvh md:w-56 md:shrink-0 md:border-r md:border-t-0 md:bg-paper">
-        <Link href="/discover" className="hidden px-6 pb-6 pt-7 font-display text-xl font-extrabold md:block">Project Connect</Link>
+        <Link href="/discover" className="hidden px-6 pb-6 pt-7 font-display text-xl font-extrabold md:block">Kinara</Link>
         <ul className="flex h-16 items-center justify-around md:h-auto md:flex-col md:items-stretch md:gap-1 md:px-3">
           {NAV.map((n) => {
             const active = path.startsWith(n.href);
@@ -93,7 +93,7 @@ function LegalGate({ me, onAccepted }: { me: Me; onAccepted: () => void }) {
   if (!me.pendingLegal.length) return null;
   return (
     <Modal open dismissable={false} onClose={() => {}} title="Please review our policies">
-      <p className="text-ink-soft">These have been added or updated since you last accepted them. Accept to keep using Project Connect.</p>
+      <p className="text-ink-soft">These have been added or updated since you last accepted them. Accept to keep using Kinara.</p>
       <ul className="my-4 space-y-2">
         {me.pendingLegal.map((d) => (
           <li key={d.slug}><Link href={`/legal/${d.slug}`} target="_blank" className="font-semibold underline">{d.title}</Link> <span className="text-sm text-ink-faint">version {d.version}</span></li>

@@ -1,4 +1,4 @@
-// Project Connect — core data model (Drizzle ORM, SQLite/libSQL dialect).
+// Kinara — core data model (Drizzle ORM, SQLite/libSQL dialect).
 // Enum-like columns are text; allowed values live in src/lib/constants.ts and are validated at the API edge.
 // Porting to Postgres: swap sqlite-core for pg-core; the shapes map 1:1.
 import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";

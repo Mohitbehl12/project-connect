@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "Project Connect", template: "%s · Project Connect" },
+  title: { default: "Kinara", template: "%s · Kinara" },
   description: "Dating built around intent, compatibility and safety.",
 };
 

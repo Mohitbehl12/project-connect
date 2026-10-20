@@ -26,7 +26,7 @@ export const CONFIG_DEFAULTS = {
   "billing.genderPricingCountries": ["IN"] as string[], // gender price groups / offers apply only here
   "billing.reminderDays": 2, // renewal reminder this many days before each charge
   "billing.graceDays": 3, // keep access this long after a failed renewal while the gateway retries
-  "billing.seller": { name: "Project Connect (placeholder legal entity)", address: "Address to be added", gstin: "", email: "billing@example.com", gstRatePct: 18 },
+  "billing.seller": { name: "Kinara (placeholder legal entity)", address: "Address to be added", gstin: "", email: "billing@example.com", gstRatePct: 18 },
   // Referrals and rewards
   "referral.rewardDays": 7,
   "referral.monthlyCap": 10, // rewards one person can earn per calendar month

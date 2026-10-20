@@ -20,7 +20,7 @@ export function sealBackup(dbFile: Buffer, secret: string): Buffer {
 }
 
 export function openBackup(blob: Buffer, secret: string): Buffer {
-  if (!blob.subarray(0, 5).equals(MAGIC)) throw new Error("Not a Project Connect backup file.");
+  if (!blob.subarray(0, 5).equals(MAGIC)) throw new Error("Not a Kinara backup file.");
   const d = createDecipheriv("aes-256-gcm", keyOf(secret), blob.subarray(5, 17));
   d.setAuthTag(blob.subarray(17, 33));
   let plain: Buffer;

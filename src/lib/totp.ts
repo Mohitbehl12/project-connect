@@ -51,5 +51,5 @@ export function totpStep(secret: string, code: string, now = Date.now()): number
 }
 
 export function otpauthUrl(secret: string, account: string) {
-  return `otpauth://totp/${encodeURIComponent("Project Connect")}:${encodeURIComponent(account)}?secret=${secret}&issuer=${encodeURIComponent("Project Connect")}&digits=6&period=30`;
+  return `otpauth://totp/${encodeURIComponent("Kinara")}:${encodeURIComponent(account)}?secret=${secret}&issuer=${encodeURIComponent("Kinara")}&digits=6&period=30`;
 }

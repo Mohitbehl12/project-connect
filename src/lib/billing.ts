@@ -637,7 +637,7 @@ export async function applyStoreState(state: StoreState, opts: { userId?: string
   let userId = existing?.userId ?? null;
   if (opts.userId) {
     const other = (existing && existing.userId !== opts.userId) || (state.accountToken && state.accountToken !== accountTokenFor(state.store, opts.userId));
-    if (other) throw new ApiError(409, `This ${label} subscription belongs to a different Project Connect account. Sign in to that account, or contact support.`, "store_other_account");
+    if (other) throw new ApiError(409, `This ${label} subscription belongs to a different Kinara account. Sign in to that account, or contact support.`, "store_other_account");
     userId = opts.userId;
   }
   if (!userId && state.store === "APPLE" && state.accountToken) {

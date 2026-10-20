@@ -127,7 +127,7 @@ When you need more than one server:
 Emails are only sent once both of these are set in Render → Environment:
 
 - `RESEND_API_KEY` — from resend.com → API Keys.
-- `EMAIL_FROM` — e.g. `Project Connect <no-reply@yourdomain.com>`. The domain must be verified in Resend. Resend's shared test sender `onboarding@resend.dev` only delivers to the email that owns the Resend account.
+- `EMAIL_FROM` — e.g. `Kinara <no-reply@yourdomain.com>`. The domain must be verified in Resend. Resend's shared test sender `onboarding@resend.dev` only delivers to the email that owns the Resend account.
 
 Until then, the request still answers normally but no email goes out (a warning is logged). The Resend sender has not yet been tested against a live account.
 

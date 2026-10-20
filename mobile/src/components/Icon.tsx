@@ -1,7 +1,7 @@
 import Svg, { Circle, Path } from "react-native-svg";
 import { useTheme } from "@/theme/ThemeProvider";
 
-// Project Connect icon set: 24 pt grid, 1.75 pt rounded strokes. Brand-specific glyphs (discover,
+// Kinara icon set: 24 pt grid, 1.75 pt rounded strokes. Brand-specific glyphs (discover,
 // matches, verified) are built from the Arc; the rest are plain, original line drawings.
 const P: Record<string, string[]> = {
   discover: ["M5.6 18.4A9 9 0 0 1 5.6 5.6", "M18.4 5.6a9 9 0 0 1 0 12.8", "M12 8.5l1.6 3.5-1.6 3.5-1.6-3.5z"],

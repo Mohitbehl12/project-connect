@@ -20,7 +20,7 @@ function Onboarding() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <p className="font-display text-lg font-extrabold">Project Connect</p>
+      <p className="font-display text-lg font-extrabold">Kinara</p>
       <ol className="mt-6 flex gap-2" aria-label="Setup progress">
         {STEPS.map((s, i) => (
           <li key={s} className="flex-1">

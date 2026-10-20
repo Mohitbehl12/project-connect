@@ -121,7 +121,7 @@ export default function Welcome() {
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 24, paddingTop: 8 }}>
           <ArcMark size={28} left={g.onNight} right={g.spark} />
-          <T v="headline" tone="white" style={{ fontFamily: "BricolageGrotesque_800ExtraBold" }}>Project Connect</T>
+          <T v="headline" tone="white" style={{ fontFamily: "BricolageGrotesque_800ExtraBold" }}>Kinara</T>
         </View>
         <FlatList
           ref={list}

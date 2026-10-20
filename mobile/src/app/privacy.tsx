@@ -54,7 +54,7 @@ export default function PrivacyCenter() {
         const f = new File(Paths.cache, "project-connect-data.json");
         if (f.exists) f.delete();
         f.create(); f.write(text);
-        await Sharing.shareAsync(f.uri, { mimeType: "application/json", dialogTitle: "Your Project Connect data" });
+        await Sharing.shareAsync(f.uri, { mimeType: "application/json", dialogTitle: "Your Kinara data" });
       }
       haptic.success();
     } catch (e: any) { setMsg({ tone: "alert", text: e.message }); } finally { setBusy(false); }

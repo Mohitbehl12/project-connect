@@ -99,7 +99,7 @@ async function seedBase(now: Date) {
     const [doc] = await db.insert(s.legalDocuments).values({ slug, title, requiredAtSignup: required }).returning();
     await db.insert(s.legalVersions).values({
       documentId: doc.id, version: 1, status: "PUBLISHED", publishedAt: now, effectiveAt: now,
-      body: `# ${title}\n\n**Placeholder text for testing — this is not legal advice.** Have a lawyer draft the real ${title.toLowerCase()} for each country you launch in (including India's DPDP Act 2023 and GDPR for EU/UK users) before going live.\n\n## Summary\n\nThis section will explain, in plain language, what this document covers and how it affects people using Project Connect.`,
+      body: `# ${title}\n\n**Placeholder text for testing — this is not legal advice.** Have a lawyer draft the real ${title.toLowerCase()} for each country you launch in (including India's DPDP Act 2023 and GDPR for EU/UK users) before going live.\n\n## Summary\n\nThis section will explain, in plain language, what this document covers and how it affects people using Kinara.`,
     });
   }
 

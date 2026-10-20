@@ -8,17 +8,15 @@ import { T } from "./Text";
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 /** The brand symbol: two open curves. `closed` (0..1) pulls them together into a ring. */
+/** The Kinara mark: a sun rising over two waves meeting the shore. Colours follow the theme. */
 export function ArcMark({ size = 48, left, right, stroke }: { size?: number; left?: string; right?: string; stroke?: number }) {
-  const { c, g: glow } = useTheme();
-  const w = stroke ?? size * 0.11;
-  const r = size / 2 - w;
-  const cx = size / 2;
-  const g = 0.24;
-  const pt = (a: number) => `${cx + r * Math.cos(a)} ${cx + r * Math.sin(a)}`;
+  const { c } = useTheme();
+  const w = stroke ? (stroke / size) * 100 : 7;
   return (
-    <Svg width={size} height={size}>
-      <Path d={`M${pt(-Math.PI / 2 - g)} A${r} ${r} 0 0 0 ${pt(Math.PI / 2 + g)}`} stroke={left ?? c.brand} strokeWidth={w} strokeLinecap="round" fill="none" />
-      <Path d={`M${pt(-Math.PI / 2 + g)} A${r} ${r} 0 0 1 ${pt(Math.PI / 2 - g)}`} stroke={right ?? c.accent} strokeWidth={w} strokeLinecap="round" fill="none" />
+    <Svg width={size} height={size} viewBox="0 0 100 100" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <Path d="M14 62 C 28 50, 40 50, 50 60 C 60 50, 72 50, 86 62" stroke={right ?? c.accent} strokeWidth={w} strokeLinecap="round" fill="none" />
+      <Path d="M14 76 C 28 64, 40 64, 50 74 C 60 64, 72 64, 86 76" stroke={left ?? c.brand} strokeOpacity={0.6} strokeWidth={w * 0.72} strokeLinecap="round" fill="none" />
+      <Circle cx={50} cy={34} r={10} fill="#F2B544" />
     </Svg>
   );
 }

@@ -33,7 +33,7 @@ export const POST = publicRoute(async ({ req }) => {
   const dobDate = new Date(body.dob + "T00:00:00Z");
   if (isNaN(dobDate.getTime()) || dobDate > new Date()) throw new ApiError(422, "dob: Enter a real date of birth.", "validation");
   const age = ageFromDob(body.dob);
-  if (age < MIN_AGE) throw new ApiError(403, "Project Connect is only for people aged 18 and over.", "underage");
+  if (age < MIN_AGE) throw new ApiError(403, "Kinara is only for people aged 18 and over.", "underage");
   if (age > 100) throw new ApiError(422, "dob: Check your date of birth.", "validation");
 
   const exists = await db.query.users.findFirst({ where: eq(schema.users.email, body.email) });

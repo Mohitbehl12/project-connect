@@ -45,6 +45,6 @@ export const POST = route<{ id: string }>(async ({ req, user, params }) => {
   await db.update(schema.reports).set({ status: b.status, resolution: b.resolution, resolvedById: user.id, resolvedAt: new Date() })
     .where(eq(schema.reports.id, r.id));
   await audit(user.id, `report.${b.status.toLowerCase()}`, "report", r.id, { resolution: b.resolution });
-  if (r.reporterId) await notify(r.reporterId, "REPORT", "Your report was reviewed", "Thanks for helping keep Project Connect safe.");
+  if (r.reporterId) await notify(r.reporterId, "REPORT", "Your report was reviewed", "Thanks for helping keep Kinara safe.");
   return ok({ closed: true });
 }, { permission: "reports.resolve" });

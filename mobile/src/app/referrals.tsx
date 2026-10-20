@@ -42,7 +42,7 @@ export default function Referrals() {
               </Sunset>
             </View>
             <View style={{ flexDirection: "row", gap: 10 }}>
-              <Button title="Share invite" icon="share" style={{ flex: 1 }} onPress={() => { haptic.light(); Share.share({ message: `Join me on Project Connect — use my code ${d.code} when you sign up: ${d.link}` }); }} />
+              <Button title="Share invite" icon="share" style={{ flex: 1 }} onPress={() => { haptic.light(); Share.share({ message: `Join me on Kinara — use my code ${d.code} when you sign up: ${d.link}` }); }} />
               <Button title={copied ? "Copied" : "Copy code"} v="outline" icon={copied ? "check" : "copy"} style={{ flex: 1 }} onPress={async () => { await Clipboard.setStringAsync(d.code); haptic.success(); setCopied(true); setTimeout(() => setCopied(false), 1800); }} />
             </View>
             <View style={{ backgroundColor: c.surface, borderRadius: 22, padding: 16, gap: 10 }}>

@@ -1,5 +1,5 @@
 const TIPS = [
-  ["Keep it on Project Connect at first", "Scammers push to move to WhatsApp or Telegram quickly. Take your time; we screen messages here."],
+  ["Keep it on Kinara at first", "Scammers push to move to WhatsApp or Telegram quickly. Take your time; we screen messages here."],
   ["Never send money", "No genuine match needs a loan, a gift card, help with customs or a crypto tip. Report anyone who asks."],
   ["Meet in public, tell a friend", "Pick a busy café or restaurant, share your plans and the person's profile with someone you trust, and arrange your own travel."],
   ["Video call before meeting", "A short call helps confirm the person is who their profile says."],

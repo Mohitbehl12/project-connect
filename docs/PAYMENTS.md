@@ -2,7 +2,7 @@
 
 _Last updated: 13 October 2026_
 
-This covers the money side of Project Connect: how prices and offers are chosen, how a payment flows, how to go live with Razorpay and the app stores, and the security and privacy controls that came with it.
+This covers the money side of Kinara: how prices and offers are chosen, how a payment flows, how to go live with Razorpay and the app stores, and the security and privacy controls that came with it.
 
 **Not legal or tax advice.** Before launch, have a lawyer review gender-based pricing, auto-renew terms and the refund policy, and a chartered accountant review the invoice format and GST treatment.
 

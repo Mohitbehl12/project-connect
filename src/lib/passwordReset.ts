@@ -25,10 +25,10 @@ export async function startPasswordReset(email: string, ip: string): Promise<{ d
   await db.insert(schema.passwordResets).values({ userId: user.id, tokenHash: sha(token), expiresAt: new Date(Date.now() + TTL_MIN * 60_000), ip });
   const url = `${appUrl()}/reset-password?token=${token}`;
   const mail = simpleEmail("Reset your password", [
-    "Someone (hopefully you) asked to reset the password for your Project Connect account.",
+    "Someone (hopefully you) asked to reset the password for your Kinara account.",
     `This link works once and expires in ${TTL_MIN} minutes. If you didn't ask for it, ignore this email — your password stays the same.`,
   ], { label: "Choose a new password", url });
-  await sendEmail(user.email, "Reset your Project Connect password", mail.text, mail.html);
+  await sendEmail(user.email, "Reset your Kinara password", mail.text, mail.html);
   await audit(user.id, "auth.reset_requested", "user", user.id, { emailSent: emailConfigured() });
   return process.env.DEV_SHOW_OTP === "true" ? { devResetUrl: url } : {};
 }

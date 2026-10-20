@@ -35,7 +35,7 @@ export const REPORTABLE_FLAGS: Flag[] = ["SCAM", "ABUSE"];
 
 /** Friendly warning shown to the recipient next to a flagged message. */
 export function warningFor(flags: Flag[]): string | null {
-  if (flags.includes("SCAM")) return "This message mentions money or investments. People on Project Connect will never need you to send money.";
+  if (flags.includes("SCAM")) return "This message mentions money or investments. People on Kinara will never need you to send money.";
   if (flags.includes("ABUSE")) return "This message may be abusive. You can report or block this person from the menu.";
   if (flags.includes("OFF_PLATFORM")) return "Moving to another app early is a common scam tactic. Take your time.";
   if (flags.includes("LINK")) return "Be careful opening links from people you haven't met.";

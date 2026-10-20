@@ -26,7 +26,7 @@ export const POST = route(async ({ req, user }) => {
     }
   }
   const message = restored ? "Your subscription is restored." : otherAccount
-    ? "That subscription belongs to a different Project Connect account. Sign in to that account to use it."
+    ? "That subscription belongs to a different Kinara account. Sign in to that account to use it."
     : "We didn't find an active subscription for this store account.";
   return ok({ restored, message, subscription: await subscriptionSummary(user.id) });
 });

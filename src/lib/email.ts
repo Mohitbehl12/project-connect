@@ -33,9 +33,9 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 
 /** A simple, readable email layout: one heading, a few lines, one button. */
 export function simpleEmail(title: string, lines: string[], button?: { label: string; url: string }) {
-  const text = [title, "", ...lines, ...(button ? ["", `${button.label}: ${button.url}`] : []), "", "— Project Connect"].join("\n");
+  const text = [title, "", ...lines, ...(button ? ["", `${button.label}: ${button.url}`] : []), "", "— Kinara"].join("\n");
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#2B1F45">
-<p style="font-size:20px;font-weight:bold;color:#2E2A6E;margin:0 0 16px">Project Connect</p>
+<p style="font-size:20px;font-weight:bold;color:#2E2A6E;margin:0 0 16px">Kinara</p>
 <h1 style="font-size:22px;margin:0 0 12px">${esc(title)}</h1>
 ${lines.map((l) => `<p style="font-size:15px;line-height:1.5;margin:0 0 12px">${esc(l)}</p>`).join("")}
 ${button ? `<p style="margin:24px 0"><a href="${esc(button.url)}" style="background:#2E2A6E;color:#fff;text-decoration:none;padding:12px 22px;border-radius:999px;font-weight:bold;display:inline-block">${esc(button.label)}</a></p>

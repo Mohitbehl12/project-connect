@@ -22,7 +22,8 @@
     "db:migrate": "tsx scripts/migrate.ts",
     "build:app-web": "npm --prefix mobile run export:server",
     "backup:restore": "tsx scripts/restore-backup.ts",
-    "reviewer:create": "tsx scripts/create-reviewer.ts"
+    "reviewer:create": "tsx scripts/create-reviewer.ts",
+    "brand:rename": "tsx scripts/rename-brand.ts"
   },
   "keywords": [],
   "author": "",

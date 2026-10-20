@@ -18,7 +18,7 @@ export default function Landing() {
             Know why before you say hello.
           </h1>
           <p className="mt-6 max-w-lg text-lg text-ink-soft">
-            Every profile on Project Connect comes with a compatibility score and the reasons behind it — shared goals,
+            Every profile on Kinara comes with a compatibility score and the reasons behind it — shared goals,
             the way you both handle a disagreement, the city you both call home. Fewer, better matches.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
