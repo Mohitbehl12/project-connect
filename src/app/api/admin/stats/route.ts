@@ -1,4 +1,4 @@
-import { and, count, eq, gte, sql, sum } from "drizzle-orm";
+import { and, count, eq, gte, inArray, isNotNull, ne, sql, sum } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ok, route } from "@/lib/http";
 
@@ -29,6 +29,29 @@ export const GET = route(async () => {
     c(db.select({ n: count() }).from(schema.blocks)),
   ]);
 
+  // Members and memberships (India rules: women free forever, men 15-day trial then paid).
+  const P = schema.profiles, S = schema.subscriptions, now = new Date();
+  const liveSub = and(inArray(S.status, ["ACTIVE", "TRIALING", "PAST_DUE", "CANCELLED"]), gte(S.endsAt, now));
+  const [men, women, freeTrials, freeForever, paidMemberships, subs100, payPending] = await Promise.all([
+    c(db.select({ n: count() }).from(P).innerJoin(U, eq(U.id, P.userId)).where(and(isUser, eq(P.gender, "MAN")))),
+    c(db.select({ n: count() }).from(P).innerJoin(U, eq(U.id, P.userId)).where(and(isUser, eq(P.gender, "WOMAN")))),
+    c(db.select({ n: count() }).from(S).where(and(eq(S.couponCode, "MEN_TRIAL"), liveSub))),
+    c(db.select({ n: count() }).from(S).where(and(eq(S.couponCode, "WOMEN_FREE_FOREVER"), liveSub))),
+    c(db.select({ n: count() }).from(S).where(and(ne(S.provider, "REWARD"), liveSub))),
+    c(db.select({ n: count() }).from(S).where(and(ne(S.provider, "REWARD"), liveSub, eq(S.planCode, "PREMIUM"), eq(S.amountMinor, 10000), eq(S.periodDays, 30), eq(S.currency, "INR")))),
+    c(db.select({ n: count() }).from(S).where(inArray(S.status, ["PENDING", "PAST_DUE"]))),
+  ]);
+  const R = schema.callRequests, CL = schema.calls;
+  const [callRequests, callAccepted, callDeclined, callsDone, callsMissed] = await Promise.all([
+    c(db.select({ n: count() }).from(R)),
+    c(db.select({ n: count() }).from(R).where(eq(R.state, "ACCEPTED"))).then(async (a) => a + (await c(db.select({ n: count() }).from(R).where(and(eq(R.state, "EXPIRED"), isNotNull(R.respondedAt)))))),
+    c(db.select({ n: count() }).from(R).where(eq(R.state, "DECLINED"))),
+    c(db.select({ n: count() }).from(CL).where(isNotNull(CL.answeredAt))),
+    c(db.select({ n: count() }).from(CL).where(eq(CL.endReason, "MISSED"))),
+  ]);
+  const paidRevenue = await db.select({ currency: schema.payments.currency, total: sum(schema.payments.amountMinor) })
+    .from(schema.payments).where(and(eq(schema.payments.status, "CAPTURED"), gte(schema.payments.createdAt, month))).groupBy(schema.payments.currency);
+
   const revenue = await db.select({ currency: schema.subscriptions.currency, total: sum(schema.subscriptions.amountMinor) })
     .from(schema.subscriptions).where(gte(schema.subscriptions.startedAt, month)).groupBy(schema.subscriptions.currency);
   const byCountry = await db.select({ country: schema.profiles.country, n: count() }).from(schema.profiles)
@@ -44,6 +67,9 @@ export const GET = route(async () => {
 
   return ok({
     users: { total, active24h, active7d, new7d, verified, pendingVerification, premium, suspended, banned },
+    members: { men, women, freeTrials, freeForever, paidMemberships, subs100, payPending },
+    calls: { requests: callRequests, accepted: callAccepted, declined: callDeclined, completed: callsDone, missed: callsMissed },
+    payments30d: paidRevenue.map((r) => ({ currency: r.currency, amountMinor: Number(r.total ?? 0) })),
     engagement: { matches, matches7d, messages7d, blocks },
     safety: { openReports, criticalReports },
     revenue30d: revenue.map((r) => ({ currency: r.currency, amountMinor: Number(r.total ?? 0) })),

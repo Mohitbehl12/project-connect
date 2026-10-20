@@ -48,10 +48,22 @@ export default function Settings() {
           <T v="caption" tone="muted" style={{ paddingTop: 10 }}>Pick the colours you like. It changes the whole app on this phone.</T>
           <ThemePicker />
         </Group>
-        <Group title="Account & safety">
+        <Group title="Privacy & Safety">
           <LinkRow icon="eye" label="Privacy Center" sub="Who sees you, your data, deleting your account" href="/privacy" />
           <LinkRow icon="key" label="Security" sub="Devices, sign-ins, 2-step verification, password" href="/security" />
-          <LinkRow icon="shield" label="Safety Center" sub="Verification, reporting, date safety" href="/safety" />
+          <LinkRow icon="shield" label="Safety Center" sub="Verification, date safety" href="/safety" />
+          <LinkRow icon="block" label="Blocked users" sub="People you've blocked — unblock here" href="/safety" />
+          <LinkRow icon="flag" label="Report a user" sub="From their profile, your chat or Call history" href="/safety" />
+          <LinkRow icon="trash" label="Delete account" sub="Permanently delete your account and data" href="/privacy" />
+        </Group>
+        <Group title="Call settings">
+          <T v="caption" tone="muted" style={{ paddingTop: 10 }}>Nobody can call you without your OK: they send a request, and you accept or decline.</T>
+          <View style={{ flexDirection: "row", gap: 8, paddingVertical: 12, flexWrap: "wrap" }}>
+            <T v="callout" style={{ width: "100%" }}>Who can send you call requests</T>
+            <Chip label="My matches" selected={(p?.callRequests ?? "MATCHES") === "MATCHES"} onPress={() => set("callRequests", "MATCHES")} />
+            <Chip label="No one" selected={p?.callRequests === "NOBODY"} onPress={() => set("callRequests", "NOBODY")} />
+          </View>
+          <LinkRow icon="call" label="Call history" sub="Calls and call requests" href="/calls" />
         </Group>
         <Group title="Premium">
           <LinkRow icon="card" label="My subscription" sub="Plan, next payment, invoices, cancel" href="/subscription" />

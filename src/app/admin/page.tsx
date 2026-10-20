@@ -8,7 +8,8 @@ import { formatMoney, useApi } from "@/lib/client";
 import { COUNTRIES } from "@/lib/constants";
 
 type Stats = {
-  users: Record<string, number>; engagement: Record<string, number>; safety: { openReports: number; criticalReports: number };
+  users: Record<string, number>; engagement: Record<string, number>;
+  members?: Record<string, number>; calls?: Record<string, number>; payments30d?: { currency: string; amountMinor: number }[]; safety: { openReports: number; criticalReports: number };
   revenue30d: { currency: string; amountMinor: number }[]; byCountry: { country: string; n: number }[]; byPlan: { plan: string; n: number }[];
   daily: { signups: { d: string; n: number }[]; matches: { d: string; n: number }[] }; retention7d: number;
 };
@@ -72,6 +73,25 @@ function Dashboard() {
         <Kpi label="Open reports" value={data.safety.openReports} note={`${data.engagement.blocks} blocks in total`} />
         <Kpi label="Suspended / banned" value={`${u.suspended} / ${u.banned}`} />
       </div>
+      {data.members && (
+        <>
+          <h2 className="mb-2 mt-6 text-lg font-bold">Memberships</h2>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <Kpi label="Men / women" value={`${data.members.men} / ${data.members.women}`} />
+            <Kpi label="Free trials (men)" value={data.members.freeTrials} />
+            <Kpi label="Free forever (women)" value={data.members.freeForever} />
+            <Kpi label="Paid memberships" value={data.members.paidMemberships} note={`${data.members.subs100} on ₹100/month · ${data.members.payPending} payment pending`} />
+            <Kpi label="Revenue, last 30 days" value={(data.payments30d ?? []).map((r) => `${r.currency === "INR" ? "₹" : r.currency + " "}${(r.amountMinor / 100).toLocaleString("en-IN")}`).join(" · ") || "₹0"} note="Payments received" />
+          </div>
+          <h2 className="mb-2 mt-6 text-lg font-bold">Calls</h2>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <Kpi label="Call requests" value={data.calls?.requests ?? 0} />
+            <Kpi label="Accepted / declined" value={`${data.calls?.accepted ?? 0} / ${data.calls?.declined ?? 0}`} />
+            <Kpi label="Calls completed" value={data.calls?.completed ?? 0} note={`${data.calls?.missed ?? 0} missed`} />
+            <Kpi label="Blocks" value={data.engagement.blocks} note={`${u.suspended} suspended · ${u.banned} banned`} />
+          </div>
+        </>
+      )}
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <Bars title="Sign-ups, last 14 days" rows={data.daily.signups} color="bg-ink" />
         <Bars title="Matches, last 14 days" rows={data.daily.matches} color="bg-marigold" />

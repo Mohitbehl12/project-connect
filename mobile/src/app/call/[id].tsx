@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type IconName } from "@/components/Icon";
 import { T } from "@/components/Text";
 import { haptic } from "@/lib/haptics";
+import { api } from "@/lib/api";
+import { callAudioStart, callAudioStop, canSwitchSpeaker, setSpeaker } from "@/lib/speaker";
 import { useCall } from "@/lib/useCall";
 import { VideoView } from "@/lib/webrtc";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -38,6 +40,13 @@ export default function CallScreen() {
   const [secs, setSecs] = useState(0);
   const video = s.call?.kind === "VIDEO";
   const over = s.call?.state === "ENDED";
+  const [speaker, setSpeakerOn] = useState(false);
+  const kindKnown = !!s.call;
+  useEffect(() => {
+    if (!kindKnown) return;
+    callAudioStart(video); setSpeakerOn(video); // video calls start on the loudspeaker, voice calls on the earpiece
+    return () => callAudioStop();
+  }, [kindKnown, video]);
 
   useEffect(() => {
     if (!s.connected || over) return;
@@ -79,17 +88,25 @@ export default function CallScreen() {
         {!over && (
           <View style={{ flexDirection: "row", justifyContent: "center", gap: 22 }}>
             <Round icon={s.muted ? "micOff" : "mic"} label={s.muted ? "Unmute" : "Mute"} active={s.muted} onPress={s.toggleMute} />
+            {canSwitchSpeaker && <Round icon="volume" label="Speaker" active={speaker} onPress={() => { setSpeaker(!speaker); setSpeakerOn(!speaker); }} />}
             {video && <Round icon={s.cameraOff ? "videoOff" : "video"} label={s.cameraOff ? "Camera on" : "Camera off"} active={s.cameraOff} onPress={s.toggleCamera} />}
             {video && s.canFlip && <Round icon="flip" label="Flip" onPress={s.flip} />}
             <Round icon="hangup" label="End" danger onPress={() => { haptic.warning(); void s.hangUp(); }} />
           </View>
         )}
         {userId ? (
-          <Pressable accessibilityRole="button" onPress={() => { void s.hangUp(); router.replace({ pathname: "/report", params: { userId, name: name ?? "" } }); }}
-            style={{ alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 6, padding: 10 }}>
-            <Icon name="flag" size={18} color={g.onNight} />
-            <T v="callout" style={{ color: g.onNight }}>End and report</T>
-          </Pressable>
+          <View style={{ flexDirection: "row", justifyContent: "center", gap: 18 }}>
+            <Pressable accessibilityRole="button" onPress={() => { void s.hangUp(); router.replace({ pathname: "/report", params: { userId, name: name ?? "" } }); }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 6, padding: 10 }}>
+              <Icon name="flag" size={18} color={g.onNight} />
+              <T v="callout" style={{ color: g.onNight }}>Report</T>
+            </Pressable>
+            <Pressable accessibilityRole="button" onPress={async () => { void s.hangUp(); await api("/api/blocks", { body: { userId } }).catch(() => {}); router.replace("/(tabs)/messages"); }}
+              style={{ flexDirection: "row", alignItems: "center", gap: 6, padding: 10 }}>
+              <Icon name="block" size={18} color={g.onNight} />
+              <T v="callout" style={{ color: g.onNight }}>Block</T>
+            </Pressable>
+          </View>
         ) : null}
         {!over && !s.relay ? <T v="caption" center style={{ color: "rgba(255,255,255,0.55)", paddingHorizontal: 24 }}>Test mode: this call connects directly, so it isn't relayed privately yet.</T> : null}
       </View>

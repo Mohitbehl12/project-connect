@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { callEligibility, callView, iceConfig, startCall } from "@/lib/calls";
+import { callRequestState } from "@/lib/callRequests";
 import { ok, parseBody, route } from "@/lib/http";
 import { rateLimit } from "@/lib/ratelimit";
 
@@ -8,7 +9,9 @@ export const dynamic = "force-dynamic";
 /** Whether the call buttons in this chat are available, and why not. */
 export const GET = route<{ id: string }>(async ({ user, params }) => {
   const e = await callEligibility(params.id, user.id);
-  return ok({ canCall: e.ok, reason: e.reason, code: e.code });
+  const r = await callRequestState(e.match.id, user.id, e.otherId);
+  // Requests can be sent when the only thing missing is consent.
+  return ok({ ...r, canCall: e.ok, reason: e.reason, code: e.code, canRequest: r.canRequest && (e.ok || e.code === "needs_request") });
 });
 
 const Body = z.object({ kind: z.enum(["AUDIO", "VIDEO"]) });

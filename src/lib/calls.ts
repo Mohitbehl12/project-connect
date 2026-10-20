@@ -12,6 +12,7 @@ import { storage } from "./storage";
 import { notify, pushNow } from "./notify";
 import { bumpChat } from "./realtime";
 import { emitEvent, onEvent, redis } from "./redis";
+import { cancelCallRequestsBetween, hasCallConsent } from "./callRequests";
 
 // Voice and video calls between matched members.
 //
@@ -148,6 +149,8 @@ export async function callEligibility(matchId: string, userId: string) {
     const n = (id: string) => sent.find((r) => r.s === id)?.n ?? 0;
     if (n(userId) < need || n(otherId) < need) return { ok: false as const, match, otherId, reason: "Calls unlock once you've both sent a message.", code: "calls_locked" };
   }
+  // Consent: a call needs an accepted call request first.
+  if (!(await hasCallConsent(match.id))) return { ok: false as const, match, otherId, reason: "Ask first: send a call request. You can call once they accept.", code: "needs_request" };
   return { ok: true as const, match, otherId, reason: null, code: null };
 }
 
@@ -241,6 +244,7 @@ export async function actOnCall(user: User, callId: string, action: "accept" | "
 
 /** Called when someone blocks, reports or unmatches: any call between them ends at once. */
 export async function endCallsBetween(a: string, b: string) {
+  await cancelCallRequestsBetween(a, b);
   const rows = await db.select().from(schema.calls).where(and(inArray(schema.calls.state, ["RINGING", "ACTIVE"]),
     or(and(eq(schema.calls.callerId, a), eq(schema.calls.calleeId, b)), and(eq(schema.calls.callerId, b), eq(schema.calls.calleeId, a)))));
   for (const c of rows) await endCall(c, a, "BLOCKED");

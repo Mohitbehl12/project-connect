@@ -27,6 +27,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 /** Immersive profile: gallery, compatibility up front, then the person in their own words. */
 export default function ProfileSheet() {
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
+  const [callNote, setCallNote] = useState("");
   const { c, g } = useTheme();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
@@ -127,6 +128,17 @@ export default function ProfileSheet() {
           <Section title="Lifestyle">
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{card.lifestyle.map((l) => <Chip key={l} label={l} />)}</View>
           </Section>
+        )}
+        {from === "match" && (
+          <View style={{ paddingHorizontal: 20, gap: 8 }}>
+            <Button title={callNote ? "Request sent" : "Request a call"} icon="video" disabled={!!callNote} onPress={async () => {
+              try {
+                await api("/api/call-requests", { body: { userId: card.id, kind: "VIDEO" } });
+                setCallNote(`Request sent. You can call once ${card.firstName} accepts — we'll let you know.`);
+              } catch (e: any) { setCallNote(e.message); }
+            }} />
+            {callNote ? <T v="callout" tone="muted" center>{callNote}</T> : <T v="caption" tone="faint" center>{card.firstName} decides: nobody is called without accepting first.</T>}
+          </View>
         )}
         <View style={{ paddingHorizontal: 20 }}>
           <Button title={`Report or block ${card.firstName}`} v="ghost" icon="flag" onPress={() => router.push({ pathname: "/report", params: { userId: card.id, name: card.firstName } })} />

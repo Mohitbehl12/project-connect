@@ -24,6 +24,7 @@ const Body = z.object({
   notifyMatches: z.boolean().optional(),
   notifyMessages: z.boolean().optional(),
   notifyLikes: z.boolean().optional(),
+  callRequests: z.enum(["MATCHES", "NOBODY"]).optional(),
   notifyEmail: z.boolean().optional(),
   theme: z.enum(["SYSTEM", "LIGHT", "DARK"]).optional(),
   showDistance: z.boolean().optional(),

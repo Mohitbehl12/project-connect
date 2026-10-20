@@ -42,7 +42,7 @@ export type Me = {
     drinking: string | null; smoking: string | null; food: string | null; exercise: string | null; pets: string | null;
   };
   preferences: null | {
-    interestedIn: string; ageMin: number; ageMax: number; maxDistanceKm: number; intents: string; longDistance: boolean;
+    interestedIn: string; ageMin: number; ageMax: number; maxDistanceKm: number; intents: string; longDistance: boolean; callRequests?: string;
     discoverable: boolean; showOnline: boolean; readReceipts: boolean; incognito: boolean;
     notifyMatches: boolean; notifyMessages: boolean; notifyLikes: boolean; theme: "SYSTEM" | "LIGHT" | "DARK";
     showDistance: boolean; likesFrom: "EVERYONE" | "VERIFIED";

@@ -57,6 +57,9 @@ async function main() {
     await call(S1, ta, "POST", `/api/matches/${matchId}/messages`, { body: "Got it on server 1" });
 
     console.log("\nCalls across servers");
+    const req = await call(S2, tb, "POST", "/api/call-requests", { matchId, kind: "VIDEO" });
+    const acc = await call(S1, ta, "POST", `/api/call-requests/${req.data?.request?.id}`, { action: "accept" });
+    check("a call request sent on server 2 is accepted on server 1", acc.data?.state === "ACCEPTED", { req: req.data, acc: acc.data });
     t = Date.now();
     const ring = call(S1, ta, "GET", "/api/calls/incoming?wait=10000");
     await new Promise((r) => setTimeout(r, 400));

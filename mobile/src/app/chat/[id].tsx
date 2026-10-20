@@ -1,7 +1,7 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -43,6 +43,25 @@ export default function Chat() {
   const [recording, setRecording] = useState(false);
   const [sendingMedia, setSendingMedia] = useState(false);
   const [kindCheck, setKindCheck] = useState<string | null>(null);
+  const [askCall, setAskCall] = useState<"AUDIO" | "VIDEO" | null>(null);
+  const cs = useQuery({
+    queryKey: ["callstate", id],
+    queryFn: () => api<{ canCall: boolean; reason: string | null; code: string | null; canRequest: boolean; requestBlockedReason: string | null;
+      request: { id: string; kind: string; state: string; mine: boolean; expiresAt: string } | null }>(`/api/matches/${id}/call`),
+    retry: false,
+  });
+  async function callRequest(action: "accept" | "decline" | "cancel" | "revoke") {
+    const r = cs.data?.request;
+    if (!r) return;
+    try { await api(`/api/call-requests/${r.id}`, { body: { action } }); haptic.success(); } catch (e: any) { setErr(e.message); }
+    cs.refetch();
+  }
+  async function sendCallRequest(kind: "AUDIO" | "VIDEO") {
+    setAskCall(null);
+    try { await api("/api/call-requests", { body: { matchId: id, kind } }); haptic.success(); setCallNote(`Call request sent. You can call once ${detail.data?.other.firstName ?? "they"} accepts.`); setTimeout(() => setCallNote(""), 6000); }
+    catch (e: any) { setErr(e.message); }
+    cs.refetch();
+  }
   const detail = useQuery({ queryKey: ["match", id], queryFn: () => api<Detail>(`/api/matches/${id}`) });
   // Instant updates: /wait answers the moment this chat changes or the other person types; a slow
   // refetch stays as a safety net.
@@ -60,7 +79,7 @@ export default function Chat() {
         try {
           const r: { version: number; typing: boolean } = await api(`/api/matches/${id}/wait?v=${v}&typing=${typing ? 1 : 0}`, { signal: ctrl.signal });
           if (!alive) break;
-          if (v !== -1 && r.version !== v) qc.invalidateQueries({ queryKey: ["messages", id] });
+          if (v !== -1 && r.version !== v) { qc.invalidateQueries({ queryKey: ["messages", id] }); qc.invalidateQueries({ queryKey: ["callstate", id] }); }
           v = r.version; typing = r.typing; setOtherTyping(r.typing);
         } catch {
           if (!alive) break;
@@ -155,6 +174,15 @@ export default function Chat() {
   async function startCall(kind: "AUDIO" | "VIDEO") {
     const who = detail.data?.other;
     if (!who) return;
+    const st = cs.data;
+    if (st && !st.canCall) {
+      // No consent yet: ask first (or explain why not).
+      if (st.canRequest) { setAskCall(kind); return; }
+      const mineWaiting = st.request?.state === "PENDING" && st.request.mine;
+      setCallNote(mineWaiting ? `Waiting for ${who.firstName} to accept your call request.` : st.requestBlockedReason ?? st.reason ?? "Calls aren't available right now.");
+      setTimeout(() => setCallNote(""), 6000);
+      return;
+    }
     try {
       const r = await api<{ call: { id: string } }>(`/api/matches/${id}/call`, { body: { kind } });
       haptic.light();
@@ -203,6 +231,35 @@ export default function Chat() {
           </View>
         )}
       </View>
+
+      {(() => {
+        const r = cs.data?.request;
+        if (!r || ended) return null;
+        const name = o?.firstName ?? "They";
+        const what = r.kind === "VIDEO" ? "video call" : "voice call";
+        const box = (children: ReactNode, tone: "accent" | "trust" = "accent") => (
+          <View accessibilityLiveRegion="polite" style={{ marginHorizontal: 12, marginTop: 10, padding: 12, borderRadius: 18, gap: 8, backgroundColor: tone === "trust" ? c.trustWash : c.accentWash }}>{children}</View>
+        );
+        if (r.state === "PENDING" && !r.mine) return box(<>
+          <T v="callout" strong>{name} wants to call you ({what})</T>
+          <T v="caption" tone="muted">You won't be connected unless you accept.</T>
+          <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+            <Pressable accessibilityRole="button" onPress={() => callRequest("accept")} style={{ backgroundColor: c.trust, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 8 }}><T v="callout" strong style={{ color: "#FFFFFF" }}>Accept</T></Pressable>
+            <Pressable accessibilityRole="button" onPress={() => callRequest("decline")} style={{ backgroundColor: c.surface, borderRadius: 999, paddingHorizontal: 16, paddingVertical: 8 }}><T v="callout" strong>Decline</T></Pressable>
+            <Pressable accessibilityRole="button" onPress={() => setMenu(true)} style={{ paddingHorizontal: 10, paddingVertical: 8 }}><T v="callout" tone="alert">Block or report</T></Pressable>
+          </View>
+        </>);
+        if (r.state === "PENDING" && r.mine) return box(<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <T v="callout" style={{ flex: 1 }}>Call request sent · waiting for {name} to accept</T>
+          <Pressable accessibilityRole="button" onPress={() => callRequest("cancel")}><T v="callout" strong>Cancel</T></Pressable>
+        </View>);
+        if (r.state === "ACCEPTED") return box(<View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <T v="callout" style={{ flex: 1 }}>{r.mine ? `${name} accepted your call request. You can now start the call.` : `You accepted — you can call each other until ${new Date(r.expiresAt).toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" })}.`}</T>
+          {r.mine ? <Pressable accessibilityRole="button" onPress={() => startCall(r.kind === "AUDIO" ? "AUDIO" : "VIDEO")} style={{ backgroundColor: c.brand, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 }}><T v="callout" strong style={{ color: c.brandText }}>Start call</T></Pressable>
+            : <Pressable accessibilityRole="button" onPress={() => callRequest("revoke")}><T v="callout" strong>Stop allowing</T></Pressable>}
+        </View>, "trust");
+        return null;
+      })()}
 
       <FlatList
         ref={list}
@@ -304,6 +361,12 @@ export default function Chat() {
           <T v="callout" tone="muted">Photos and voice messages unlock once you've both sent a message.</T>
         )}
         <SheetAction label="Suggest a date" icon={<Icon name="calendar" />} onPress={() => { setPlus(false); router.push({ pathname: "/date/[matchId]", params: { matchId: id, name: o?.firstName ?? "" } }); }} />
+      </BottomSheet>
+
+      <BottomSheet open={!!askCall} onClose={() => setAskCall(null)} title="Request a call">
+        <T tone="muted">{o?.firstName ?? "They"} will get your request and can accept or decline. You'll only be able to call once they accept — and they still answer the call themselves.</T>
+        <SheetAction label="Request a video call" icon={<Icon name="video" />} onPress={() => sendCallRequest("VIDEO")} />
+        <SheetAction label="Request a voice call" icon={<Icon name="call" />} onPress={() => sendCallRequest("AUDIO")} />
       </BottomSheet>
 
       <BottomSheet open={!!kindCheck} onClose={() => setKindCheck(null)} title="Before you send">

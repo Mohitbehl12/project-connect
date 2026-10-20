@@ -16,6 +16,7 @@ export const RISK_KINDS = {
   MESSAGE_FLAGS: "Several messages flagged by safety screening",
   NEW_DEVICE_LOGIN: "Sign-in from a new device after failed attempts",
   GENDER_CHANGED: "Changed gender after sign-up (prices differ by gender)",
+  CALL_REQUEST_SPAM: "Sent many call requests in a short time",
 } as const;
 export type RiskKind = keyof typeof RISK_KINDS;
 

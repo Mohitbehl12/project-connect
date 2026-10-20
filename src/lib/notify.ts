@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { sendWebPush, type PushMessage } from "./webpush";
 
-type NotifType = "MATCH" | "MESSAGE" | "LIKE" | "VERIFICATION" | "DATE" | "SUBSCRIPTION" | "SECURITY" | "REPORT" | "MODERATION";
+type NotifType = "MATCH" | "MESSAGE" | "LIKE" | "VERIFICATION" | "DATE" | "SUBSCRIPTION" | "SECURITY" | "REPORT" | "MODERATION" | "CALL";
 
 const PREF_GATE: Partial<Record<NotifType, "notifyMatches" | "notifyMessages" | "notifyLikes">> = {
   MATCH: "notifyMatches", MESSAGE: "notifyMessages", LIKE: "notifyLikes",

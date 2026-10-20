@@ -71,6 +71,13 @@
       "when": 1792503023203,
       "tag": "0009_pricing_v3",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1792503501125,
+      "tag": "0010_call_requests",
+      "breakpoints": true
     }
   ]
 }

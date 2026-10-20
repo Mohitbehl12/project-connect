@@ -84,6 +84,7 @@ export const preferences = sqliteTable("preferences", {
   likesFrom: text("likes_from").notNull().default("EVERYONE"), // EVERYONE | VERIFIED — who can like (and so match with) me
   notifyMatches: bool("notify_matches").notNull().default(true),
   notifyMessages: bool("notify_messages").notNull().default(true),
+  callRequests: text("call_requests").notNull().default("MATCHES"), // MATCHES | NOBODY: who may ask to call
   notifyLikes: bool("notify_likes").notNull().default(true),
   notifyEmail: bool("notify_email").notNull().default(false),
   theme: text("theme").notNull().default("SYSTEM"), // SYSTEM | LIGHT | DARK
@@ -594,3 +595,19 @@ export const messageReactions = sqliteTable("message_reactions", {
   emoji: text("emoji").notNull().default("❤️"),
   createdAt: now("created_at"),
 }, (t) => [uniqueIndex("reaction_once").on(t.messageId, t.userId)]);
+
+/**
+ * Asking before calling: a call can only start after the other person accepts a request. An accepted
+ * request lets either of them start calls for a limited time; she (or he) can decline, block or report.
+ */
+export const callRequests = sqliteTable("call_requests", {
+  id: id(),
+  matchId: text("match_id").notNull().references(() => matches.id, { onDelete: "cascade" }),
+  fromId: text("from_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  toId: text("to_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull().default("VIDEO"), // AUDIO | VIDEO
+  state: text("state").notNull().default("PENDING"), // PENDING | ACCEPTED | DECLINED | CANCELLED | EXPIRED
+  createdAt: now("created_at"),
+  respondedAt: ts("responded_at"),
+  expiresAt: ts("expires_at").notNull(), // a pending request lapses; an accepted one stops allowing calls
+}, (t) => [index("callreq_match").on(t.matchId, t.createdAt), index("callreq_to").on(t.toId, t.state)]);
