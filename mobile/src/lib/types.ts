@@ -65,6 +65,8 @@ export type MatchRow = {
 
 export type Message = {
   id: string; mine: boolean; kind: string; body: string | null; deleted: boolean; createdAt: string; read?: boolean; warning: string | null;
+  media?: { url: string; w?: number; h?: number; blurhash?: string; checked?: boolean; ms?: number; type?: string } | null;
+  hearts?: { mine: boolean; theirs: boolean };
 };
 
 // --- Billing -----------------------------------------------------------------

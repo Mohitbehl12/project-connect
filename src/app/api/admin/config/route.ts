@@ -23,6 +23,8 @@ const Body = z.object({
   config: z.object({
     "matching.weights": z.object({ intent: W, interests: W, personality: W, lifestyle: W, distance: W, age: W, quality: W }).optional(),
     "chat.maxUnansweredMessages": z.number().int().min(1).max(50).optional(),
+    "chat.mediaAfterMessagesEach": z.number().int().min(0).max(50).optional(),
+    "chat.kindnessCheck": z.boolean().optional(),
     "calls.enabled": z.boolean().optional(),
     "calls.minMessagesEach": z.number().int().min(0).max(50).optional(),
     "discovery.batchSize": z.number().int().min(5).max(100).optional(),

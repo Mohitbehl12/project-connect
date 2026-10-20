@@ -16,6 +16,8 @@ export type PlanFeatures = {
 export const CONFIG_DEFAULTS = {
   "matching.weights": DEFAULT_WEIGHTS as Weights,
   "chat.maxUnansweredMessages": 4, // messages a person can send before the other replies
+  "chat.mediaAfterMessagesEach": 1, // photos and voice messages unlock once both people have sent this many messages
+  "chat.kindnessCheck": true, // ask "send anyway?" before a message that looks hurtful
   "calls.enabled": true, // voice and video calls between matches (also needs a TURN relay in production; see docs/CALLS.md)
   "calls.minMessagesEach": 1, // both people must have sent at least this many messages before either can call
   "discovery.batchSize": 20,

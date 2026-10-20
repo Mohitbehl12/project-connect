@@ -18,5 +18,5 @@ export const POST = route<{ id: string }>(async ({ req, user, params }) => {
   await rateLimit(`call:${user.id}`, 10, 10 * 60_000);
   const { kind } = await parseBody(req, Body);
   const c = await startCall(user, params.id, kind);
-  return ok({ call: callView(c, user.id), ice: iceConfig(user.id) }, 201);
+  return ok({ call: callView(c, user.id), ice: await iceConfig(user.id) }, 201);
 });

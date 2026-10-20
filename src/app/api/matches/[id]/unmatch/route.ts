@@ -1,3 +1,4 @@
+import { purgeEndedChatMedia } from "@/lib/chatMedia";
 import { endCallsBetween } from "@/lib/calls";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
@@ -12,5 +13,6 @@ export const POST = route<{ id: string }>(async ({ user, params }) => {
   await db.update(schema.datePlans).set({ status: "CANCELLED", updatedAt: new Date() }).where(eq(schema.datePlans.matchId, match.id));
   await audit(user.id, "match.unmatch", "match", match.id);
   await endCallsBetween(user.id, otherId);
+  await purgeEndedChatMedia([match.id]);
   return ok({ unmatched: true });
 }, { allowSuspended: true });

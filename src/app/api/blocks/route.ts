@@ -1,3 +1,4 @@
+import { purgeEndedChatMedia } from "@/lib/chatMedia";
 import { endCallsBetween } from "@/lib/calls";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
@@ -17,6 +18,7 @@ export const POST = route(async ({ req, user }) => {
     .where(and(eq(schema.matches.userAId, a), eq(schema.matches.userBId, b)));
   await audit(user.id, "user.block", "user", userId);
   await endCallsBetween(user.id, userId);
+  await purgeEndedChatMedia();
   return ok({ blocked: true }, 201);
 }, { allowSuspended: true });
 

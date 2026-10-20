@@ -57,6 +57,13 @@
       "when": 1792173764459,
       "tag": "0007_web_push",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1792502140682,
+      "tag": "0008_chat_media",
+      "breakpoints": true
     }
   ]
 }

@@ -87,13 +87,37 @@ function waitEvent(key: string, ms: number, signal?: AbortSignal) {
 export type CallRow = typeof schema.calls.$inferSelect;
 
 // ---- connection settings handed to the apps --------------------------------------------------------
-export function iceConfig(userId: string) {
-  const urls = (process.env.TURN_URLS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+type Ice = { iceServers: { urls: string[] | string; username?: string; credential?: string }[]; iceTransportPolicy: "all" | "relay"; relay: boolean };
+const cloudflare = () => !!(process.env.CLOUDFLARE_TURN_KEY_ID && process.env.CLOUDFLARE_TURN_API_TOKEN);
+
+/** Cloudflare's TURN service: short-lived credentials per call (the API token never leaves the server). */
+async function cloudflareIce(): Promise<Ice["iceServers"] | null> {
+  try {
+    const res = await fetch(`https://rtc.live.cloudflare.com/v1/turn/keys/${encodeURIComponent(process.env.CLOUDFLARE_TURN_KEY_ID!)}/credentials/generate-ice-servers`, {
+      method: "POST", headers: { authorization: `Bearer ${process.env.CLOUDFLARE_TURN_API_TOKEN}`, "content-type": "application/json" },
+      body: JSON.stringify({ ttl: 4 * 3600 }), signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) { console.warn("[calls] Cloudflare TURN credentials failed", res.status); return null; }
+    const j = (await res.json()) as { iceServers?: Ice["iceServers"] };
+    // Relay-only calls don't need STUN; browsers block port 53, so drop those addresses to avoid timeouts.
+    return (j.iceServers ?? []).filter((x) => x.username)
+      .map((x) => ({ ...x, urls: (Array.isArray(x.urls) ? x.urls : [x.urls]).filter((u) => !/:53(\?|$)/.test(u)) }))
+      .filter((x) => x.urls.length);
+  } catch (e) { console.warn("[calls] Cloudflare TURN unreachable", (e as Error).message); return null; }
+}
+
+export async function iceConfig(userId: string): Promise<Ice | null> {
   const direct = process.env.CALLS_ALLOW_DIRECT === "true";
+  if (cloudflare()) {
+    const servers = await cloudflareIce();
+    if (servers?.length) return { iceServers: servers, iceTransportPolicy: direct ? "all" : "relay", relay: !direct };
+    if (!direct) return null;
+  }
+  const urls = (process.env.TURN_URLS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   if (!urls.length) {
     if (!direct) return null;
     const stun = (process.env.STUN_URLS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
-    return { iceServers: stun.length ? [{ urls: stun }] : [], iceTransportPolicy: "all" as const, relay: false };
+    return { iceServers: stun.length ? [{ urls: stun }] : [], iceTransportPolicy: "all", relay: false };
   }
   let username = process.env.TURN_USERNAME ?? "", credential = process.env.TURN_CREDENTIAL ?? "";
   if (process.env.TURN_SECRET) {
@@ -102,9 +126,10 @@ export function iceConfig(userId: string) {
     username = `${expiry}:${createHash("sha256").update(userId).digest("hex").slice(0, 16)}`;
     credential = createHmac("sha1", process.env.TURN_SECRET).update(username).digest("base64");
   }
-  return { iceServers: [{ urls, username, credential }], iceTransportPolicy: direct ? ("all" as const) : ("relay" as const), relay: !direct };
+  return { iceServers: [{ urls, username, credential }], iceTransportPolicy: direct ? "all" : "relay", relay: !direct };
 }
-export const callsConfigured = () => iceConfig("probe") !== null;
+/** Whether calls can work at all (a relay is set up, or direct calls are allowed for testing). */
+export const callsConfigured = () => cloudflare() || !!(process.env.TURN_URLS ?? "").trim() || process.env.CALLS_ALLOW_DIRECT === "true";
 
 // ---- rules -------------------------------------------------------------------------------------------
 /** Whether these two can call, and if not, why (shown in the chat). */

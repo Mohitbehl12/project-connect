@@ -6,7 +6,10 @@ import { FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, TextIn
 import Animated, { FadeIn, FadeInUp } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DATE_KINDS } from "@shared/constants";
+import * as ImagePicker from "expo-image-picker";
 import { BottomSheet, SheetAction } from "@/components/BottomSheet";
+import { PhotoBubble, VoiceBubble, VoiceRecorder, appendVoice } from "@/components/ChatMedia";
+import { appendPhoto } from "@/lib/photoFile";
 import { IconButton } from "@/components/Button";
 import { Icon, VerifiedBadge } from "@/components/Icon";
 import { T } from "@/components/Text";
@@ -37,12 +40,15 @@ export default function Chat() {
   const [menu, setMenu] = useState(false);
   const [plus, setPlus] = useState(false);
   const [msgAction, setMsgAction] = useState<Message | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [sendingMedia, setSendingMedia] = useState(false);
+  const [kindCheck, setKindCheck] = useState<string | null>(null);
   const detail = useQuery({ queryKey: ["match", id], queryFn: () => api<Detail>(`/api/matches/${id}`) });
   // Instant updates: /wait answers the moment this chat changes or the other person types; a slow
   // refetch stays as a safety net.
   const msgs = useQuery({
     queryKey: ["messages", id],
-    queryFn: () => api<{ messages: Message[]; ended: boolean }>(`/api/matches/${id}/messages`),
+    queryFn: () => api<{ messages: Message[]; ended: boolean; mediaUnlocked?: boolean }>(`/api/matches/${id}/messages`),
     refetchInterval: 20_000,
   });
   const [otherTyping, setOtherTyping] = useState(false);
@@ -79,24 +85,58 @@ export default function Chat() {
 
   const items = useMemo(() => [...(msgs.data?.messages ?? [])].reverse(), [msgs.data]);
   const hasText = (msgs.data?.messages ?? []).some((m) => m.kind === "TEXT");
-  const lastMineId = useMemo(() => [...(msgs.data?.messages ?? [])].reverse().find((m) => m.mine && m.kind === "TEXT")?.id, [msgs.data]);
+  const lastMineId = useMemo(() => [...(msgs.data?.messages ?? [])].reverse().find((m) => m.mine && m.kind !== "SYSTEM")?.id, [msgs.data]);
+  const mediaUnlocked = !!msgs.data?.mediaUnlocked;
 
-  async function send() {
-    const body = text.trim();
+  async function send(confirmed = false, override?: string) {
+    const body = (override ?? text).trim();
     if (!body) return;
     setErr("");
     setText("");
     haptic.light();
     // Optimistic append
-    qc.setQueryData(["messages", id], (old: any) => old && ({ ...old, messages: [...old.messages, { id: `tmp-${Date.now()}`, mine: true, kind: "TEXT", body, deleted: false, createdAt: new Date().toISOString(), warning: null }] }));
+    const tmp = `tmp-${Date.now()}`;
+    qc.setQueryData(["messages", id], (old: any) => old && ({ ...old, messages: [...old.messages, { id: tmp, mine: true, kind: "TEXT", body, deleted: false, createdAt: new Date().toISOString(), warning: null }] }));
     try {
-      await api(`/api/matches/${id}/messages`, { body: { body } });
+      await api(`/api/matches/${id}/messages`, { body: { body, confirmed } });
     } catch (e: any) {
-      setErr(e.message);
+      qc.setQueryData(["messages", id], (old: any) => old && ({ ...old, messages: old.messages.filter((m: Message) => m.id !== tmp) }));
       setText(body);
+      if (e.code === "kindness_check") { setKindCheck(body); haptic.warning(); return; }
+      setErr(e.message);
       haptic.warning();
     }
     msgs.refetch();
+  }
+
+  async function sendMedia(build: (f: FormData) => Promise<void>) {
+    setErr(""); setSendingMedia(true);
+    try {
+      const form = new FormData();
+      await build(form);
+      await api(`/api/matches/${id}/media`, { form });
+      haptic.success();
+    } catch (e: any) { setErr(e.message); haptic.warning(); }
+    finally { setSendingMedia(false); msgs.refetch(); }
+  }
+
+  async function pickPhoto(camera: boolean) {
+    setPlus(false);
+    if (camera && Platform.OS !== "web") {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) { setErr("Allow camera access in Settings to send a photo."); return; }
+    }
+    const r = camera ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.85 }) : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85 });
+    if (r.canceled || !r.assets?.[0]) return;
+    const asset = r.assets[0];
+    await sendMedia(async (f) => { f.append("kind", "photo"); await appendPhoto(f, asset); });
+  }
+
+  async function heart(m: Message) {
+    const on = !m.hearts?.mine;
+    haptic.light();
+    qc.setQueryData(["messages", id], (old: any) => old && ({ ...old, messages: old.messages.map((x: Message) => x.id === m.id ? { ...x, hearts: { mine: on, theirs: !!x.hearts?.theirs } } : x) }));
+    await api(`/api/messages/${m.id}/react`, { body: { on } }).catch(() => msgs.refetch());
   }
 
   async function unmatch() {
@@ -185,17 +225,27 @@ export default function Chat() {
         renderItem={({ item: m, index }) => {
           if (m.kind === "SYSTEM") return <T v="caption" tone="faint" center style={{ paddingVertical: 8 }}>{m.body}</T>;
           const prev = items[index + 1];
-          const grouped = prev && prev.mine === m.mine && prev.kind === "TEXT";
+          const grouped = prev && prev.mine === m.mine && prev.kind !== "SYSTEM";
+          const report = () => router.push({ pathname: "/report", params: { userId: o?.id ?? "", name: o?.firstName ?? "", messageId: m.id } });
+          const photo = m.kind === "PHOTO" && m.media && !m.deleted;
           return (
             <Animated.View entering={FadeInUp.duration(160)} style={{ alignItems: m.mine ? "flex-end" : "flex-start", marginTop: grouped ? 2 : 10 }}>
               <Pressable onLongPress={() => { if (!m.deleted && !m.id.startsWith("tmp")) { haptic.medium(); setMsgAction(m); } }}
-                accessibilityHint={m.mine ? "Long press for options, such as delete" : "Long press to report this message"}
-                style={{ maxWidth: "80%", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderBottomRightRadius: m.mine && !grouped ? 6 : 20, borderBottomLeftRadius: !m.mine && !grouped ? 6 : 20, backgroundColor: m.mine ? undefined : c.surface, overflow: "hidden", opacity: m.deleted ? 0.6 : 1 }}>
-                {m.mine && <LinearGradient colors={[...g.dusk]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />}
-                <T style={{ color: m.mine ? "#FFFFFF" : c.text, fontStyle: m.deleted ? "italic" : "normal" }}>{m.deleted ? "Message deleted" : m.body}</T>
+                accessibilityHint={m.mine ? "Long press for options, such as delete or a heart" : "Long press to send a heart or report"}
+                style={photo ? { maxWidth: "80%" } : { maxWidth: "80%", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 20, borderBottomRightRadius: m.mine && !grouped ? 6 : 20, borderBottomLeftRadius: !m.mine && !grouped ? 6 : 20, backgroundColor: m.mine ? undefined : c.surface, overflow: "hidden", opacity: m.deleted ? 0.6 : 1 }}>
+                {m.mine && !photo && <LinearGradient colors={[...g.dusk]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />}
+                {photo ? <PhotoBubble m={m} onReport={report} />
+                  : m.kind === "VOICE" && m.media && !m.deleted ? <VoiceBubble m={m} />
+                  : <T style={{ color: m.mine ? "#FFFFFF" : c.text, fontStyle: m.deleted ? "italic" : "normal" }}>{m.deleted ? "Message deleted" : m.body}</T>}
               </Pressable>
+              {(m.hearts?.mine || m.hearts?.theirs) && !m.deleted ? (
+                <Pressable accessibilityRole="button" accessibilityLabel={m.hearts.mine ? "Remove your heart" : "Heart"} onPress={() => heart(m)}
+                  style={{ marginTop: -8, marginHorizontal: 8, backgroundColor: c.surface, borderRadius: 12, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: c.line }}>
+                  <T v="caption">{"❤️"}{m.hearts.mine && m.hearts.theirs ? " 2" : ""}</T>
+                </Pressable>
+              ) : null}
               {m.warning && (
-                <Pressable onPress={() => router.push({ pathname: "/report", params: { userId: o?.id ?? "", name: o?.firstName ?? "", messageId: m.id } })}
+                <Pressable onPress={report}
                   style={{ maxWidth: "85%", marginTop: 4, backgroundColor: c.accentWash, borderRadius: 14, padding: 10 }}>
                   <T v="caption">{m.warning} <T v="caption" strong>Report</T></T>
                 </Pressable>
@@ -210,6 +260,7 @@ export default function Chat() {
 
       {err ? <View style={{ paddingHorizontal: 14 }}><Banner tone="alert">{err}</Banner></View> : null}
       {callNote ? <View style={{ paddingHorizontal: 14 }}><Banner tone="info">{callNote}</Banner></View> : null}
+      {sendingMedia ? <View style={{ paddingHorizontal: 14 }}><Banner tone="info">Sending…</Banner></View> : null}
       {ended ? (
         <View style={{ padding: 18, paddingBottom: insets.bottom + 18 }}><T tone="muted" center>This conversation has ended.</T></View>
       ) : (
@@ -225,22 +276,46 @@ export default function Chat() {
               ))}
             </ScrollView>
           )}
+          {recording ? (
+            <VoiceRecorder onCancel={(e) => { setRecording(false); if (e) setErr(e); }}
+              onSend={({ uri, ms }) => { setRecording(false); void sendMedia(async (f) => { f.append("kind", "voice"); f.append("ms", String(ms)); await appendVoice(f, uri); }); }} />
+          ) : (
           <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 8, paddingHorizontal: 10, paddingTop: 8 }}>
-            <IconButton icon="plus" label="More: suggest a date" size={44} onPress={() => setPlus(true)} />
+            <IconButton icon="plus" label="More: photos, voice messages, suggest a date" size={44} onPress={() => setPlus(true)} />
             <TextInput value={text} onChangeText={onType} placeholder={`Message ${o?.firstName ?? ""}`} placeholderTextColor={c.faint} multiline maxLength={2000}
               accessibilityLabel="Message"
               style={{ flex: 1, minHeight: 44, maxHeight: 120, borderRadius: 22, backgroundColor: c.raised, paddingHorizontal: 16, paddingTop: 11, paddingBottom: 11, fontSize: 17, color: c.text, fontFamily: "Figtree_500Medium" }} />
-            <IconButton icon="send" label="Send" size={44} tone="brand" disabled={!text.trim()} onPress={send} />
+            {text.trim() || !mediaUnlocked
+              ? <IconButton icon="send" label="Send" size={44} tone="brand" disabled={!text.trim()} onPress={() => send()} />
+              : <IconButton icon="mic" label="Record a voice message" size={44} tone="brand" disabled={sendingMedia} onPress={() => { setErr(""); setRecording(true); }} />}
           </View>
+          )}
         </View>
       )}
 
       <BottomSheet open={plus} onClose={() => setPlus(false)} title="Share">
+        {mediaUnlocked ? (
+          <>
+            <SheetAction label="Send a photo" icon={<Icon name="image" />} onPress={() => pickPhoto(false)} />
+            <SheetAction label="Take a photo" icon={<Icon name="camera" />} onPress={() => pickPhoto(true)} />
+            <SheetAction label="Voice message" icon={<Icon name="mic" />} onPress={() => { setPlus(false); setErr(""); setRecording(true); }} />
+          </>
+        ) : (
+          <T v="callout" tone="muted">Photos and voice messages unlock once you've both sent a message.</T>
+        )}
         <SheetAction label="Suggest a date" icon={<Icon name="calendar" />} onPress={() => { setPlus(false); router.push({ pathname: "/date/[matchId]", params: { matchId: id, name: o?.firstName ?? "" } }); }} />
-        <T v="caption" tone="faint">Photos, voice notes and GIFs in chat are coming in the next update.</T>
+      </BottomSheet>
+
+      <BottomSheet open={!!kindCheck} onClose={() => setKindCheck(null)} title="Before you send">
+        <T tone="muted">This might come across as hurtful. Kind messages get far more replies.</T>
+        <SheetAction label="Edit my message" icon={<Icon name="edit" />} onPress={() => setKindCheck(null)} />
+        <SheetAction label="Send anyway" icon={<Icon name="send" />} onPress={() => { const b = kindCheck!; setKindCheck(null); void send(true, b); }} />
       </BottomSheet>
 
       <BottomSheet open={!!msgAction} onClose={() => setMsgAction(null)} title="Message">
+        {msgAction && !msgAction.deleted && msgAction.kind !== "SYSTEM" && (
+          <SheetAction label={msgAction.hearts?.mine ? "Remove heart" : "Send a heart ❤️"} icon={<Icon name="likes" />} onPress={() => { const m = msgAction; setMsgAction(null); void heart(m); }} />
+        )}
         {msgAction?.mine ? (
           <SheetAction label="Delete for both of you" tone="alert" icon={<Icon name="trash" color={c.alert} />}
             onPress={async () => { const m = msgAction; setMsgAction(null); await api(`/api/messages/${m.id}`, { method: "DELETE" }).catch(() => {}); msgs.refetch(); }} />

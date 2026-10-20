@@ -91,6 +91,10 @@ services:
         value: "384"
       # Voice and video calls: a TURN relay (keeps members' IP addresses private). Calls stay off until set.
       # See docs/CALLS.md. TURN_SECRET for coturn-style short-lived credentials, or TURN_USERNAME/TURN_CREDENTIAL.
+      - key: CLOUDFLARE_TURN_KEY_ID
+        sync: false
+      - key: CLOUDFLARE_TURN_API_TOKEN
+        sync: false
       - key: TURN_URLS
         sync: false
       - key: TURN_SECRET

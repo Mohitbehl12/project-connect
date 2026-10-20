@@ -121,8 +121,10 @@ export const messages = sqliteTable("messages", {
   matchId: text("match_id").notNull().references(() => matches.id, { onDelete: "cascade" }),
   senderId: text("sender_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   body: text("body").notNull(),
-  kind: text("kind").notNull().default("TEXT"), // TEXT | SYSTEM
+  kind: text("kind").notNull().default("TEXT"), // TEXT | SYSTEM | PHOTO | VOICE
   flags: text("flags").notNull().default(""), // moderation flags, comma-separated
+  mediaKey: text("media_key"), // PHOTO/VOICE: storage key; deleted when the match ends
+  mediaMeta: text("media_meta"), // JSON: { w, h, blurhash, checked } for photos, { ms, type } for voice
   readAt: ts("read_at"),
   deletedAt: ts("deleted_at"),
   createdAt: now("created_at"),
@@ -583,3 +585,12 @@ export const webPushSubscriptions = sqliteTable("web_push_subscriptions", {
   createdAt: now("created_at"),
   lastOkAt: ts("last_ok_at"),
 }, (t) => [uniqueIndex("webpush_endpoint").on(t.endpoint), index("webpush_user").on(t.userId)]);
+
+/** A heart on a message (one per person per message). */
+export const messageReactions = sqliteTable("message_reactions", {
+  id: id(),
+  messageId: text("message_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  emoji: text("emoji").notNull().default("❤️"),
+  createdAt: now("created_at"),
+}, (t) => [uniqueIndex("reaction_once").on(t.messageId, t.userId)]);

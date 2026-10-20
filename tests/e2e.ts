@@ -864,6 +864,71 @@ async function main() {
     check("blocked people can't call", (await W2.post(`/api/matches/${rtMatch}/call`, { kind: "AUDIO" })).status >= 400);
   }
 
+  section("Chat: photos, voice messages, hearts, kindness check");
+  {
+    const P1 = new Client("PhotoOne1"), P2 = new Client("PhotoTwo22");
+    const p1 = await onboard(P1, `media1-${run}@test.local`, "WOMAN", "MAN", "Asha", answersA);
+    const p2 = await onboard(P2, `media2-${run}@test.local`, "MAN", "WOMAN", "Nikhil", answersB);
+    await P1.post("/api/likes", { toId: p2, kind: "LIKE" });
+    const mm = (await P2.post("/api/likes", { toId: p1, kind: "LIKE" })).data?.matchId;
+    check("a fresh match for media tests", !!mm);
+    const sharpLib = (await import("sharp")).default;
+    const pic = await sharpLib({ create: { width: 1200, height: 900, channels: 3, background: { r: 120, g: 160, b: 200 } } })
+      .withExifMerge({ IFD0: { Make: "TestPhone", Software: "e2e" } }).jpeg().toBuffer();
+    check("the test photo really carries EXIF data", !!(await sharpLib(pic).metadata()).exif);
+    const webm = Buffer.concat([Buffer.from([0x1a, 0x45, 0xdf, 0xa3]), Buffer.alloc(4000, 7)]);
+
+    check("no photos before both people have written", (await P1.upload(`/api/matches/${mm}/media`, { kind: "photo", file: pic })).data?.code === "media_locked");
+    check("…and the app is told they're locked", (await P1.get(`/api/matches/${mm}/messages`)).data?.mediaUnlocked === false);
+    await P1.post(`/api/matches/${mm}/messages`, { body: "Hi Nikhil!" });
+    await P2.post(`/api/matches/${mm}/messages`, { body: "Hey Asha 👋" });
+    check("unlocked once both have written", (await P1.get(`/api/matches/${mm}/messages`)).data?.mediaUnlocked === true);
+
+    const sentPhoto = await P1.upload(`/api/matches/${mm}/media`, { kind: "photo", file: pic });
+    check("a photo is sent", sentPhoto.status === 201, sentPhoto.data);
+    const seen = (await P2.get(`/api/matches/${mm}/messages`)).data?.messages ?? [];
+    const pm = seen.find((m: any) => m.id === sentPhoto.data?.id);
+    check("the other person gets it with a blur preview and a private link", pm?.kind === "PHOTO" && pm.body === "📷 Photo" && !!pm.media?.blurhash && /\/api\/media\/chat\//.test(pm.media?.url ?? ""), pm);
+    const photoUrl = new URL(pm?.media?.url ?? "/", BASE).toString();
+    const delivered = Buffer.from(await (await fetch(photoUrl)).arrayBuffer());
+    const meta = await sharpLib(delivered).metadata();
+    check("the delivered photo has no EXIF data (so no GPS location)", meta.format === "webp" && !meta.exif, { format: meta.format, exif: !!meta.exif });
+    const O = new Client("Outsider77");
+    await onboard(O, `media3-${run}@test.local`, "MAN", "WOMAN", "Rahul", answersB);
+    check("outsiders can't send media into the chat", (await O.upload(`/api/matches/${mm}/media`, { kind: "photo", file: pic })).status === 404);
+
+    const voice = await P2.upload(`/api/matches/${mm}/media`, { kind: "voice", ms: "4200", file: webm });
+    check("a voice message is sent", voice.status === 201, voice.data);
+    check("random bytes aren't accepted as audio", (await P2.upload(`/api/matches/${mm}/media`, { kind: "voice", ms: "1000", file: Buffer.alloc(3000, 1) })).data?.code === "bad_audio");
+    const vm = ((await P1.get(`/api/matches/${mm}/messages`)).data?.messages ?? []).find((m: any) => m.id === voice.data?.id);
+    check("it shows its length", vm?.kind === "VOICE" && vm.media?.ms === 4200, vm);
+    const ranged = await fetch(new URL(vm?.media?.url ?? "/", BASE), { headers: { range: "bytes=0-99" } });
+    check("audio can be streamed in parts (needed by iPhone Safari)", ranged.status === 206 && ranged.headers.get("content-range") === `bytes 0-99/${webm.length}` && ranged.headers.get("content-type") === "audio/webm", { s: ranged.status, r: ranged.headers.get("content-range") });
+
+    const textId = seen.find((m: any) => m.kind === "TEXT" && !m.mine)?.id;
+    check("a heart on a message", (await P2.post(`/api/messages/${textId}/react`, { on: true })).status === 200);
+    check("the sender sees it", ((await P1.get(`/api/matches/${mm}/messages`)).data?.messages ?? []).find((m: any) => m.id === textId)?.hearts?.theirs === true);
+    check("outsiders can't heart messages", (await O.post(`/api/messages/${textId}/react`, { on: true })).status === 404);
+    await P2.post(`/api/messages/${textId}/react`, { on: false });
+    check("hearts can be removed", ((await P1.get(`/api/matches/${mm}/messages`)).data?.messages ?? []).find((m: any) => m.id === textId)?.hearts?.theirs === false);
+
+    const harsh = await P2.post(`/api/matches/${mm}/messages`, { body: "you are so stupid" });
+    check("a hurtful message gets a kindness check first", harsh.status === 409 && harsh.data?.code === "kindness_check", harsh.data);
+    const anyway = await P2.post(`/api/matches/${mm}/messages`, { body: "you are so stupid", confirmed: true });
+    check("…but can still be sent (and is still screened)", anyway.status === 201 && anyway.data?.flagged === true, anyway.data);
+
+    await P1.del(`/api/messages/${sentPhoto.data?.id}`);
+    check("deleting a photo message deletes the photo", (await fetch(photoUrl)).status === 404);
+
+    const voiceUrl = new URL(vm?.media?.url ?? "/", BASE).toString();
+    const rep = await P1.post("/api/reports", { reportedId: p2, matchId: mm, category: "HARASSMENT", details: "Rude message in chat (e2e)", alsoBlock: true });
+    check("reporting and blocking ends the chat", rep.status === 201, rep.data);
+    check("a reported chat keeps its voice messages as evidence", (await fetch(voiceUrl)).status === 200);
+    const rid = rep.data?.report?.id ?? rep.data?.id;
+    const ev = rid ? await admin.get(`/api/admin/reports/${rid}`) : null;
+    check("moderators can hear it in the report", ev?.data?.evidence?.some((m: any) => m.kind === "VOICE" && !!m.media?.url), ev?.data?.evidence?.map((m: any) => m.kind));
+  }
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) {
     console.log("Failed:\n - " + failures.join("\n - "));

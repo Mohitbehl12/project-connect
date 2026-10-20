@@ -11,6 +11,8 @@ import { rateLimit } from "@/lib/ratelimit";
 import { REPORTABLE_FLAGS, screenMessage, warningFor, type Flag } from "@/lib/moderation";
 import { notify } from "@/lib/notify";
 import { bumpChat, setTyping } from "@/lib/realtime";
+import { mediaFor } from "@/lib/chatMedia";
+import { count, inArray } from "drizzle-orm";
 
 /**
  * Messages. The app learns about changes instantly through /wait (long polling, lib/realtime) and then
@@ -33,10 +35,17 @@ export const GET = route<{ id: string }>(async ({ req, user, params }) => {
 
   const otherPrefs = await db.query.preferences.findFirst({ where: eq(schema.preferences.userId, otherId) });
   const showReceipts = otherPrefs?.readReceipts !== false;
+  const hearts = rows.length ? await db.select().from(schema.messageReactions).where(inArray(schema.messageReactions.messageId, rows.map((r) => r.id))) : [];
+  const need = await getConfig("chat.mediaAfterMessagesEach");
+  const sent = await db.select({ s: schema.messages.senderId, n: count() }).from(schema.messages)
+    .where(and(eq(schema.messages.matchId, match.id), eq(schema.messages.kind, "TEXT"), isNull(schema.messages.deletedAt))).groupBy(schema.messages.senderId);
+  const n = (id: string) => sent.find((r) => r.s === id)?.n ?? 0;
+  const media = await Promise.all(rows.map((m) => mediaFor(m)));
 
   return ok({
     ended: match.status !== "ACTIVE",
-    messages: rows.map((m) => {
+    mediaUnlocked: match.status === "ACTIVE" && (need <= 0 || (n(user.id) >= need && n(otherId) >= need)),
+    messages: rows.map((m, i) => {
       const mine = m.senderId === user.id;
       const flags = (m.flags ? m.flags.split(",") : []) as Flag[];
       return {
@@ -48,18 +57,20 @@ export const GET = route<{ id: string }>(async ({ req, user, params }) => {
         createdAt: m.createdAt,
         read: mine && showReceipts ? !!m.readAt : undefined,
         warning: !mine && !m.deletedAt ? warningFor(flags) : null,
+        media: media[i],
+        hearts: { mine: hearts.some((h) => h.messageId === m.id && h.userId === user.id), theirs: hearts.some((h) => h.messageId === m.id && h.userId !== user.id) },
       };
     }),
   });
 }, { allowSuspended: true });
 
-const Body = z.object({ body: z.string().trim().min(1, "Write a message first").max(2000) });
+const Body = z.object({ body: z.string().trim().min(1, "Write a message first").max(2000), confirmed: z.boolean().optional() });
 
 export const POST = route<{ id: string }>(async ({ req, user, params }) => {
   await rateLimit(`msg:${user.id}`, 30, 60_000);
   const { match, otherId } = await requireMatch(params.id, user.id);
   if (await isBlockedBetween(user.id, otherId)) throw new ApiError(410, "This match has ended.", "match_ended");
-  const { body } = await parseBody(req, Body);
+  const { body, confirmed } = await parseBody(req, Body);
 
   // Controlled interaction: cap how many messages can go unanswered in a row.
   const limit = await getConfig("chat.maxUnansweredMessages");
@@ -70,6 +81,9 @@ export const POST = route<{ id: string }>(async ({ req, user, params }) => {
     throw new ApiError(429, `You've sent ${limit} messages in a row. Give them a chance to reply.`, "awaiting_reply");
 
   const flags = screenMessage(body);
+  // Kindness check: a nudge before sending something that may hurt. Sending anyway is allowed (and still screened).
+  if (flags.includes("ABUSE") && !confirmed && (await getConfig("chat.kindnessCheck")))
+    throw new ApiError(409, "This might come across as hurtful. Do you want to change it before sending?", "kindness_check");
   const [msg] = await db.insert(schema.messages).values({ matchId: match.id, senderId: user.id, body: seal(body, match.id), flags: flags.join(",") }).returning();
 
   if (flags.length) await messageFlagCheck(user.id);

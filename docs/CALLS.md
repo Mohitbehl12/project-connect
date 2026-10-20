@@ -27,6 +27,10 @@ on real phones yet.
 
 Choose one:
 
+0. **Cloudflare (easiest, free to start).** In the Cloudflare dashboard go to **Realtime → TURN Server → Create**.
+   Copy the **Turn Token ID** into `CLOUDFLARE_TURN_KEY_ID` and the **API Token** into `CLOUDFLARE_TURN_API_TOKEN`
+   (Render → Environment). The server asks Cloudflare for fresh 4-hour credentials for each call, and the token never
+   reaches the apps. Cloudflare's free allowance covers early testing; check their current pricing before launch.
 1. **A hosted TURN service** (e.g. Cloudflare Realtime TURN, Twilio Network Traversal, Metered). Put its
    URLs in `TURN_URLS` and its credentials in `TURN_USERNAME` / `TURN_CREDENTIAL`. If the provider issues
    short-lived credentials through its own API, add that call in `iceConfig()` in `src/lib/calls.ts`.

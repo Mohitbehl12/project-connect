@@ -1,4 +1,5 @@
 import { openSafe } from "@/lib/crypto";
+import { storage } from "@/lib/storage";
 import { z } from "zod";
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
@@ -11,12 +12,13 @@ import { notify } from "@/lib/notify";
 export const GET = route<{ id: string }>(async ({ user, params }) => {
   const r = await db.query.reports.findFirst({ where: eq(schema.reports.id, params.id) });
   if (!r) throw new ApiError(404, "Report not found.", "not_found");
-  let evidence: { id: string; fromReported: boolean; body: string; deleted: boolean; flags: string; createdAt: Date; highlighted: boolean }[] = [];
+  let evidence: { id: string; fromReported: boolean; body: string; deleted: boolean; flags: string; createdAt: Date; highlighted: boolean; kind?: string; media?: { url: string; kind: string } | null }[] = [];
   if (r.matchId && can(user.role, "messages.view_reported")) {
     const msgs = await db.select().from(schema.messages).where(eq(schema.messages.matchId, r.matchId)).orderBy(asc(schema.messages.createdAt)).limit(300);
-    evidence = msgs.map((m) => ({
+    evidence = await Promise.all(msgs.map(async (m) => ({
       id: m.id, fromReported: m.senderId === r.reportedId, body: openSafe(m.body, m.matchId), deleted: !!m.deletedAt, flags: m.flags, createdAt: m.createdAt, highlighted: m.id === r.messageId,
-    }));
+      kind: m.kind, media: m.mediaKey ? { url: await storage().url(m.mediaKey, 900), kind: m.kind } : null,
+    })));
     await audit(user.id, "admin.view_evidence", "report", r.id, { matchId: r.matchId, messages: evidence.length });
   }
   const reported = await db.select({ u: schema.users, p: schema.profiles }).from(schema.users)

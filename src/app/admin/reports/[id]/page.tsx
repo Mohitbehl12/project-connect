@@ -68,6 +68,9 @@ function ReportDetail() {
                 <li key={m.id} className={`rounded-xl px-3 py-2 text-sm ${m.highlighted ? "ring-2 ring-rose" : ""} ${m.fromReported ? "bg-rose-wash" : "bg-paper-sunk"}`}>
                   <p className="text-xs font-semibold text-ink-faint">{m.fromReported ? "Reported member" : "Other member"} · {new Date(m.createdAt).toLocaleString()}{m.deleted ? " · deleted" : ""}{m.flags ? ` · flags: ${m.flags}` : ""}</p>
                   <p>{m.body}</p>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  {m.media?.kind === "PHOTO" && <img src={m.media.url} alt="Photo sent in the chat" className="mt-2 max-h-64 rounded-lg" />}
+                  {m.media?.kind === "VOICE" && <audio controls preload="none" src={m.media.url} className="mt-2 w-full" />}
                 </li>
               ))}
             </ul>

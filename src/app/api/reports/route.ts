@@ -1,3 +1,4 @@
+import { purgeEndedChatMedia } from "@/lib/chatMedia";
 import { endCallsBetween } from "@/lib/calls";
 import { z } from "zod";
 import { and, eq, gte, isNotNull, or } from "drizzle-orm";
@@ -46,6 +47,7 @@ export const POST = route(async ({ req, user }) => {
     await db.update(schema.matches).set({ status: "UNMATCHED", unmatchedBy: user.id })
       .where(and(eq(schema.matches.userAId, a), eq(schema.matches.userBId, z2)));
     await endCallsBetween(user.id, b.reportedId);
+    await purgeEndedChatMedia();
   }
 
   // Auto-suspend pending review when several different people report the same account.
