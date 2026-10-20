@@ -41,6 +41,7 @@ export default function ProfileTab() {
   const p = me?.profile;
   const age = me?.user.dob ? Math.floor((Date.now() - new Date(me.user.dob).getTime()) / (365.25 * 86400_000)) : null;
   const premium = me?.user.planCode && me.user.planCode !== "FREE";
+  const ms = me?.membership;
 
   return (
     <Screen pad={false}>
@@ -71,10 +72,15 @@ export default function ProfileTab() {
           </View>
         </View>
 
-        <Pressable accessibilityRole="button" onPress={() => router.push(premium ? "/subscription" : "/premium")} style={{ marginHorizontal: 20, borderRadius: 22, overflow: "hidden" }}>
+        <Pressable accessibilityRole="button" onPress={() => router.push(ms?.state === "FREE_FOREVER" ? "/premium" : premium && ms?.state !== "FREE_TRIAL" ? "/subscription" : "/premium")} style={{ marginHorizontal: 20, borderRadius: 22, overflow: "hidden" }}>
           <LinearGradient colors={[...g.dusk]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 18, gap: 4 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}><Icon name="sparkle" color={g.spark} /><T v="headline" tone="white">{premium ? `You're on ${me?.user.planCode.replace("_", " ").toLowerCase()}` : "Premium"}</T></View>
-            <T v="callout" tone="white" style={{ opacity: 0.85 }}>{premium ? "Manage your plan, payments and invoices." : "See who likes you, get more likes and finer filters. Free stays fully usable."}</T>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Icon name="sparkle" color={g.spark} />
+              <T v="headline" tone="white" style={{ flex: 1 }}>Membership</T>
+              {ms && <View style={{ backgroundColor: "rgba(255,255,255,0.22)", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}><T v="caption" strong tone="white">{ms.label}</T></View>}
+            </View>
+            <T v="callout" tone="white" style={{ opacity: 0.9 }}>{ms?.note ?? (premium ? "Manage your plan, payments and invoices." : "See who likes you, get more likes and finer filters. Free stays fully usable.")}</T>
+            {ms?.price && ["FREE_TRIAL", "EXPIRED", "NONE"].includes(ms.state) && <T v="callout" strong tone="white" style={{ marginTop: 2 }}>Membership: {ms.price}</T>}
           </LinearGradient>
         </Pressable>
 

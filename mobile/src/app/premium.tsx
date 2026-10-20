@@ -120,6 +120,23 @@ export default function Premium() {
     router.push({ pathname: "/checkout", params: { plan: selected.planCode, offerId: choice.startsWith("pass:") ? choice.slice(5) : "", coupon: coupon?.plan === choice ? coupon.quote.coupon?.code ?? "" : "", duration: choice.startsWith("pass:") ? "" : String(selected.periodDays) } });
   }
 
+  if (q.data?.freeForever) return (
+    <View style={{ flex: 1, backgroundColor: c.bg }}>
+      <LinearGradient colors={[...g.dusk]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 30, gap: 10, overflow: "hidden" }}>
+        <Aurora variant="match" style={{ opacity: 0.45 }} />
+        <IconButton icon="close" label="Close" tone="glass" size={44} onPress={() => router.back()} />
+        <T v="display" tone="white" style={{ fontSize: 34, lineHeight: 38 }}>Everything is free for you, forever</T>
+        <T tone="white" style={{ opacity: 0.9 }}>Every feature is included — no subscription, no payment details, nothing that renews.</T>
+      </LinearGradient>
+      <View style={{ padding: 20, gap: 10 }}>
+        {["See who likes you", "Unlimited likes and Priority Likes", "Boosts and advanced filters", "Photos, voice messages and calls"].map((f) => (
+          <View key={f} style={{ flexDirection: "row", gap: 10, alignItems: "center" }}><Icon name="check" color={c.trust} /><T>{f}</T></View>
+        ))}
+      </View>
+    </View>
+  );
+
+  const ms = q.data?.membership;
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <ScrollView contentContainerStyle={{ paddingBottom: 170 }}>
@@ -145,9 +162,10 @@ export default function Premium() {
 
           {freeUntil && (
             <Animated.View entering={FadeInDown} style={{ backgroundColor: c.surface, borderRadius: 26, padding: 18, gap: 6, borderWidth: 2, borderColor: c.brand }}>
-              <T v="caption" tone="brand" style={{ fontFamily: "Figtree_700Bold" }}>🎁 Your gift</T>
-              <T v="title">Premium is free until {niceDate(freeUntil)}</T>
-              <T tone="muted">Nothing to pay now and nothing renews automatically. To keep Premium after that, pick a plan below. A plan you choose starts the day you pay.</T>
+              <T v="caption" tone="brand" style={{ fontFamily: "Figtree_700Bold" }}>{ms?.state === "FREE_TRIAL" ? "🎁 Free trial" : "🎁 Your gift"}</T>
+              <T v="title">{ms?.state === "FREE_TRIAL" ? `Your free trial ends on ${niceDate(freeUntil)}` : `Premium is free until ${niceDate(freeUntil)}`}</T>
+              {ms?.price ? <T strong>After that: Membership {ms.price}</T> : null}
+              <T tone="muted">Nothing to pay now and nothing is charged automatically. To keep your membership after that, pick a plan below — you'll see the full price before paying. A plan you choose starts the day you pay.</T>
             </Animated.View>
           )}
 

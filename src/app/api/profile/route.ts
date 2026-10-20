@@ -1,3 +1,4 @@
+import { grantStartingMembership } from "@/lib/billing";
 import { syncOnboardingStep } from "@/lib/photos";
 import { z } from "zod";
 import { addRiskSignal } from "@/lib/risk";
@@ -49,6 +50,7 @@ async function saveProfile(user: User, b: ProfileInput) {
   // after sign-up is noted for the risk review — it never blocks the change or the person.
   if (existing?.gender && existing.gender !== b.gender && user.onboardingStep >= 3)
     await addRiskSignal(user.id, "GENDER_CHANGED", 35, `${existing.gender} → ${b.gender}`).catch(() => {});
+  const genderChanged = !!existing?.gender && existing.gender !== b.gender && user.onboardingStep >= 3;
 
   // Store the city centre with a stable per-user jitter (~±3 km). Device GPS is never collected.
   const cityChanged = !existing || existing.city !== b.city;
@@ -66,6 +68,7 @@ async function saveProfile(user: User, b: ProfileInput) {
     .onConflictDoUpdate({ target: schema.profiles.userId, set: values });
   const onboardingStep = await syncOnboardingStep(user.id);
   void onboardingStep;
+  if (genderChanged) await grantStartingMembership(user.id).catch(() => {}); // free forever applies (or stops) with the new gender
   return refreshCompleteness(user.id);
 }
 

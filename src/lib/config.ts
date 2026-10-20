@@ -31,7 +31,8 @@ export const CONFIG_DEFAULTS = {
   "referral.rewardDays": 7,
   "referral.monthlyCap": 10, // rewards one person can earn per calendar month
   "rewards.completeProfileBoostMinutes": 30, // one-time boost for reaching 100% profile
-  "rewards.womenFreeDays": 90, // free Premium for women & everyone not a man, in gender-pricing countries, on finishing sign-up (0 = off)
+  "rewards.womenFreeForever": true, // women & everyone not a man, in gender-pricing countries: every plan free for life
+  "rewards.menTrialDays": 15, // men in gender-pricing countries: free trial on finishing sign-up (0 = off); nothing is charged automatically
   "rewards.verifiedPremiumDays": 0, // optional Premium days for completing selfie verification
   // Data retention
   "retention.deletedMessageDays": 90, // deleted messages are kept this long for safety review, then purged

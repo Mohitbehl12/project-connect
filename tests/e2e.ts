@@ -103,6 +103,15 @@ async function main() {
   const terms = await anon.get("/api/legal/terms");
   check("terms are publicly readable", terms.status === 200 && terms.data.version >= 1, terms.data);
 
+  // The older billing checks below were written for paid plans for everyone; run them with the
+  // women-free-forever and men's-trial rules off. "Membership v3" near the end tests the new rules.
+  const adminEarly = new Client("Admin0");
+  await adminEarly.post("/api/auth/login", { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+  await adminEarly.put("/api/admin/config", { config: { "rewards.womenFreeForever": false, "rewards.menTrialDays": 0 } });
+  // …and with the old ₹1 intro offer for men, which they exercise (it's off in the real catalogue now).
+  const legacyIntro = { name: `Welcome ₹1 — men (e2e ${run})`, kind: "INTRO", headline: "Try Premium for ₹1", badge: "Welcome offer", planCode: "PREMIUM", country: "IN", genders: ["MAN"], audience: "NEW", priceMinor: 100, days: 15, priority: 10, active: true };
+  const legacyIntroId = (await adminEarly.post("/api/admin/billing/offers", legacyIntro)).data?.offer?.id;
+
   section("User A: register → profile → verify → preferences");
   const aId = await onboard(A, `tara-${run}@test.local`, "WOMAN", "MAN", "Tara", answersA);
   section("User B: register → profile → verify");
@@ -242,12 +251,6 @@ async function main() {
   check("author cannot publish own draft (four-eyes)", selfPub.status === 403, selfPub.data);
   await admin.post(`/api/admin/legal/${draft.data.id}`, { action: "back_to_draft" });
 
-  section("Free months for women (India)");
-  const giftA = (await A.get("/api/billing/subscription")).data?.subscription;
-  const giftDays = giftA?.endsAt ? Math.round((new Date(giftA.endsAt).getTime() - Date.now()) / 86_400_000) : 0;
-  check("woman gets Premium free for 3 months on finishing sign-up", giftA?.status === "REWARD" && giftDays >= 89 && giftDays <= 90, giftA);
-  check("the free months need no payment", ((await A.get("/api/billing/subscription")).data?.payments ?? []).length === 0);
-  check("free months unlock Premium features", (await A.get("/api/me")).data?.features?.seeWhoLiked === true);
 
   section("Subscriptions (mock provider)");
   const plans = await A.get("/api/plans");
@@ -927,6 +930,46 @@ async function main() {
     const rid = rep.data?.report?.id ?? rep.data?.id;
     const ev = rid ? await admin.get(`/api/admin/reports/${rid}`) : null;
     check("moderators can hear it in the report", ev?.data?.evidence?.some((m: any) => m.kind === "VOICE" && !!m.media?.url), ev?.data?.evidence?.map((m: any) => m.kind));
+  }
+
+  section("Membership v3: free forever for women, 15-day trial for men (India)");
+  {
+    await admin.put("/api/admin/config", { config: { "rewards.womenFreeForever": true, "rewards.menTrialDays": 15 } });
+    if (legacyIntroId) await admin.put(`/api/admin/billing/offers/${legacyIntroId}`, { ...legacyIntro, active: false });
+    const W = new Client("MemberWoman1"), Mn = new Client("MemberMan22");
+    await onboard(W, `free-${run}@test.local`, "WOMAN", "MAN", "Kiran", answersA);
+    await onboard(Mn, `trial-${run}@test.local`, "MAN", "WOMAN", "Arjun", answersB);
+    const wm = (await W.get("/api/me")).data;
+    check("a woman is free forever after sign-up", wm?.membership?.state === "FREE_FOREVER" && wm.user.planCode === "VIP" && !wm.membership.price, wm?.membership);
+    check("…with every feature on", wm?.features?.seeWhoLiked === true && wm.features.incognito === true, wm?.features);
+    const wc = (await W.get("/api/billing/catalogue")).data;
+    check("there's nothing for her to buy", wc?.freeForever === true && wc.plans.length === 0 && wc.passes.length === 0, { free: wc?.freeForever, plans: wc?.plans?.length });
+    const wbuy = await W.post("/api/billing/checkout", { planCode: "PREMIUM", acceptTerms: true, expectedTodayMinor: 5000 });
+    check("…and checkout refuses to charge her", wbuy.status === 409 && wbuy.data?.code === "free_forever", wbuy.data);
+    check("no payment details were needed", ((await W.get("/api/billing/subscription")).data?.payments ?? []).length === 0);
+
+    const mm = (await Mn.get("/api/me")).data;
+    const days = mm?.membership?.endsAt ? Math.round((new Date(mm.membership.endsAt).getTime() - Date.now()) / 86_400_000) : 0;
+    check("a man gets a 15-day free trial", mm?.membership?.state === "FREE_TRIAL" && days >= 14 && days <= 15 && mm.user.planCode === "PREMIUM", mm?.membership);
+    check("the trial end date is shown", /free trial ends on/.test(mm?.membership?.note ?? ""), mm?.membership?.note);
+    check("and the price after it: ₹100/month", /₹100(\.00)?\/month/.test(mm?.membership?.price ?? ""), mm?.membership?.price);
+    const mc = (await Mn.get("/api/billing/catalogue")).data;
+    const prem = mc?.plans?.find((p: any) => p.code === "PREMIUM");
+    check("men can choose 1, 3, 6 or 12 months", JSON.stringify((prem?.options ?? []).map((o: any) => [o.durationDays, o.quote.todayMinor])) === JSON.stringify([[30, 10000], [90, 25000], [180, 50000], [365, 100000]]), prem?.options?.map((o: any) => [o.durationDays, o.quote.todayMinor]));
+    check("no ₹1 intro offer any more", !prem?.quote?.offer || prem.quote.offer.kind !== "INTRO", prem?.quote?.offer);
+    const welcome = ((await Mn.get("/api/notifications")).data?.notifications ?? []).find((n: any) => /free trial has started/.test(n.title));
+    check("he's told the trial is free and nothing is charged automatically", /nothing is charged/.test(welcome?.body ?? ""), welcome);
+
+    // Gender changes: man → woman doesn't unlock free-forever until a selfie is verified; woman → man ends it.
+    const prof = async (c: Client, gender: string, name: string) => c.put("/api/profile", {
+      firstName: name, gender, bio: "Test account for the end-to-end journey. Enjoys board games, chai and long walks in Lodhi Garden.", city: "Delhi", intent: "FRIENDS",
+      education: "Master's degree", profession: "QA engineer", heightCm: 170, drinking: "SOCIAL", smoking: "NEVER", food: "VEG", exercise: "SOMETIMES", pets: "WANTS",
+      interests: ["board_games", "coffee", "trekking", "reading"], prompts: [{ q: "A perfect first date for me is", a: "a slow walk and good chai" }],
+    });
+    await prof(Mn, "WOMAN", "Arjun");
+    check("switching the profile to woman doesn't unlock free-forever by itself", (await Mn.get("/api/me")).data?.membership?.state !== "FREE_FOREVER");
+    await prof(W, "MAN", "Kiran");
+    check("switching to man ends free-forever", (await W.get("/api/me")).data?.membership?.state !== "FREE_FOREVER");
   }
 
   console.log(`\n${passed} passed, ${failures.length} failed`);

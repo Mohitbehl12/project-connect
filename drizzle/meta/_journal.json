@@ -64,6 +64,13 @@
       "when": 1792502140682,
       "tag": "0008_chat_media",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1792503023203,
+      "tag": "0009_pricing_v3",
+      "breakpoints": true
     }
   ]
 }

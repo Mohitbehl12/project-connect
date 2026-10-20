@@ -106,13 +106,17 @@ function Settings() {
             <input id="gpc" className="input" value={(cfg["billing.genderPricingCountries"] ?? []).join(", ")} onChange={(e) => setCfg({ ...cfg, "billing.genderPricingCountries": e.target.value.toUpperCase().split(/[ ,]+/).filter(Boolean) })} />
             <p className="mt-1 text-xs text-ink-faint">Two-letter codes, e.g. IN. Gender-based pricing is unlawful in some places (e.g. the EU) — check with a lawyer before adding a country.</p>
           </div>
+          <label className="flex items-start gap-3">
+            <input type="checkbox" className="mt-1" checked={cfg["rewards.womenFreeForever"] !== false} onChange={(e) => setCfg({ ...cfg, "rewards.womenFreeForever": e.target.checked })} />
+            <span><span className="font-semibold">Free forever for women</span><span className="block text-xs text-ink-faint">Women and everyone who isn't a man, in the countries above, get every plan free for life. Their paid prices are hidden.</span></span>
+          </label>
           {[
             ["billing.reminderDays", "Renewal reminder (days before)", "In addition to the bank's own pre-debit notice."],
             ["billing.graceDays", "Grace period after a failed renewal (days)", "Premium stays on while the gateway retries."],
             ["referral.rewardDays", "Premium days per verified referral", ""],
             ["referral.monthlyCap", "Max referral rewards per person per month", "Limits farming."],
             ["rewards.completeProfileBoostMinutes", "Boost for a 100% profile (minutes)", "0 turns it off."],
-            ["rewards.womenFreeDays", "Free Premium for women (days)", "Given once when sign-up is finished, in gender-pricing countries. 0 turns it off."],
+            ["rewards.menTrialDays", "rewards.womenFreeForever", "Free trial for men (days)", "Given once per account and phone when sign-up is finished, in gender-pricing countries. Nothing is charged when it ends. 0 turns it off."],
             ["rewards.verifiedPremiumDays", "Premium days for completing verification", "0 turns it off."],
             ["retention.deletedMessageDays", "Keep deleted messages for safety review (days)", "Then the text is purged."],
             ["retention.loginEventDays", "Keep sign-in history (days)", ""],
@@ -124,7 +128,7 @@ function Settings() {
             </div>
           ))}
         </div>
-        <button className="btn-primary mt-4" disabled={!staff.permissions.includes("config.edit")} onClick={() => save({ config: Object.fromEntries(["billing.genderPricingCountries", "billing.reminderDays", "billing.graceDays", "referral.rewardDays", "referral.monthlyCap", "rewards.completeProfileBoostMinutes", "rewards.womenFreeDays", "rewards.verifiedPremiumDays", "retention.deletedMessageDays", "retention.loginEventDays"].map((k) => [k, cfg[k]])) }, "Billing settings")}>Save billing settings</button>
+        <button className="btn-primary mt-4" disabled={!staff.permissions.includes("config.edit")} onClick={() => save({ config: Object.fromEntries(["billing.genderPricingCountries", "billing.reminderDays", "billing.graceDays", "referral.rewardDays", "referral.monthlyCap", "rewards.completeProfileBoostMinutes", "rewards.menTrialDays", "rewards.womenFreeForever", "rewards.verifiedPremiumDays", "retention.deletedMessageDays", "retention.loginEventDays"].map((k) => [k, cfg[k]])) }, "Billing settings")}>Save billing settings</button>
       </section>
 
       <h2 className="mb-3 mt-10 text-2xl font-extrabold">Plans and prices</h2>

@@ -1,5 +1,5 @@
 import "server-only";
-import { grantWelcomeGift } from "./billing";
+import { grantStartingMembership } from "./billing";
 import { getConfig } from "./config";
 import { notify } from "./notify";
 import sharp from "sharp";
@@ -122,7 +122,7 @@ export async function syncOnboardingStep(userId: string) {
   if (user && step > user.onboardingStep) {
     await db.update(schema.users).set({ onboardingStep: step }).where(eq(schema.users.id, userId));
     // Finishing sign-up is when the free months for women start (once per account; see billing).
-    if (step === 3) await grantWelcomeGift(userId).catch(() => {});
+    if (step === 3) await grantStartingMembership(userId).catch(() => {});
   }
   return Math.max(step, user?.onboardingStep ?? 0);
 }

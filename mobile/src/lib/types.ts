@@ -28,7 +28,9 @@ export type Card = {
   likeNote?: string | null;
 };
 
+export type Membership = { state: "FREE_FOREVER" | "FREE_TRIAL" | "ACTIVE" | "PAYMENT_PENDING" | "CANCELLED" | "EXPIRED" | "NONE"; label: string; planCode: string | null; endsAt: string | null; note: string | null; price?: string | null };
 export type Me = {
+  membership?: Membership;
   user: {
     id: string; email: string; phone: string | null; dob: string | null; role: string; status: string;
     emailVerified: boolean; phoneVerified: boolean; selfieStatus: "NONE" | "PENDING" | "VERIFIED" | "REJECTED";
@@ -90,6 +92,8 @@ export type Catalogue = {
     options?: { durationDays: number; label: string; perMonthMinor: number; quote: Quote; store?: { apple: string | null; google: string | null } | null }[];
   }[];
   passes: Quote[];
+  membership?: Membership;
+  freeForever?: boolean;
   subscription: SubSummary;
   provider: "MOCK" | "RAZORPAY" | "NONE";
   appleIap: { enabled: boolean };

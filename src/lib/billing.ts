@@ -119,6 +119,9 @@ export async function quoteFor(user: User, planCode: string, opts: { coupon?: st
 
 /** Everything the Premium screen needs: plans with personalised quotes, passes, and current status. */
 export async function catalogue(user: User) {
+  const membership = await membershipStatus(user.id);
+  if (membership.state === "FREE_FOREVER")
+    return { plans: [], passes: [], subscription: await subscriptionSummary(user.id), membership, freeForever: true, provider: checkoutProviderName(), appleIap: { enabled: false }, store: { enabled: false } };
   const plans = await db.select().from(schema.plans).where(and(eq(schema.plans.active, true), ne(schema.plans.code, "FREE"))).orderBy(schema.plans.sortOrder);
   const out = [];
   for (const p of plans) {
@@ -142,7 +145,7 @@ export async function catalogue(user: User) {
       passes.push(buildQuote({ price, offer: o, buyer, now: new Date(), genderCountries, reminderDays }));
   }
   return {
-    plans: out, passes, subscription: await subscriptionSummary(user.id), provider: checkoutProviderName(),
+    plans: out, passes, subscription: await subscriptionSummary(user.id), membership, freeForever: false, provider: checkoutProviderName(),
     appleIap: { enabled: storeBillingEnabled() },
     // In-app purchase: the ids that tie a purchase to this account (Apple appAccountToken / Google obfuscated id).
     store: storeBillingEnabled() ? { enabled: true, appleAccountToken: accountTokenFor("APPLE", user.id), googleAccountId: accountTokenFor("GOOGLE", user.id) } : { enabled: false },
@@ -163,6 +166,7 @@ function checkoutProviderName() {
 // ---------------------------------------------------------------------------
 
 export async function startCheckout(user: User, input: { planCode: string; offerId?: string | null; coupon?: string | null; durationDays?: number | null; acceptTerms: boolean; expectedTodayMinor: number }) {
+  if ((await membershipStatus(user.id)).state === "FREE_FOREVER") throw new ApiError(409, "Everything is already free for you — there's nothing to buy.", "free_forever");
   if (!input.acceptTerms) throw new ApiError(422, "Please confirm you understand the subscription terms.", "terms_required");
   if (user.riskLevel === "HIGH" && user.selfieStatus !== "VERIFIED")
     throw new ApiError(403, "For your security, please complete selfie verification before subscribing.", "verification_required");
@@ -706,14 +710,45 @@ function storeIds(p: { appleProductId?: string | null; googleProductId?: string 
  * Admin → Settings (0 turns it off). One gift per device too, so new accounts on the same phone don't
  * each get one.
  */
-export async function grantWelcomeGift(userId: string) {
-  const days = await getConfig("rewards.womenFreeDays");
-  if (days <= 0) return null;
+const FOREVER = new Date("2099-12-31T00:00:00Z");
+export const WOMEN_FREE_CODE = "WOMEN_FREE_FOREVER";
+export const MEN_TRIAL_CODE = "MEN_TRIAL";
+
+/**
+ * Starting membership, given when sign-up is finished (and checked again on every visit, so existing
+ * members move to new rules automatically). In gender-pricing countries:
+ *  - women and everyone who isn't a man: every plan free for life (nothing to buy);
+ *  - men: a free trial, once per account and phone. Nothing is charged when it ends — they choose a plan.
+ */
+export async function grantStartingMembership(userId: string) {
   const user = await db.query.users.findFirst({ where: eq(schema.users.id, userId) });
-  if (!user || user.welcomeGiftAt || user.status !== "ACTIVE") return null;
+  if (!user || user.status !== "ACTIVE" || user.onboardingStep < 3) return null;
   const profile = await db.query.profiles.findFirst({ where: eq(schema.profiles.userId, userId) });
-  if (!profile?.gender || profile.gender === "MAN") return null;
+  if (!profile?.gender) return null;
   if (!(await getConfig("billing.genderPricingCountries")).includes(profile.country ?? "IN")) return null;
+  const rewards = await db.select().from(schema.subscriptions).where(and(eq(schema.subscriptions.userId, userId), eq(schema.subscriptions.provider, "REWARD")));
+
+  if (profile.gender !== "MAN") {
+    if (!(await getConfig("rewards.womenFreeForever"))) return null;
+    if (rewards.some((r) => r.couponCode === WOMEN_FREE_CODE && r.status === "ACTIVE")) return null;
+    // Someone who changed their gender after sign-up gets free-forever once their selfie is verified
+    // (so it can't be unlocked just by editing the profile).
+    const changed = await db.query.riskSignals.findFirst({ where: and(eq(schema.riskSignals.userId, userId), eq(schema.riskSignals.kind, "GENDER_CHANGED")) });
+    if (changed && user.selfieStatus !== "VERIFIED") return null;
+    await db.insert(schema.subscriptions).values({ userId, planCode: "VIP", provider: "REWARD", status: "ACTIVE", kind: "PASS", periodDays: 36500, cancelAtPeriodEnd: true, endsAt: FOREVER, couponCode: WOMEN_FREE_CODE });
+    await db.update(schema.users).set({ welcomeGiftAt: user.welcomeGiftAt ?? new Date() }).where(eq(schema.users.id, userId));
+    await syncUserPlan(userId);
+    await notify(userId, "SUBSCRIPTION", "Everything is free for you, forever 🎁", "Every feature is included at no cost — no payment details, no subscription, nothing to renew.", "/subscription");
+    await audit(null, "billing.women_free_forever", "user", userId);
+    return FOREVER;
+  }
+
+  // A man (also someone who changed their gender to man): lifetime access no longer applies.
+  for (const r of rewards.filter((x) => x.couponCode === WOMEN_FREE_CODE && x.status === "ACTIVE"))
+    await db.update(schema.subscriptions).set({ status: "EXPIRED", endsAt: new Date() }).where(eq(schema.subscriptions.id, r.id));
+  if (rewards.some((r) => r.couponCode === WOMEN_FREE_CODE)) await syncUserPlan(userId);
+  const days = await getConfig("rewards.menTrialDays");
+  if (days <= 0 || user.welcomeGiftAt) return null;
   if (user.signupInstallId) {
     const twin = await db.query.users.findFirst({ where: and(eq(schema.users.signupInstallId, user.signupInstallId), ne(schema.users.id, userId), isNotNull(schema.users.welcomeGiftAt)) });
     if (twin) return null;
@@ -722,11 +757,48 @@ export async function grantWelcomeGift(userId: string) {
   const claimed = await db.update(schema.users).set({ welcomeGiftAt: new Date() }).where(and(eq(schema.users.id, userId), isNull(schema.users.welcomeGiftAt))).returning({ id: schema.users.id });
   if (!claimed.length) return null;
   const endsAt = new Date(Date.now() + days * DAY);
-  await db.insert(schema.subscriptions).values({ userId, planCode: "PREMIUM", provider: "REWARD", status: "ACTIVE", kind: "PASS", periodDays: days, cancelAtPeriodEnd: true, endsAt, couponCode: "WELCOME_FREE" });
+  await db.insert(schema.subscriptions).values({ userId, planCode: "PREMIUM", provider: "REWARD", status: "ACTIVE", kind: "PASS", periodDays: days, cancelAtPeriodEnd: true, endsAt, couponCode: MEN_TRIAL_CODE });
   await syncUserPlan(userId);
-  await notify(userId, "SUBSCRIPTION", `Premium is free for your first ${Math.round(days / 30)} months 🎁`, `Enjoy Premium until ${formatDate(endsAt)}. No payment details needed and nothing renews automatically.`, "/subscription");
-  await audit(null, "billing.welcome_gift", "user", userId, { days });
+  await notify(userId, "SUBSCRIPTION", `Your ${days}-day free trial has started`, `Your free trial ends on ${formatDate(endsAt)}. After that, membership is ₹100 a month — nothing is charged unless you choose a plan.`, "/subscription");
+  await audit(null, "billing.men_trial", "user", userId, { days });
   return endsAt;
+}
+/** @deprecated kept for older callers */
+export const grantWelcomeGift = grantStartingMembership;
+
+/** "₹100/month" — this person's monthly membership price (Premium), or null if not sold to them. */
+export async function membershipPrice(user: User) {
+  const price = pickPrice(await priceRows(), "PREMIUM", await loadBuyer(user), await getConfig("billing.genderPricingCountries"), 30);
+  return price ? `${formatMoney(price.amountMinor, price.currency)}/month` : null;
+}
+
+export type MembershipState = "FREE_FOREVER" | "FREE_TRIAL" | "ACTIVE" | "PAYMENT_PENDING" | "CANCELLED" | "EXPIRED" | "NONE";
+
+/** What the profile shows: one of the membership states, with the dates that matter. */
+export async function membershipStatus(userId: string) {
+  const user = await db.query.users.findFirst({ where: eq(schema.users.id, userId) });
+  const base = await membershipCore(userId);
+  const price = user && base.state !== "FREE_FOREVER" ? await membershipPrice(user).catch(() => null) : null;
+  return { ...base, price };
+}
+
+async function membershipCore(userId: string) {
+  const subs = await db.select().from(schema.subscriptions).where(eq(schema.subscriptions.userId, userId)).orderBy(desc(schema.subscriptions.endsAt));
+  const now = Date.now();
+  const live = (x: typeof subs[number]) => x.endsAt.getTime() > now && ["ACTIVE", "TRIALING", "PAST_DUE", "CANCELLED"].includes(x.status);
+  const forever = subs.find((x) => x.couponCode === WOMEN_FREE_CODE && live(x));
+  if (forever) return { state: "FREE_FOREVER" as MembershipState, label: "Free forever", planCode: forever.planCode, endsAt: null, note: "Every feature is free for you, for life." };
+  const paid = subs.find((x) => x.provider !== "REWARD" && live(x));
+  const pending = subs.find((x) => x.provider !== "REWARD" && (x.status === "PENDING" || x.status === "PAST_DUE"));
+  const trial = subs.find((x) => x.couponCode === MEN_TRIAL_CODE);
+  if (paid?.status === "PAST_DUE" || (!paid && pending && pending.startedAt.getTime() > now - 2 * DAY))
+    return { state: "PAYMENT_PENDING" as MembershipState, label: "Payment pending", planCode: (paid ?? pending)!.planCode, endsAt: (paid ?? pending)!.endsAt, note: "We're waiting for your payment to go through." };
+  if (paid && (paid.cancelAtPeriodEnd || paid.status === "CANCELLED") && paid.kind === "RECURRING")
+    return { state: "CANCELLED" as MembershipState, label: "Cancelled", planCode: paid.planCode, endsAt: paid.endsAt, note: `Your membership stays on until ${formatDate(paid.endsAt)} and won't renew.` };
+  if (paid) return { state: "ACTIVE" as MembershipState, label: "Active", planCode: paid.planCode, endsAt: paid.endsAt, note: paid.kind === "RECURRING" ? `Renews on ${formatDate(paid.nextChargeAt ?? paid.endsAt)}.` : `Active until ${formatDate(paid.endsAt)}.` };
+  if (trial && live(trial)) return { state: "FREE_TRIAL" as MembershipState, label: "Free trial", planCode: trial.planCode, endsAt: trial.endsAt, note: `Your ${trial.periodDays}-day free trial ends on ${formatDate(trial.endsAt)}.` };
+  if (trial || subs.some((x) => x.provider !== "REWARD")) return { state: "EXPIRED" as MembershipState, label: "Expired", planCode: null, endsAt: null, note: "Choose a plan to get your membership features back." };
+  return { state: "NONE" as MembershipState, label: "Free plan", planCode: null, endsAt: null, note: null };
 }
 
 async function currentRewardEnd(userId: string) {
@@ -752,6 +824,15 @@ export async function runBillingJobs(now = new Date()) {
     await notify(s.userId, "SUBSCRIPTION", s.status === "TRIALING" ? "Your intro period ends soon" : "Upcoming payment",
       `${formatMoney(s.nextChargeMinor ?? s.amountMinor, s.currency)} for ${planName(s.pendingPlanCode ?? s.planCode)} on ${formatDate(s.nextChargeAt)}. Don't want it? Turn off auto-renew in My Subscription before then.`, "/subscription");
     await db.update(schema.subscriptions).set({ reminderSentFor: s.nextChargeAt }).where(eq(schema.subscriptions.id, s.id));
+    out.reminders++;
+  }
+
+  // 1b) Free trial ending soon: a clear notice. Nothing is charged automatically.
+  const trials = await db.select().from(schema.subscriptions).where(and(eq(schema.subscriptions.couponCode, MEN_TRIAL_CODE), eq(schema.subscriptions.status, "ACTIVE"), lte(schema.subscriptions.endsAt, soon)));
+  for (const t of trials) {
+    if (t.endsAt <= now || t.reminderSentFor) continue;
+    await notify(t.userId, "SUBSCRIPTION", "Your free trial ends soon", `Your ${t.periodDays}-day free trial ends on ${formatDate(t.endsAt)}. Membership is ₹100 a month (or less on longer plans). Nothing is charged unless you choose a plan.`, "/premium");
+    await db.update(schema.subscriptions).set({ reminderSentFor: t.endsAt }).where(eq(schema.subscriptions.id, t.id));
     out.reminders++;
   }
 
