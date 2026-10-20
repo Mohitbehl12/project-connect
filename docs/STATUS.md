@@ -206,3 +206,19 @@ Voice/video calls, voice messages, image and GIF sharing in chat, typing indicat
 - **Sample data** for testing: matches, chats and likes for the demo accounts (`scripts/sample-data.ts`). Remove it before launch.
 - **iPhone photos:** photos and selfies are converted to JPEG on the phone before upload. iPhone HEIC photos and photos over 10 MB used to fail.
 - Tests: 68 unit, 421 end-to-end, 8 two-server.
+
+## Kinara (rename), membership v3, call requests, chat media, clothing
+- **Renamed to Kinara**, with a new icon set. `npm run brand:rename -- "Old" "New"` renames it again.
+- **Membership:**
+  - Women and everyone not a man (India): every plan free for life.
+  - Men: 15-day free trial, then ₹100/month (or ₹250 / ₹500 / ₹1,000 for 3, 6 or 12 months).
+  - Membership states are shown on the profile.
+- **Call requests:** nobody can be called without accepting a request first. Includes call history, call settings, Speaker and Block on the call screen, and an admin Calls page.
+- **Chat:**
+  - Photos: blurred until tapped, location data removed.
+  - Voice messages, hearts, and a "send anyway?" check before hurtful messages.
+  - Media from reported chats is kept as evidence.
+- **Calls relay:** Cloudflare TURN built in. Paste `CLOUDFLARE_TURN_KEY_ID` and `CLOUDFLARE_TURN_API_TOKEN` to switch calls on.
+- **Kinara Style (docs/STYLE.md):** the custom-clothing section merged from Darzi, with a workshop admin and the TAILOR role.
+- **Admin dashboard:** men and women, free trials, free-forever members, paid memberships, ₹100 subscriptions, payments, call requests (accepted / declined), calls, clothing orders and revenue.
+- **Tests:** 72 unit, 601+ end-to-end, 9 two-server.

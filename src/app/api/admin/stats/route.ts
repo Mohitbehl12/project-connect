@@ -49,6 +49,11 @@ export const GET = route(async () => {
     c(db.select({ n: count() }).from(CL).where(isNotNull(CL.answeredAt))),
     c(db.select({ n: count() }).from(CL).where(eq(CL.endReason, "MISSED"))),
   ]);
+  const SO = schema.styleOrders;
+  const [styleOrders, styleRevenue] = await Promise.all([
+    c(db.select({ n: count() }).from(SO).where(inArray(SO.paymentStatus, ["PAID", "TEST_PAID"]))),
+    db.select({ total: sum(SO.priceMinor) }).from(SO).where(and(eq(SO.paymentStatus, "PAID"), gte(SO.createdAt, month))),
+  ]);
   const paidRevenue = await db.select({ currency: schema.payments.currency, total: sum(schema.payments.amountMinor) })
     .from(schema.payments).where(and(eq(schema.payments.status, "CAPTURED"), gte(schema.payments.createdAt, month))).groupBy(schema.payments.currency);
 
@@ -69,6 +74,7 @@ export const GET = route(async () => {
     users: { total, active24h, active7d, new7d, verified, pendingVerification, premium, suspended, banned },
     members: { men, women, freeTrials, freeForever, paidMemberships, subs100, payPending },
     calls: { requests: callRequests, accepted: callAccepted, declined: callDeclined, completed: callsDone, missed: callsMissed },
+    style: { orders: styleOrders, revenue30dMinor: Number(styleRevenue[0]?.total ?? 0) },
     payments30d: paidRevenue.map((r) => ({ currency: r.currency, amountMinor: Number(r.total ?? 0) })),
     engagement: { matches, matches7d, messages7d, blocks },
     safety: { openReports, criticalReports },

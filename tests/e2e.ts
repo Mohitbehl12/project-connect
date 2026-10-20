@@ -1004,6 +1004,80 @@ async function main() {
     check("switching to man ends free-forever", (await W.get("/api/me")).data?.membership?.state !== "FREE_FOREVER");
   }
 
+  section("Kinara Style: clothing design → measurements → order → workshop");
+  {
+    const D = await import("../src/lib/style/darzi.js");
+    const Sx = new Client("StyleBuyer1"), Oth = new Client("StyleOther22");
+    await onboard(Sx, `style1-${run}@test.local`, "WOMAN", "MAN", "Rhea", answersA);
+    await onboard(Oth, `style2-${run}@test.local`, "MAN", "WOMAN", "Varun", answersB);
+    const cat = await Sx.get("/api/style/catalog");
+    check("the catalogue lists 16 garment types and the 2026 styles", cat.data?.categories?.length === 16 && cat.data.items.length >= 40, cat.data?.categories?.length);
+    check("style preferences are saved", (await Sx.put("/api/style/prefs", { fit: "Relaxed", colors: ["Sage", "Ivory", "NotAColour"], occasions: ["wedding", "festive"] })).data?.prefs?.colors?.join() === "Sage,Ivory");
+    const ai = await Sx.post("/api/style/ai", { prompt: "a slim fit maroon silk sherwani with zari border and contrast buttons" });
+    check("describing a design in words builds it", ai.data?.spec?.category === "sherwani" && ai.data.spec.color === "Maroon" && ai.data.spec.pattern === "Zari border" && ai.data.understood.includes("Silk"), ai.data);
+    const sugg = await Sx.post("/api/style/ai", { occasion: "Wedding" });
+    check("outfit ideas for an occasion", sugg.data?.suggestions?.length === 3 && sugg.data.suggestions.every((x: any) => x.price > 0), sugg.data?.suggestions?.length);
+    check("an impossible garment is refused", (await Sx.post("/api/style/designs", { spec: { ...ai.data.spec, category: "spacesuit" } })).status === 422);
+    const odd = await Sx.post("/api/style/designs", { spec: { ...ai.data.spec, collar: "Pirate collar" }, prompt: "maroon sherwani" });
+    check("options a garment doesn't offer fall back to valid ones", odd.status === 201 && odd.data.design.spec.collar === "Mandarin", odd.data?.design?.spec);
+    check("saved designs are listed", ((await Sx.get("/api/style/designs")).data?.designs ?? []).length === 1);
+
+    const m = D.estimateM(66, 58, "Average", "M", 7);
+    check("a profile without all 18 measurements is refused", (await Sx.post("/api/style/profiles", { name: "Me", rel: "Self", fit: "Tailored", m: { height: m.height } })).status === 422);
+    check("impossible measurements are refused", (await Sx.post("/api/style/profiles", { name: "Me", rel: "Self", fit: "Tailored", m: { ...m, chest: { ...m.chest, v: 400 } } })).status === 422);
+    const prof = await Sx.post("/api/style/profiles", { name: "Me", rel: "Self", fit: "Tailored", m, method: "estimate" });
+    check("a measurement profile is saved with a Fit Lock score", prof.status === 201 && prof.data.profile.fitScore > 0 && prof.data.profile.fitScore < 100, prof.data?.profile?.fitScore);
+    const pid = prof.data?.profile?.id;
+    check("someone else can't change your measurements", (await Oth.put(`/api/style/profiles/${pid}`, { name: "x", rel: "Self", fit: "Slim", m })).status === 404);
+    const ver = Object.fromEntries(Object.entries(m).map(([k, x]: [string, any]) => [k, { ...x, c: x.u ? "Verified" : x.c, u: false }]));
+    const ref = { chest: String((m.chest.v + D.EASE.Tailored).toFixed(1)), shoulder: String((m.shoulder.v + 0.3).toFixed(1)), sleeve: String(m.arm.v), length: String(m.shirtLen.v) };
+    const locked = await Sx.put(`/api/style/profiles/${pid}`, { name: "Me", rel: "Self", fit: "Tailored", m: ver, ref, method: "tape" });
+    check("checking the uncertain ones with a tape and a shirt that fits reaches Fit Lock", locked.data?.profile?.fitLocked === true && locked.data.profile.fitScore === 100, { score: locked.data?.profile?.fitScore, gates: locked.data?.profile?.gates });
+
+    const spec = ai.data.spec;
+    const quote = await Sx.post("/api/style/quote", { spec });
+    check("the server sets the price (never the app)", quote.data?.priceMinor === D.price(D.normalize(spec)) * 100 && quote.data.days === D.CATS.sherwani.days, quote.data);
+    check("an order needs a delivery address", (await Sx.post("/api/style/orders", { spec, profileId: pid, address: "x", acceptTerms: true })).status === 422);
+    check("…and confirming the price and date", (await Sx.post("/api/style/orders", { spec, profileId: pid, address: "12 Lodhi Road, New Delhi 110003" })).status === 422);
+    check("you can't order with someone else's measurements", (await Oth.post("/api/style/orders", { spec, profileId: pid, address: "12 Lodhi Road, New Delhi 110003", acceptTerms: true })).status === 404);
+    const ord = await Sx.post("/api/style/orders", { spec, profileId: pid, notes: "Slightly roomier sleeves", address: "12 Lodhi Road, New Delhi 110003", acceptTerms: true, priceMinor: 1 });
+    const oid = ord.data?.order?.id;
+    check("an order is placed, waiting for payment, at the server's price", ord.status === 201 && /^KN-\d+/.test(oid) && ord.data.order.paymentStatus === "PENDING" && ord.data.order.priceMinor === quote.data.priceMinor && !!ord.data.payUrl, ord.data);
+    check("other people can't see it", (await Oth.get(`/api/style/orders/${oid}`)).status === 404);
+    const payPath = new URL(ord.data?.payUrl ?? "http://x/").pathname + new URL(ord.data?.payUrl ?? "http://x/").search;
+    check("the pay link opens the order", payPath.startsWith(`/style/pay/${oid}?t=`));
+    const tok = new URL(ord.data?.payUrl ?? "http://x/?t=").searchParams.get("t") ?? "";
+    const pinfo = await fetch(`${BASE}/api/style/orders/${oid}/pay?t=${encodeURIComponent(tok)}`).then((r) => r.json());
+    check("the pay page gets the amount and the test provider", pinfo.order?.priceMinor === quote.data.priceMinor && pinfo.provider === "MOCK", pinfo);
+    check("a wrong pay link is refused", (await fetch(`${BASE}/api/style/orders/${oid}/pay?t=nope`)).status === 401);
+    const paid = await fetch(`${BASE}/api/style/orders/${oid}/pay?t=${encodeURIComponent(tok)}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ action: "test" }) }).then((r) => r.json());
+    check("test payment confirms the order", paid.result === "paid", paid);
+    const od = (await Sx.get(`/api/style/orders/${oid}`)).data?.order;
+    check("it moves to Measurement Confirmed with a delivery date", od?.paymentStatus === "TEST_PAID" && od.status === 1 && !!od.eta && od.finished?.length > 3, od);
+    check("the buyer is told it's confirmed", ((await Sx.get("/api/notifications")).data?.notifications ?? []).some((n: any) => n.title === `Order ${oid} confirmed`));
+    check("fit feedback waits until delivery", (await Sx.post(`/api/style/orders/${oid}/feedback`, { fit: "PERFECT", rating: 5 })).status === 409);
+
+    check("members can't open the workshop", (await Sx.get("/api/admin/style/orders")).status === 403);
+    check("finance staff can't see measurements or orders", (await finance.get("/api/admin/style/orders")).status === 403 && (await finance.get("/api/admin/style/measurements")).status === 403);
+    const wo = (await admin.get("/api/admin/style/orders?filter=open")).data?.orders?.find((x: any) => x.id === oid);
+    check("the workshop sees the order with measurements, finished sizes and the address", wo && wo.measurements?.chest && wo.finished?.length && /Lodhi Road/.test(wo.address ?? ""), wo && Object.keys(wo));
+    const unpaid = await Sx.post("/api/style/orders", { spec, profileId: pid, address: "12 Lodhi Road, New Delhi 110003", acceptTerms: true });
+    check("the workshop can't start an unpaid order", (await admin.patch(`/api/admin/style/orders/${unpaid.data?.order?.id}`, { status: 3 })).data?.code === "unpaid");
+    const st = await admin.patch(`/api/admin/style/orders/${oid}`, { status: 6, note: "Delivered by courier" });
+    check("the workshop moves the order along", st.data?.order?.statusLabel === "Delivered", st.data);
+    check("…and the buyer hears about it", ((await Sx.get("/api/notifications")).data?.notifications ?? []).some((n: any) => n.title === `${oid}: Delivered`));
+    check("fit feedback after delivery", (await Sx.post(`/api/style/orders/${oid}/feedback`, { fit: "TIGHT", rating: 4, note: "Sleeves a little snug" })).status === 200);
+    check("a Fit Locked order that doesn't fit gets a free remake offer", ((await Sx.get("/api/notifications")).data?.notifications ?? []).some((n: any) => n.title === "We'll make it right"));
+    const rep = (await admin.get("/api/admin/style/reports")).data;
+    check("workshop reports count orders by status and garment", rep?.testOrders >= 1 && rep.categories.some((x: any) => x.category === "Sherwani") && rep.byStatus.length === 7, rep);
+    const meas = await admin.get("/api/admin/style/measurements");
+    check("staff can see measurement profiles, and the view is logged", meas.data?.profiles?.some((p: any) => p.id === pid) && ((await admin.get("/api/admin/audit")).data?.logs ?? []).some((l: any) => l.action === "style.view_measurements"));
+    const fab = await admin.get("/api/admin/style/fabrics");
+    check("fabric stock is there for the workshop", (fab.data?.fabrics ?? []).length >= 1, fab.data?.fabrics?.length);
+    const stats = (await admin.get("/api/admin/stats")).data;
+    check("the dashboard counts clothing orders", stats?.style?.orders >= 1, stats?.style);
+  }
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) {
     console.log("Failed:\n - " + failures.join("\n - "));

@@ -1,0 +1,61 @@
+// Types for darzi.js (Kinara Style catalogue and rules).
+export type Spec = {
+  category: string; fabric: string; color: string; collar: string | null; sleeves: string | null;
+  buttons: string; pockets: string; fit: string; length: string; pattern: string;
+};
+export type Confidence = "High" | "Medium" | "Low" | "Verified" | "Edited";
+export type MVal = { v: number; c: Confidence; u: boolean; src?: string; calibrated?: boolean };
+export type Measurements = Record<string, MVal>;
+export type Cat = {
+  name: string; one: string; base: number; kind: "top" | "bottom" | "dress"; days: number; blurb: string; hem?: number;
+  fab: string[]; collarLabel?: string; collars: string[] | null; sleeves: string[] | null; buttonsLabel?: string;
+  buttons: string[]; pockets: string[]; lengths: string[]; fits?: string[];
+};
+export type CatalogItem = { id: string; name: string; spec: Spec; price: number; occ: string[]; trend: boolean; why: string };
+export type ProfileLike = { m: Measurements | null; fit?: string; ref?: Record<string, string> | null };
+
+export const COLORS: Record<string, string>;
+export const FABRIC: Record<string, number>;
+export const FITS: string[];
+export const FIT_IN: Record<string, number>;
+export const EASE: Record<string, number>;
+export const PATTERNS: string[];
+export const PAT_COST: Record<string, number>;
+export const CATS: Record<string, Cat>;
+export function fitsOf(cat: string): string[];
+export const STATUSES: string[];
+/** [key, label, group, ratio-to-height, typical confidence] */
+export const MEAS: [string, string, string, number, Confidence][];
+export function esc(s: unknown): string;
+export function inr(n: number): string;
+export function cm(v: number): string;
+export function rng(seed: number): () => number;
+export function shade(hex: string, a: number): string;
+export function lum(hex: string): number;
+export function defaultSpec(cat: string): Spec;
+export function normalize(s: Partial<Spec> & { category: string }): Spec;
+export function price(s: Spec): number;
+export function title(s: Spec): string;
+export function describe(s: Spec): string;
+export function genM(heightIn: number, seed: number): Measurements;
+export function uncertain(m: Measurements): [string, string, string, number, Confidence][];
+export function checks(m: Measurements): [string, boolean][];
+export const REF: [string, string][];
+export function refIssues(p: ProfileLike): { k: string; msg: string; fix: number }[] | null;
+export function fitScore(p: ProfileLike | null): { score: number; gates: [string, number, string][]; ri: unknown; ch: [string, boolean][]; unc: unknown[] };
+export const GIRTHS: string[];
+export const TAPE: Record<string, string>;
+export function garmentSVG(s: Spec, view?: "front" | "back", cls?: string): string;
+export const CATALOG: CatalogItem[];
+export const TRENDS: CatalogItem[];
+export function byId(id: string): CatalogItem | undefined;
+export function lockSeed<T>(p: T): T;
+export const CAT_WORDS: [string, RegExp][];
+export function matchFit(t: string): string | null;
+export function parsePrompt(t: string): { ch: Partial<Spec>; u: string[] };
+export const OCC_SETS: Record<string, [string, Partial<Spec>, string][]>;
+export function recommend(occasion: string, profile: ProfileLike | null): { spec: Spec; reason: string }[];
+export function parseSearch(q: string): { u: string[]; items: CatalogItem[] };
+export function finished(spec: Spec, m: Measurements, adj?: Record<string, number>): [string, number][];
+export function finished0(spec: Spec, m: Measurements): [string, number][];
+export function estimateM(heightIn: number, kg: number, shape: string, size: string | null, seed: number): Measurements;

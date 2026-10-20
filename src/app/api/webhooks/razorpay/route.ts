@@ -1,3 +1,4 @@
+import { captureByProviderOrder } from "@/lib/style/server";
 import { NextResponse } from "next/server";
 import { createHash } from "node:crypto";
 import { and, eq } from "drizzle-orm";
@@ -30,7 +31,14 @@ export async function POST(req: Request) {
   try {
     const events = parseRazorpayEvent(body);
     const results = [];
-    for (const ev of events) results.push(await applyEvent(ev));
+    for (const ev of events) {
+      // A clothing order (Kinara Style) is paid through its own gateway order, not a subscription.
+      if (ev.t === "CAPTURED" && ev.orderId) {
+        const style = await captureByProviderOrder(ev.orderId, ev.providerPaymentId);
+        if (style) { results.push(`style:${style}`); continue; }
+      }
+      results.push(await applyEvent(ev));
+    }
     await db.update(schema.webhookEvents).set({ status: events.length ? "PROCESSED" : "IGNORED", processedAt: new Date(), error: null })
       .where(and(eq(schema.webhookEvents.provider, "RAZORPAY"), eq(schema.webhookEvents.eventId, eventId)));
     return NextResponse.json({ ok: true, results });

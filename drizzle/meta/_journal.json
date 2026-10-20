@@ -78,6 +78,13 @@
       "when": 1792503501125,
       "tag": "0010_call_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1792504808309,
+      "tag": "0011_kinara_style",
+      "breakpoints": true
     }
   ]
 }

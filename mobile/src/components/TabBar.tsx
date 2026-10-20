@@ -24,15 +24,17 @@ const TABS: Record<string, { label: string; icon: IconName }> = {
  * Floating glass tab bar. A soft brand-coloured lozenge springs to the selected tab;
  * a small marigold arc sits above the selected icon — the brand mark in miniature.
  */
-export function TabBar({ state, navigation }: { state: any; navigation: any }) {
-  const { c, dark, g } = useTheme();
+export function TabBar({ state, navigation, tabs = TABS, accent }: { state: any; navigation: any; tabs?: Record<string, { label: string; icon: IconName }>; accent?: string }) {
+  const { c: base, dark, g } = useTheme();
+  const c = accent ? { ...base, brand: accent } : base;
+  const TABS_ = tabs;
   const insets = useSafeAreaInsets();
   const [w, setW] = useState(0);
   const matches = useQuery({ queryKey: ["matches"], queryFn: () => api<{ matches: MatchRow[] }>("/api/matches"), staleTime: 30_000 });
   const unread = (matches.data?.matches ?? []).reduce((s, m) => s + m.unread, 0);
   const fresh = (matches.data?.matches ?? []).filter((m) => !m.lastMessage).length;
   const likes = useQuery({ queryKey: ["likes"], queryFn: () => api<{ total: number }>("/api/likes"), staleTime: 60_000 });
-  const routes = state.routes.filter((r: any) => TABS[r.name]);
+  const routes = state.routes.filter((r: any) => TABS_[r.name]);
   const tabW = w / Math.max(1, routes.length);
   const x = useSharedValue(0);
   useEffect(() => { x.value = withSpring(state.index * tabW, { damping: 20, stiffness: 220 }); }, [state.index, tabW, x]);
@@ -44,12 +46,12 @@ export function TabBar({ state, navigation }: { state: any; navigation: any }) {
         <View accessibilityRole="tablist" onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ flexDirection: "row", height: 64 }}>
           {w > 0 && (
             <Animated.View pointerEvents="none" style={[{ position: "absolute", top: 7, left: 0, width: tabW, height: 50, alignItems: "center" }, lozenge]}>
-              <View style={{ width: Math.min(tabW - 8, 76), height: 50, borderRadius: 25, backgroundColor: dark ? alpha(g.spark2, 0.22) : alpha(c.brand, 0.1) }} />
+              <View style={{ width: Math.min(tabW - 8, 76), height: 50, borderRadius: 25, backgroundColor: dark ? alpha(accent ?? g.spark2, 0.22) : alpha(c.brand, 0.1) }} />
             </Animated.View>
           )}
           {routes.map((route: any) => {
             const i = state.routes.indexOf(route);
-            const tab = TABS[route.name];
+            const tab = TABS_[route.name];
             const focused = state.index === i;
             const badge = route.name === "messages" ? unread : route.name === "matches" ? fresh + (likes.data?.total ?? 0) : 0;
             return (
