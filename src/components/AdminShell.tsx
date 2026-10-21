@@ -18,7 +18,6 @@ const NAV: [string, string, string][] = [
   ["/admin/users", "Users", "users.view"],
   ["/admin/matches", "Matches", "users.view"],
   ["/admin/calls", "Calls", "users.view"],
-  ["/admin/style", "Style workshop", "style.view"],
   ["/admin/payments", "Payments", "payments.view"],
   ["/admin/offers", "Offers & coupons", "offers.edit"],
   ["/admin/risk", "Risk & referrals", "security.view"],

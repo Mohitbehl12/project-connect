@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { StyleEntryCard } from "@/style/StyleEntryCard";
 import { router } from "expo-router";
 import { Pressable, ScrollView, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
@@ -73,7 +72,6 @@ export default function ProfileTab() {
           </View>
         </View>
 
-        <StyleEntryCard />
 
         <Pressable accessibilityRole="button" onPress={() => router.push(ms?.state === "FREE_FOREVER" ? "/premium" : premium && ms?.state !== "FREE_TRIAL" ? "/subscription" : "/premium")} style={{ marginHorizontal: 20, borderRadius: 22, overflow: "hidden" }}>
           <LinearGradient colors={[...g.dusk]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ padding: 18, gap: 4 }}>

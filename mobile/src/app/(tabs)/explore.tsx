@@ -1,4 +1,3 @@
-import { StyleEntryCard } from "@/style/StyleEntryCard";
 import { INTEREST_EMOJI, INTERESTS } from "@shared/constants";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
@@ -39,7 +38,6 @@ export default function Explore() {
           <T v="title">Explore</T>
           <T v="caption" tone="muted">Browse by what matters to you</T>
         </View>
-        <View style={{ paddingBottom: 14 }}><StyleEntryCard /></View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingHorizontal: 20 }}>
           {collections(c, g).map((col, i) => (
             <Animated.View key={col.key} entering={FadeInDown.delay(i * 50).duration(300)}>

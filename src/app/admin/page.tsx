@@ -9,7 +9,7 @@ import { COUNTRIES } from "@/lib/constants";
 
 type Stats = {
   users: Record<string, number>; engagement: Record<string, number>;
-  members?: Record<string, number>; calls?: Record<string, number>; style?: { orders: number; revenue30dMinor: number }; payments30d?: { currency: string; amountMinor: number }[]; safety: { openReports: number; criticalReports: number };
+  members?: Record<string, number>; calls?: Record<string, number>; payments30d?: { currency: string; amountMinor: number }[]; safety: { openReports: number; criticalReports: number };
   revenue30d: { currency: string; amountMinor: number }[]; byCountry: { country: string; n: number }[]; byPlan: { plan: string; n: number }[];
   daily: { signups: { d: string; n: number }[]; matches: { d: string; n: number }[] }; retention7d: number;
 };
@@ -89,11 +89,6 @@ function Dashboard() {
             <Kpi label="Accepted / declined" value={`${data.calls?.accepted ?? 0} / ${data.calls?.declined ?? 0}`} />
             <Kpi label="Calls completed" value={data.calls?.completed ?? 0} note={`${data.calls?.missed ?? 0} missed`} />
             <Kpi label="Blocks" value={data.engagement.blocks} note={`${u.suspended} suspended · ${u.banned} banned`} />
-          </div>
-          <h2 className="mb-2 mt-6 text-lg font-bold">Kinara Style</h2>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <Kpi label="Clothing orders" value={data.style?.orders ?? 0} />
-            <Kpi label="Clothing revenue, 30 days" value={`₹${((data.style?.revenue30dMinor ?? 0) / 100).toLocaleString("en-IN")}`} note="See Style workshop for details" />
           </div>
         </>
       )}
