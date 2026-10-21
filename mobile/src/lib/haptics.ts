@@ -1,9 +1,11 @@
 import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
+import { fxState } from "./fx";
 
 // Thin wrapper so screens never have to care whether the device supports haptics.
 const on = Platform.OS === "ios" || Platform.OS === "android";
-const safe = (fn: () => Promise<void>) => { if (on) fn().catch(() => {}); };
+// Follows Settings › Experience › Haptics.
+const safe = (fn: () => Promise<void>) => { if (on && fxState.haptics) fn().catch(() => {}); };
 
 export const haptic = {
   tick: () => safe(() => Haptics.selectionAsync()),

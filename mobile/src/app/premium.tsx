@@ -22,7 +22,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 const BENEFITS: [IconName, string, string, boolean?][] = [
   ["likes", "See who likes you", "Match the moment you like them back."],
   ["sparkle", "More likes every day", "100 a day on Premium, unlimited on Premium Plus."],
-  ["star", "More priority likes", "Lead with a note that lands at the top."],
+  ["star", "More Super Likes ⭐", "Lead with a note that lands at the top."],
   ["sliders", "Advanced filters", "Fine-tune who you see."],
   ["eye", "Incognito (Premium Plus)", "Only people you like can see you."],
   ["pin", "Profile boost & travel mode", "Coming soon.", true],

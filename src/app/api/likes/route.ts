@@ -15,7 +15,7 @@ import { screenMessage } from "@/lib/moderation";
 
 const Body = z.object({
   toId: z.string().min(1).max(64),
-  kind: z.enum(["LIKE", "PASS", "PRIORITY"]),
+  kind: z.enum(["LIKE", "PASS", "PRIORITY", "SPARK"]), // PRIORITY = Super Like ⭐, SPARK = Spark ✨
   note: z.string().trim().max(200).optional(),
 });
 
@@ -52,10 +52,11 @@ export const POST = route(async ({ req, user }) => {
     const f = await planFeatures(user.planCode, user.planEndsAt);
     const [{ n }] = await db.select({ n: count() }).from(schema.likes)
       .where(and(eq(schema.likes.fromId, user.id), eq(schema.likes.kind, b.kind), gte(schema.likes.createdAt, startOfUtcDay())));
-    const limit = b.kind === "PRIORITY" ? f.dailyPriorityLikes : f.dailyLikes;
+    const limit = b.kind === "PRIORITY" ? f.dailyPriorityLikes : b.kind === "SPARK" ? await getConfig("flirt.dailySparks") : f.dailyLikes;
     if (limit >= 0 && n >= limit)
       throw new ApiError(429, b.kind === "PRIORITY"
-        ? "You've used today's priority likes. They refresh at midnight UTC."
+        ? "You've used today's Super Likes. They refresh at midnight UTC."
+        : b.kind === "SPARK" ? "You've sent today's Sparks ✨ — more tomorrow."
         : "You've reached today's like limit. It resets at midnight UTC, or upgrade for more.", "daily_limit");
     if (b.note) {
       const flags = screenMessage(b.note);
@@ -69,8 +70,10 @@ export const POST = route(async ({ req, user }) => {
 
   const match = await matchIfMutual(user.id, b.toId);
   if (!match) {
-    await notify(b.toId, "LIKE", b.kind === "PRIORITY" ? "Someone sent you a priority like" : "Someone likes you",
-      "Open Likes to see who's interested.", "/likes");
+    const [title, body] = b.kind === "PRIORITY" ? ["You received a Super Like ⭐", "Someone really wants to meet you. Open Likes to see who."]
+      : b.kind === "SPARK" ? ["Someone sent you a Spark ✨", "You caught someone's eye 👀 Open Likes to see who."]
+      : ["Someone liked you ❤️", "You caught someone's eye 👀 Open Likes to see who's interested."];
+    await notify(b.toId, "LIKE", title, body, "/likes");
   }
   return ok({ matched: !!match, matchId: match?.id ?? null });
 });
@@ -84,7 +87,7 @@ export const GET = route(async ({ user }) => {
   const blocked = [...(await blockedIds(user.id))];
 
   const incoming = await db.select().from(schema.likes)
-    .where(and(eq(schema.likes.toId, user.id), inArray(schema.likes.kind, ["LIKE", "PRIORITY"]), notInArray(schema.likes.fromId, [...acted, ...blocked, user.id])));
+    .where(and(eq(schema.likes.toId, user.id), inArray(schema.likes.kind, ["LIKE", "PRIORITY", "SPARK"]), notInArray(schema.likes.fromId, [...acted, ...blocked, user.id])));
   if (!incoming.length) return ok({ total: 0, cards: [], hidden: 0, canSeeAll: f.seeWhoLiked });
 
   const rows = await db.select({ user: schema.users, profile: schema.profiles, prefs: schema.preferences })
@@ -97,7 +100,7 @@ export const GET = route(async ({ user }) => {
   const byId = new Map(incoming.map((l) => [l.fromId, l]));
 
   // Priority likes always reveal who sent them; regular likes need the seeWhoLiked entitlement.
-  const visible = rows.filter((r) => f.seeWhoLiked || byId.get(r.user.id)?.kind === "PRIORITY");
+  const visible = rows.filter((r) => f.seeWhoLiked || ["PRIORITY", "SPARK"].includes(byId.get(r.user.id)?.kind ?? ""));
   const photoMap = await photosFor(visible.map((r) => r.user.id));
   // Locked (free plan) likes expose only a blurhash so the grid can show a soft placeholder — never the photo itself.
   const lockedRows = rows.filter((r) => !visible.includes(r));
@@ -109,6 +112,6 @@ export const GET = route(async ({ user }) => {
       const s = scorePair(me.person, toMatchPerson(r, answers.get(r.user.id) ?? {}), weights);
       return { ...publicCard(me.person, r, { score: s.score, reasons: s.reasons, photos: photoMap.get(r.user.id) }), likeKind: like.kind, likeNote: like.note, likedAt: like.createdAt };
     })
-    .sort((a, b) => (a.likeKind === "PRIORITY" ? -1 : 0) - (b.likeKind === "PRIORITY" ? -1 : 0) || +b.likedAt - +a.likedAt);
+    .sort((a, b) => (a.likeKind !== "LIKE" ? -1 : 0) - (b.likeKind !== "LIKE" ? -1 : 0) || +b.likedAt - +a.likedAt);
   return ok({ total: rows.length, cards, hidden: rows.length - cards.length, locked, canSeeAll: f.seeWhoLiked });
 });

@@ -11,12 +11,13 @@ type Ctx = {
 };
 
 const ThemeCtx = createContext<Ctx | null>(null);
-const KEY = "pc.theme"; // light / dark / system
+const KEY = "kn.mode"; // light / dark / system (new key: everyone starts on the dark design once)
 const COLOR_KEY = "pc.colorTheme"; // which colour theme
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const system = useColorScheme();
-  const [pref, setPrefState] = useState<ThemePref>("SYSTEM");
+  // Kinara is designed dark-first (night romance); people can switch to light or follow the phone.
+  const [pref, setPrefState] = useState<ThemePref>("DARK");
   const [themeId, setThemeState] = useState(DEFAULT_THEME);
   useEffect(() => {
     AsyncStorage.multiGet([KEY, COLOR_KEY]).then(([[, v], [, t]]) => {

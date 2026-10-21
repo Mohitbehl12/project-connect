@@ -8,6 +8,23 @@ import { T } from "@/components/Text";
 import { EmptyState, ErrorState, Screen, Skeleton } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useTheme } from "@/theme/ThemeProvider";
+import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from "react-native-reanimated";
+import { useFx } from "@/lib/fx";
+
+/** The moment's emoji (wink, Spark, Super Like, match, call yes, heart), pulsing once when it's new. */
+function EmojiBadge({ emoji, fresh }: { emoji: string; fresh: boolean }) {
+  const { c } = useTheme();
+  const { motion } = useFx();
+  const sc = useSharedValue(1);
+  useEffect(() => { if (fresh && motion) sc.value = withRepeat(withSequence(withTiming(1.25, { duration: 220 }), withTiming(1, { duration: 260 })), 3); }, [fresh, motion, sc]);
+  const st = useAnimatedStyle(() => ({ transform: [{ scale: sc.value }] }));
+  return (
+    <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: c.brandWash, alignItems: "center", justifyContent: "center" }}>
+      <Animated.Text style={[{ fontSize: 22 }, st]} accessibilityElementsHidden>{emoji}</Animated.Text>
+    </View>
+  );
+}
+const momentEmoji = (title: string) => (/📞/.test(title) ? "📞" : /😉/.test(title) ? "😉" : /✨/.test(title) ? "✨" : /⭐/.test(title) ? "⭐" : /💕/.test(title) ? "💕" : /❤️/.test(title) ? "❤️" : null);
 
 type N = { id: string; type: string; title: string; body: string; link: string | null; readAt: string | null; createdAt: string };
 const ICON: Record<string, [IconName, "accent" | "brand" | "trust" | "alert"]> = {
@@ -52,12 +69,14 @@ export default function Notifications() {
         renderSectionHeader={({ section }) => <T v="callout" tone="muted" style={{ marginTop: 8 }}>{section.title}</T>}
         renderItem={({ item: n }) => {
           const [icon, tone] = ICON[n.type] ?? ["bell", "brand"];
+          const emoji = momentEmoji(n.title);
           return (
             <Pressable accessibilityRole={n.link ? "button" : undefined} onPress={() => open(n.link)}
               style={{ flexDirection: "row", gap: 12, alignItems: "center", backgroundColor: c.surface, borderRadius: 20, padding: 14 }}>
+              {emoji ? <EmojiBadge emoji={emoji} fresh={!n.readAt} /> : (
               <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: tone === "accent" ? c.accentWash : tone === "trust" ? c.trustWash : tone === "alert" ? c.alertWash : c.raised, alignItems: "center", justifyContent: "center" }}>
                 <Icon name={icon} size={22} color={c[tone]} />
-              </View>
+              </View>)}
               <View style={{ flex: 1 }}>
                 <T v="headline" style={{ fontFamily: n.readAt ? "Figtree_600SemiBold" : "Figtree_700Bold" }}>{n.title}</T>
                 <T v="callout" tone="muted">{n.body}</T>

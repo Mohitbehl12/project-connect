@@ -53,6 +53,7 @@ export type Me = {
   answers: Record<string, number>;
   features: { dailyLikes: number; dailyPriorityLikes: number; seeWhoLiked: boolean; advancedFilters: boolean; incognito: boolean; travelMode: boolean; monthlyBoosts: number };
   unreadNotifications: number;
+  moment?: { newLikes24h: number; newMatches24h: number };
 };
 
 export type Compatibility = {
@@ -72,6 +73,7 @@ export type Message = {
   id: string; mine: boolean; kind: string; body: string | null; deleted: boolean; createdAt: string; read?: boolean; warning: string | null;
   media?: { url: string; w?: number; h?: number; blurhash?: string; checked?: boolean; ms?: number; type?: string } | null;
   hearts?: { mine: boolean; theirs: boolean };
+  reactions?: { mine: string | null; theirs: string | null };
 };
 
 // --- Billing -----------------------------------------------------------------

@@ -756,8 +756,8 @@ async function main() {
     check("…only once at a time", (await W2.post("/api/call-requests", { matchId: rtMatch, kind: "VIDEO" })).data?.code === "pending");
     const m3st = (await M3.get(`/api/matches/${rtMatch}/call`)).data;
     check("M3 sees it waiting for an answer", m3st?.request?.state === "PENDING" && m3st.request.mine === false && m3st.canCall === false, m3st);
-    const note = ((await M3.get("/api/notifications")).data?.notifications ?? []).find((n: any) => /wants to call you$/.test(n.title));
-    check("M3 is notified \"… wants to call you\"", !!note && /accept or decline/.test(note.body), note);
+    const note = ((await M3.get("/api/notifications")).data?.notifications ?? []).find((n: any) => /wants to have a call with you\. ❤️$/.test(n.title));
+    check("M3 is notified \"… wants to have a call with you. ❤️\"", !!note && /accept or decline/.test(note.body), note);
     check("the person asking can't accept their own request", (await W2.post(`/api/call-requests/${rq.data?.request?.id}`, { action: "accept" })).status === 403);
     check("outsiders can't answer it", (await IAP.post(`/api/call-requests/${rq.data?.request?.id}`, { action: "accept" })).status === 404);
     check("still no call before accepting", (await W2.post(`/api/matches/${rtMatch}/call`, { kind: "AUDIO" })).data?.code === "needs_request");
@@ -769,8 +769,8 @@ async function main() {
     const rq2 = await M3.post("/api/call-requests", { userId: w2Id, kind: "VIDEO" });
     check("a request can be sent from the profile (by person, not chat)", rq2.status === 201, rq2.data);
     check("W2 accepts", (await W2.post(`/api/call-requests/${rq2.data?.request?.id}`, { action: "accept" })).data?.state === "ACCEPTED");
-    const acceptedNote = ((await M3.get("/api/notifications")).data?.notifications ?? []).find((n: any) => n.title === "Call request accepted");
-    check("M3 is told \"Call request accepted. You can now start the call.\"", acceptedNote?.body === "Call request accepted. You can now start the call.", acceptedNote);
+    const acceptedNote = ((await M3.get("/api/notifications")).data?.notifications ?? []).find((n: any) => n.title === "Your call request was accepted ❤️📞");
+    check("M3 is told \"It's a yes! Time to talk. 💕📞\"", acceptedNote?.body === "It's a yes! Time to talk. 💕📞", acceptedNote);
     check("now either of them can call", (await W2.get(`/api/matches/${rtMatch}/call`)).data?.canCall === true && (await M3.get(`/api/matches/${rtMatch}/call`)).data?.canCall === true);
     const hist = (await M3.get("/api/calls/history")).data?.items ?? [];
     check("call history lists requests with who and the outcome", hist.some((h: any) => h.type === "REQUEST" && h.outcome === "Accepted" && h.with?.name) && hist.some((h: any) => h.outcome === "Declined"), hist.slice(0, 3));
@@ -1161,6 +1161,50 @@ async function main() {
     const job = await fetch(`${BASE}/api/cron/billing`, { method: "POST", headers: { "x-cron-secret": envVal("CRON_SECRET") } }).then((r) => r.json());
     check("the retention job reports each category it cleaned", job?.retention && "endedChatMessagesDeleted" in job.retention && "callRecordsDeleted" in job.retention && "auditLogsDeleted" in job.retention, job?.retention);
     check("the audit chain is still intact after all of that", (await admin.get("/api/admin/compliance")).data?.auditChain?.ok === true);
+  }
+
+  section("Flirting: Sparks, Super Likes, winks, hearts, reactions, Cupid, Love Moment");
+  {
+    const F1 = new Client("FlirtyOneClient12345"), F2 = new Client("FlirtyTwoClient123456");
+    const f1 = await onboard(F1, `flirt1-${run}@test.local`, "WOMAN", "MAN", "Asha", answersA);
+    const f2 = await onboard(F2, `flirt2-${run}@test.local`, "MAN", "WOMAN", "Kabir", answersB);
+    const sp = await F2.post("/api/likes", { toId: f1, kind: "SPARK" });
+    check("a Spark is sent", sp.status === 200 && sp.data?.matched === false, sp.data);
+    const n1 = ((await F1.get("/api/notifications")).data?.notifications ?? [])[0];
+    check("…and arrives as “Someone sent you a Spark ✨”", n1?.title === "Someone sent you a Spark ✨", n1);
+    const lk = ((await F1.get("/api/likes")).data?.cards ?? []).find((x: any) => x.id === f2);
+    check("a Spark shows who sent it, even on the free plan", lk?.likeKind === "SPARK", lk?.likeKind);
+    check("the Love Moment counts real likes from the last day", (await F1.get("/api/me")).data?.moment?.newLikes24h >= 1);
+    const back = await F1.post("/api/likes", { toId: f2, kind: "LIKE" });
+    check("liking back a Spark makes a match", back.data?.matched === true, back.data);
+    const mid = back.data?.matchId;
+    const mn = ((await F2.get("/api/notifications")).data?.notifications ?? []).find((x: any) => x.type === "MATCH");
+    check("the match notification says “You have a new match! 💕”", mn?.title === "You have a new match! 💕", mn);
+    const w = await F1.post(`/api/matches/${mid}/flirt`, { kind: "WINK" });
+    check("a wink can be sent in the chat", w.status === 201, w.data);
+    const wn = ((await F2.get("/api/notifications")).data?.notifications ?? [])[0];
+    check("…the other person hears “Asha sent you a wink 😉”", wn?.title === "Asha sent you a wink 😉", wn);
+    await F1.post(`/api/matches/${mid}/flirt`, { kind: "HEART" });
+    await F1.post(`/api/matches/${mid}/flirt`, { kind: "WINK" });
+    check("winks and hearts are capped until the other person replies", (await F1.post(`/api/matches/${mid}/flirt`, { kind: "HEART" })).data?.code === "awaiting_reply");
+    const msgs = (await F2.get(`/api/matches/${mid}/messages`)).data?.messages ?? [];
+    check("winks and hearts show in the chat as their own kind", msgs.filter((m: any) => m.kind === "WINK").length === 2 && msgs.some((m: any) => m.kind === "HEART" && m.body === "❤️"));
+    const reply = await F2.post(`/api/matches/${mid}/messages`, { body: "Haha, hi Asha! How's your week going?" });
+    check("…and a reply opens it up again", reply.status === 201 && (await F1.post(`/api/matches/${mid}/flirt`, { kind: "HEART" })).status === 201);
+    const r1 = await F1.post(`/api/messages/${reply.data.id}/react`, { on: true, emoji: "🔥" });
+    check("messages take 🔥 and other reactions", r1.data?.emoji === "🔥");
+    check("…but only the five reactions", (await F1.post(`/api/messages/${reply.data.id}/react`, { on: true, emoji: "🍆" })).status === 422);
+    const seen = ((await F2.get(`/api/matches/${mid}/messages`)).data?.messages ?? []).find((m: any) => m.id === reply.data.id);
+    check("the other person sees the reaction", seen?.reactions?.theirs === "🔥", seen?.reactions);
+    const cup = await F2.post("/api/cupid", { task: "reply", matchId: mid });
+    check("Cupid suggests replies, labelled as automatic", cup.data?.ideas?.length >= 2 && /automatic suggestions/.test(cup.data.note), cup.data);
+    const op = await F2.post("/api/cupid", { task: "opener", matchId: mid });
+    check("Cupid suggests openers", op.data?.ideas?.length >= 3);
+    check("Cupid suggests date ideas in public places", ((await F2.post("/api/cupid", { task: "date", matchId: mid })).data?.ideas ?? []).every((i: any) => /public/.test(i.why)));
+    check("Cupid helps with a bio", ((await F1.post("/api/cupid", { task: "bio" })).data?.ideas ?? []).length === 3);
+    check("Cupid only works inside your own matches", (await new Client("FlirtyStrangerClient9").post("/api/cupid", { task: "reply", matchId: mid })).status === 401);
+    const sup = await F2.post("/api/likes", { toId: p1Id, kind: "PRIORITY", note: "Love your taste in films" });
+    check("a Super Like arrives as “You received a Super Like ⭐”", sup.status === 200 && (((await P1.get("/api/notifications")).data?.notifications ?? []).some((n: any) => n.title === "You received a Super Like ⭐")), sup.data);
   }
 
   console.log(`\n${passed} passed, ${failures.length} failed`);

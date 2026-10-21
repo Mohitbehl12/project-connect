@@ -10,6 +10,8 @@ import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { IncomingCall } from "@/components/IncomingCall";
+import { FxLayer } from "@/components/FxLayer";
+import { FxProvider } from "@/lib/fx";
 import { StoreBridge } from "@/components/StoreBridge";
 import { AuthProvider } from "@/lib/auth";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
@@ -42,6 +44,7 @@ function Shell() {
         <Stack.Screen name="call/[id]" options={{ animation: "fade", gestureEnabled: false }} />
       </Stack>
       <IncomingCall />
+      <FxLayer />
     </>
   );
 }
@@ -58,10 +61,12 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
-            <AuthProvider>
-              <Shell />
-              <StoreBridge />
-            </AuthProvider>
+            <FxProvider>
+              <AuthProvider>
+                <Shell />
+                <StoreBridge />
+              </AuthProvider>
+            </FxProvider>
           </ThemeProvider>
         </QueryClientProvider>
       </SafeAreaProvider>

@@ -117,12 +117,16 @@ export async function purgeEndedChatMedia(matchIds?: string[]) {
 }
 
 /** Hearts: toggles this person's heart on a message in one of their conversations. */
-export async function react(user: User, messageId: string, on: boolean) {
+export const REACTIONS = ["❤️", "😉", "🔥", "😍", "✨"] as const;
+
+export async function react(user: User, messageId: string, on: boolean, emoji: string = "❤️") {
   const m = await db.query.messages.findFirst({ where: eq(schema.messages.id, messageId) });
   if (!m || m.deletedAt || m.kind === "SYSTEM") throw new ApiError(404, "Message not found.", "not_found");
   await requireMatch(m.matchId, user.id); // must be part of an active conversation
-  if (on) await db.insert(schema.messageReactions).values({ messageId, userId: user.id }).onConflictDoNothing();
+  if (!(REACTIONS as readonly string[]).includes(emoji)) throw new ApiError(422, "Pick one of the reactions.", "validation");
+  if (on) await db.insert(schema.messageReactions).values({ messageId, userId: user.id, emoji })
+    .onConflictDoUpdate({ target: [schema.messageReactions.messageId, schema.messageReactions.userId], set: { emoji, createdAt: new Date() } });
   else await db.delete(schema.messageReactions).where(and(eq(schema.messageReactions.messageId, messageId), eq(schema.messageReactions.userId, user.id)));
   bumpChat(m.matchId);
-  return { liked: on };
+  return { liked: on, emoji: on ? emoji : null };
 }

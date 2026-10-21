@@ -22,6 +22,8 @@ export const CONFIG_DEFAULTS = {
   "calls.minMessagesEach": 1, // both people must have sent at least this many messages before either can call
   "discovery.batchSize": 20,
   "safety.autoSuspendReportThreshold": 5, // distinct reporters within 30 days → auto-suspend pending review
+  "flirt.dailySparks": 3, // Sparks ✨ a member can send per day (a like that shows who sent it)
+  "flirt.maxUnansweredFlirts": 3, // winks/hearts in a row before the other person replies
   "chat.massMessagingMatches": 15, // new chats started within 10 minutes before we ask the person to slow down (0 = off)
   // Staff security
   "admin.idleTimeoutMinutes": 30, // staff must re-enter their 2-step code after this long without admin activity

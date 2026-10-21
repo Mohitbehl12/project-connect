@@ -1,6 +1,6 @@
 import { deleteAccount } from "@/lib/privacy";
 import { z } from "zod";
-import { and, count, eq, isNull } from "drizzle-orm";
+import { and, count, eq, gte, isNull, ne, or } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ApiError, ok, parseBody, route } from "@/lib/http";
 import { planFeatures } from "@/lib/config";
@@ -23,6 +23,12 @@ export const GET = route(async ({ user }) => {
     db.select({ unread: count() }).from(schema.notifications).where(and(eq(schema.notifications.userId, user.id), isNull(schema.notifications.readAt))),
     pendingLegal(user.id),
   ]);
+  // "Your Love Moment": real numbers from the last 24 hours only — never invented or exaggerated.
+  const day = new Date(Date.now() - 86400_000);
+  const [[{ likes24 }], [{ matches24 }]] = await Promise.all([
+    db.select({ likes24: count() }).from(schema.likes).where(and(eq(schema.likes.toId, user.id), ne(schema.likes.kind, "PASS"), gte(schema.likes.createdAt, day))),
+    db.select({ matches24: count() }).from(schema.matches).where(and(or(eq(schema.matches.userAId, user.id), eq(schema.matches.userBId, user.id)), eq(schema.matches.status, "ACTIVE"), gte(schema.matches.createdAt, day))),
+  ]);
   const fresh = (await db.query.users.findFirst({ where: eq(schema.users.id, user.id) })) ?? user;
   const features = await planFeatures(fresh.planCode, fresh.planEndsAt);
   const membership = await membershipStatus(user.id);
@@ -41,6 +47,7 @@ export const GET = route(async ({ user }) => {
     features,
     membership,
     unreadNotifications: unread,
+    moment: { newLikes24h: likes24, newMatches24h: matches24 },
     pendingLegal: legal,
   });
 }, { allowSuspended: true });

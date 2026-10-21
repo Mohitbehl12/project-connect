@@ -14,10 +14,13 @@ import { haptic } from "@/lib/haptics";
 import { useTheme, type ThemePref } from "@/theme/ThemeProvider";
 import { Group, LinkRow, Toggle } from "@/components/SettingsKit";
 import { ThemePicker } from "@/components/ThemePicker";
+import { useFx, type TypingStyle } from "@/lib/fx";
+import { CHAT_THEMES } from "@/components/ChatFx";
 
 export default function Settings() {
   const { me, refetchMe, signOut } = useAuth();
   const { pref, setPref } = useTheme();
+  const fx = useFx();
   const qc = useQueryClient();
   const p = me?.preferences;
   const [err, setErr] = useState("");
@@ -42,6 +45,23 @@ export default function Settings() {
         <Group title="Appearance">
           <View style={{ flexDirection: "row", gap: 8, paddingVertical: 12 }}>
             {(["SYSTEM", "LIGHT", "DARK"] as ThemePref[]).map((t) => <Chip key={t} label={t === "SYSTEM" ? "System" : t === "LIGHT" ? "Light" : "Dark"} selected={pref === t} onPress={() => theme(t)} />)}
+          </View>
+        </Group>
+        <Group title="Experience">
+          <Toggle label="Animations" sub="Hearts, sparkles, match moments and chat backgrounds. Also off when your phone asks for reduced motion." value={fx.prefs.animations} onChange={(v) => fx.set({ animations: v })} />
+          <Toggle label="Sound" sub="A soft heartbeat, chime or sparkle for likes, matches and winks." value={fx.prefs.sound} onChange={(v) => fx.set({ sound: v })} />
+          <Toggle label="Haptics" sub="Gentle vibrations on supported phones." value={fx.prefs.haptics} onChange={(v) => { fx.set({ haptics: v }); if (v) haptic.light(); }} />
+          <View style={{ paddingVertical: 12, gap: 8 }}>
+            <T v="headline" style={{ fontFamily: "Figtree_600SemiBold" }}>When someone is typing</T>
+            <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+              {([["dots", "• • •"], ["hearts", "💕 • • •"], ["playful", "Thinking… 😉"]] as [TypingStyle, string][]).map(([k, l]) => <Chip key={k} label={l} selected={fx.prefs.typing === k} onPress={() => fx.set({ typing: k })} />)}
+            </View>
+          </View>
+          <View style={{ paddingVertical: 12, gap: 8 }}>
+            <T v="headline" style={{ fontFamily: "Figtree_600SemiBold" }}>Chat theme</T>
+            <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+              {CHAT_THEMES.map((t) => <Chip key={t.id} label={t.name} selected={fx.prefs.chatTheme === t.id} onPress={() => fx.set({ chatTheme: t.id })} />)}
+            </View>
           </View>
         </Group>
         <Group title="Colour theme">

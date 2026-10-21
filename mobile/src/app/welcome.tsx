@@ -9,6 +9,7 @@ import { Button } from "@/components/Button";
 import { VerifiedBadge } from "@/components/Icon";
 import { T } from "@/components/Text";
 import { ArcMark, CompatArc } from "@/components/Arc";
+import { FloatingHearts } from "@/components/FxLayer";
 import { Aurora } from "@/components/Ambient";
 import { useTheme } from "@/theme/ThemeProvider";
 import type { Glow, Palette } from "@/theme/themes";
@@ -101,9 +102,9 @@ function SafetyArt() {
 }
 
 const SLIDES = [
-  { title: "Meet someone worth staying for.", body: "Meaningful connections with people who match your vibe, values and energy." },
-  { title: "Know why before you say hello.", body: "Every profile shows what you have in common." },
-  { title: "Safe by design.", body: "Verification, quick reporting and privacy built in." },
+  { title: "Meet someone who makes your heart skip a beat. ❤️", body: "Discover. Connect. Flirt. Find your chemistry. 🔥" },
+  { title: "Chemistry, before you say hello. 👀", body: "See what you have in common, then break the ice with a wink, a Spark or a little help from Cupid." },
+  { title: "Flirty, and safe by design.", body: "Verified profiles, calls only after you say yes, and privacy you control." },
 ];
 
 export default function Welcome() {
@@ -118,6 +119,7 @@ export default function Welcome() {
       <StatusBar style="light" />
       <LinearGradient colors={[c.brand, g.night]} start={{ x: 0.2, y: 0 }} end={{ x: 0.5, y: 0.75 }} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 }} />
       <Aurora variant="match" style={{ opacity: 0.55 }} />
+      <FloatingHearts />
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 24, paddingTop: 8 }}>
           <ArcMark size={28} left={g.onNight} right={g.spark} />
@@ -137,7 +139,7 @@ export default function Welcome() {
                 {index === 0 ? <Collage size={art} /> : index === 1 ? <MiniCard /> : <SafetyArt />}
               </View>
               <Animated.View entering={FadeInDown.duration(400).delay(150)} style={{ gap: 10 }}>
-                <T v="display" tone="white" style={{ fontSize: 38, lineHeight: 42 }}>{item.title}</T>
+                <T v="display" tone="white" style={{ fontSize: 34, lineHeight: 39 }}>{item.title}</T>
                 <T tone="white" style={{ opacity: 0.75 }}>{item.body}</T>
               </Animated.View>
             </View>
@@ -147,7 +149,7 @@ export default function Welcome() {
           <View style={{ flexDirection: "row", gap: 6, justifyContent: "center", marginBottom: 8 }} accessibilityLabel={`Page ${page + 1} of 3`}>
             {SLIDES.map((s, i) => <View key={s.title} style={{ height: 6, width: i === page ? 22 : 6, borderRadius: 3, backgroundColor: i === page ? g.spark : "rgba(255,255,255,0.3)" }} />)}
           </View>
-          <Button title="Find my match" v="accent" size="lg" full onPress={() => router.push("/sign-up")} />
+          <Button title="Start Matching ❤️" v="accent" size="lg" full onPress={() => router.push("/sign-up")} />
           <Button title="I already have an account" v="ghost" textColor="#FFFFFF" full onPress={() => router.push("/sign-in")} />
           <T v="caption" center style={{ color: "rgba(255,255,255,0.55)" }}>For adults 18 and over.</T>
         </View>

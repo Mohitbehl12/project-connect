@@ -59,7 +59,7 @@ export function DiscoveryCard({ card, drag, threshold, photoIndex = 0, bottomIns
         </View>
       )}
 
-      <LinearGradient colors={["transparent", "rgba(22,17,42,0.6)", "rgba(12,11,30,0.97)"]} locations={[0, 0.38, 1]}
+      <LinearGradient colors={["transparent", "rgba(30,8,18,0.6)", "rgba(15,7,9,0.97)"]} locations={[0, 0.38, 1]}
         style={{ position: "absolute", left: 0, right: 0, bottom: 0, paddingTop: 140, paddingHorizontal: 20, paddingBottom: 20 + bottomInset, gap: 10 }}>
         <View style={{ flexDirection: "row", alignItems: "flex-end", gap: 10 }}>
           <T v="display" tone="white" numberOfLines={1} style={{ flexShrink: 1, fontSize: 40, lineHeight: 44, textShadowColor: "rgba(0,0,0,0.35)", textShadowRadius: 12 }}>
@@ -67,6 +67,11 @@ export function DiscoveryCard({ card, drag, threshold, photoIndex = 0, bottomIns
           </T>
           {card.verified && <View style={{ marginBottom: 9 }}><VerifiedBadge size={24} /></View>}
         </View>
+        {(card.score ?? 0) >= 80 && (
+          <View style={{ alignSelf: "flex-start", flexDirection: "row", gap: 6, alignItems: "center", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, backgroundColor: "rgba(232,70,124,0.28)", borderWidth: 1, borderColor: "rgba(244,143,184,0.55)" }}>
+            <T v="caption" strong tone="white">There might be chemistry here… 🔥</T>
+          </View>
+        )}
 
         {page === 1 && card.bio ? (
           <T v="callout" tone="white" numberOfLines={4} style={{ opacity: 0.95 }}>{card.bio}</T>

@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import { INTENTS, INTEREST_EMOJI, INTERESTS, LIFESTYLE } from "@shared/constants";
 import { Button } from "@/components/Button";
 import { Header } from "@/components/Header";
@@ -31,6 +31,11 @@ export default function EditProfile() {
   const qc = useQueryClient();
   const p = me?.profile;
   const [bio, setBio] = useState(p?.bio ?? "");
+  const [ideas, setIdeas] = useState<{ text: string; why: string }[] | null>(null);
+  const [seed, setSeed] = useState(0);
+  async function askCupid() {
+    try { const r = await api<{ ideas: { text: string; why: string }[] }>("/api/cupid", { body: { task: "bio", seed } }); setIdeas(r.ideas); setSeed(seed + 1); } catch { setIdeas([]); }
+  }
   const [prompts, setPrompts] = useState<{ q: string; a: string }[]>(() => { try { return JSON.parse(p?.prompts ?? "[]"); } catch { return []; } });
   const [interests, setInterests] = useState<string[]>(p?.interests ? p.interests.split(",").filter(Boolean) : []);
   const [intent, setIntent] = useState(p?.intent ?? "");
@@ -63,6 +68,14 @@ export default function EditProfile() {
           <Section title="About me" hint={`${bio.length}/500 · a few honest lines beat a list of adjectives`}>
             <TextInput value={bio} onChangeText={setBio} multiline maxLength={500} accessibilityLabel="About me" placeholder="Weekday spreadsheets, weekend trails…" placeholderTextColor={c.faint}
               style={{ minHeight: 100, borderRadius: 16, backgroundColor: c.raised, padding: 14, fontSize: 17, color: c.text, fontFamily: "Figtree_500Medium", textAlignVertical: "top" }} />
+            <Pressable accessibilityRole="button" onPress={askCupid} style={{ alignSelf: "flex-start", paddingVertical: 6 }}>
+              <T v="callout" strong tone="brand">{ideas ? "More ideas from Cupid ✨" : "Cupid, help me write this ✨"}</T>
+            </Pressable>
+            {ideas?.map((i) => (
+              <Pressable key={i.text} accessibilityRole="button" accessibilityLabel={`Use: ${i.text}`} onPress={() => { haptic.tick(); setBio(i.text); }} style={{ backgroundColor: c.surface, borderRadius: 14, padding: 12, gap: 2 }}>
+                <T v="callout">{i.text}</T><T v="caption" tone="faint">{i.why} · tap to use, then make it yours</T>
+              </Pressable>
+            ))}
           </Section>
           <Section title="Prompts" hint="Up to three. These are what people reply to most.">
             {[0, 1, 2].map((i) => (

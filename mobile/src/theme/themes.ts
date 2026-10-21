@@ -79,6 +79,8 @@ function build(s: Seed): Theme {
 }
 
 const SEEDS: Seed[] = [
+  // Kinara Night (default): deep black-wine, rose, burgundy, dark purple and warm gold.
+  { id: "kinara-night", name: "Kinara Night", brand: "#9B1B4A", brandDark: "#F48FB8", accent: "#E9C37A", accentInk: "#3B2608", bg: "#FFF5F7", text: "#2B0C1A", grad: ["#E8467C", "#7B2FB0"], night: "#0F0709" },
   { id: "lilac-mint", name: "Lilac + mint", brand: "#7B48CC", brandDark: "#C3A6FF", accent: "#7FD8BE", accentInk: "#173B33", bg: "#F7F4FF", text: "#2B1F45", grad: ["#8E5BD8", "#7FD8BE"], night: "#16112A" },
   { id: "lavender-peach", name: "Lavender + peach", brand: "#7446D4", brandDark: "#C9B3FF", accent: "#FFC4A3", accentInk: "#4A2A14", bg: "#FAF6FF", text: "#2E2142", grad: ["#9B7BEA", "#FFB38A"], night: "#18122B" },
   { id: "pink-lavender", name: "Baby pink + lavender", brand: "#7E4FD0", brandDark: "#D5B8FF", accent: "#F9C9DC", accentInk: "#5A2440", bg: "#FFF8FB", text: "#3A2340", grad: ["#F4A9CC", "#A98BEA"], night: "#1C1222" },
@@ -92,5 +94,5 @@ const SEEDS: Seed[] = [
 ];
 
 export const THEMES: Theme[] = SEEDS.map(build);
-export const DEFAULT_THEME = "lilac-mint";
+export const DEFAULT_THEME = "kinara-night";
 export const themeById = (id: string | null | undefined) => THEMES.find((t) => t.id === id) ?? THEMES[0];

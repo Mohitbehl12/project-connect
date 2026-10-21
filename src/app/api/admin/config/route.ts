@@ -52,6 +52,8 @@ const Body = z.object({
     "retention.auditLogDays": z.number().int().min(365).max(3650).optional(),
     "retention.inactiveAccountMonths": z.number().int().min(0).max(120).optional(),
     "chat.massMessagingMatches": z.number().int().min(0).max(200).optional(),
+    "flirt.dailySparks": z.number().int().min(0).max(50).optional(),
+    "flirt.maxUnansweredFlirts": z.number().int().min(1).max(20).optional(),
     "admin.idleTimeoutMinutes": z.number().int().min(5).max(240).optional(),
     "admin.sensitiveViewsPerHourAlert": z.number().int().min(5).max(10000).optional(),
     "moderation.photoScreening": z.enum(["auto", "review", "off"]).optional(),

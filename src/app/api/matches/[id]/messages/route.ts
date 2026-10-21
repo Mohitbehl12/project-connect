@@ -63,6 +63,10 @@ export const GET = route<{ id: string }>(async ({ req, user, params }) => {
         warning: !mine && !m.deletedAt ? warningFor(flags) : null,
         media: media[i],
         hearts: { mine: hearts.some((h) => h.messageId === m.id && h.userId === user.id), theirs: hearts.some((h) => h.messageId === m.id && h.userId !== user.id) },
+        reactions: {
+          mine: hearts.find((h) => h.messageId === m.id && h.userId === user.id)?.emoji ?? null,
+          theirs: hearts.find((h) => h.messageId === m.id && h.userId !== user.id)?.emoji ?? null,
+        },
       };
     }),
   });

@@ -132,7 +132,7 @@ export default function ProfileSheet() {
         )}
         {from === "match" && (
           <View style={{ paddingHorizontal: 20, gap: 8 }}>
-            <Button title={callNote ? "Request sent" : "Request a call"} icon="video" disabled={!!callNote} onPress={async () => {
+            <Button title={callNote ? "Request sent 📞" : "Request a Call 📞"} icon="video" disabled={!!callNote} onPress={async () => {
               try {
                 await api("/api/call-requests", { body: { userId: card.id, kind: "VIDEO" } });
                 setCallNote(`Request sent. You can call once ${card.firstName} accepts — we'll let you know.`);

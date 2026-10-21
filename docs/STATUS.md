@@ -252,3 +252,25 @@ Built to the 30-section "Privacy by Design / Safety by Design" brief. The full m
   - Launch readiness checklist
 - **Tests:** 75 unit, 684 end-to-end, 9 two-server; iOS and Android bundles export.
 - **Needs people, not code:** lawyer review, DPAs, an independent penetration test, a law-enforcement/CSAM process, a breach plan.
+
+## Flirty premium redesign (21 October 2026)
+- **Look:** a new default "Kinara Night" theme (deep black-wine, rose, burgundy, dark purple, warm gold), dark by default. All 11 themes pass the AA contrast check. New dark romantic hero on the website.
+- **Moments:**
+  - Like: ❤️→💖→💕→✨ with flying hearts and a heartbeat
+  - Super Like: ⭐→✨→❤️→🔥
+  - Spark ✨: a new like type, 3 a day, shows who sent it
+  - Match: photos meet, a big heart, "IT'S A MATCH! 🔥", Say Hello / Send a Wink / Send a Heart
+  - Call accepted: "It's a yes! Time to talk. 💕📞"
+- **Chat:**
+  - winks and hearts as animated messages ("Send a wink back"), capped at 3 without a reply
+  - five reactions (❤️ 😉 🔥 😍 ✨) with a small burst
+  - six chat themes (Midnight, Rose, Passion, Luxury, Romance, Starlight)
+  - a chemistry glow only when both people are actively chatting
+  - three typing styles
+  - call requests with "Accept ❤️ / Maybe later / Decline"
+- **Cupid ❤️:** opener, reply, date and bio ideas. Rule-based (no AI service), clearly labelled; nothing is sent for you.
+- **Love Moment:** at most once a day, using only real numbers from the last 24 hours.
+- **Settings › Experience:** animations, sound, haptics, typing style and chat theme. The phone's reduced-motion setting is respected.
+- **Sounds:** synthesised in-house (heartbeat, chime, wink, sparkle, soft).
+- **Kept honest on purpose:** no "someone viewed you" tracking (it's about likes instead), no invented admirers, no autoplaying ambient effects when animations are off.
+- **Tests:** 80 unit, 730 end-to-end.

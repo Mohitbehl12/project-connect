@@ -19,7 +19,7 @@ export const GET = route<{ userId: string }>(async ({ user, params }) => {
 
   const [a, b] = orderedPair(user.id, params.userId);
   const matched = await db.query.matches.findFirst({ where: and(eq(schema.matches.userAId, a), eq(schema.matches.userBId, b)) });
-  const likedMe = await db.query.likes.findFirst({ where: and(eq(schema.likes.fromId, params.userId), eq(schema.likes.toId, user.id), or(eq(schema.likes.kind, "LIKE"), eq(schema.likes.kind, "PRIORITY"))) });
+  const likedMe = await db.query.likes.findFirst({ where: and(eq(schema.likes.fromId, params.userId), eq(schema.likes.toId, user.id), or(eq(schema.likes.kind, "LIKE"), eq(schema.likes.kind, "PRIORITY"), eq(schema.likes.kind, "SPARK"))) });
   if (!matched && !likedMe && eligibility(me.person, other.person) !== null) throw notFound;
 
   const weights = await getConfig("matching.weights");

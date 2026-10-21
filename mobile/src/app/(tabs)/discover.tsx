@@ -19,6 +19,8 @@ import { cardCache } from "@/lib/cardCache";
 import { haptic } from "@/lib/haptics";
 import type { Card } from "@/lib/types";
 import { useTheme } from "@/theme/ThemeProvider";
+import { MOMENTS, celebrate } from "@/lib/fx";
+import { LoveMoment } from "@/components/LoveMoment";
 
 const MODES = [
   ["recommended", "Top picks"],
@@ -66,8 +68,11 @@ export default function Discover() {
     else setIndex((i) => i + 1);
   }
 
-  async function decide(kind: Decision | "PRIORITY", card: Card, withNote?: string) {
+  async function decide(kind: Decision | "PRIORITY" | "SPARK", card: Card, withNote?: string) {
     if (kind === "PASS") setLastPassed(card); else setLastPassed(null);
+    if (kind === "LIKE") { celebrate(MOMENTS.like); haptic.medium(); }
+    if (kind === "PRIORITY") celebrate(MOMENTS.superLike);
+    if (kind === "SPARK") celebrate(MOMENTS.spark);
     advance();
     try {
       const r = await api<{ matched: boolean; matchId: string | null }>("/api/likes", { body: { toId: card.id, kind, note: withNote || undefined } });
@@ -81,7 +86,8 @@ export default function Discover() {
       // Put the card back so nothing is lost when a like didn't go through.
       setExtra((ex) => [card, ...ex]);
       haptic.warning();
-      setNotice({ tone: e.code === "daily_limit" ? "warn" : "alert", text: e.code === "daily_limit" ? "That's today's likes. New people tomorrow — or polish your profile meanwhile." : e.message, premium: e.code === "daily_limit" });
+      const limitLikes = e.code === "daily_limit" && kind === "LIKE";
+      setNotice({ tone: e.code === "daily_limit" ? "warn" : "alert", text: limitLikes ? "That's today's likes. New people tomorrow — or polish your profile meanwhile." : e.message, premium: limitLikes });
     }
   }
 
@@ -124,6 +130,7 @@ export default function Discover() {
         {MODES.map(([k, l]) => <Chip key={k} small label={l} selected={mode === k} onPress={() => { haptic.tick(); setMode(k); }} />)}
       </ScrollView>
 
+      <LoveMoment />
       {notice && (
         <Animated.View entering={FadeInDown} style={{ paddingHorizontal: 12, paddingBottom: 8 }}>
           <Banner tone={notice.tone} onPress={notice.premium ? () => router.push("/premium") : () => setNotice(null)}>
@@ -150,12 +157,14 @@ export default function Discover() {
       </View>
 
       {top && (
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 18, paddingTop: 14, paddingBottom: 8 }}>
-          <Orb icon="undo" label="Undo last pass" size={46} disabled={!lastPassed} onPress={undo} />
-          <Orb icon="pass" label={`Pass on ${top.firstName}`} size={64} onPress={() => deck.current?.swipe("PASS")} />
-          <Orb icon="likes" label={`Like ${top.firstName}`} size={78} like onPress={() => deck.current?.swipe("LIKE")} />
-          <Orb icon="star" label={`Priority like with a note to ${top.firstName}`} size={56} tint={c.accent}
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingTop: 14, paddingBottom: 8 }}>
+          <Orb icon="undo" label="Undo last pass" size={40} disabled={!lastPassed} onPress={undo} />
+          <Orb icon="pass" label={`Pass on ${top.firstName}`} size={56} onPress={() => deck.current?.swipe("PASS")} />
+          <Orb icon="eye" label={`View ${top.firstName}'s profile`} size={46} onPress={() => router.push({ pathname: "/profile/[id]", params: { id: top.id } })} />
+          <Orb icon="likes" label={`Like ${top.firstName}`} size={74} like onPress={() => deck.current?.swipe("LIKE")} />
+          <Orb icon="star" label={`Super Like ${top.firstName}, with a note`} size={52} tint={c.accent}
             onPress={() => { setNote(top.shared[0] ? `You're into ${top.shared[0].label.toLowerCase()} too — ` : ""); setNoteFor(top); }} />
+          <Orb icon="sparkle" label={`Send ${top.firstName} a Spark`} size={46} tint={g.sunset[0]} onPress={() => decide("SPARK", top)} />
         </View>
       )}
 
@@ -176,12 +185,12 @@ export default function Discover() {
         )}
       </BottomSheet>
 
-      <BottomSheet open={!!noteFor} onClose={() => setNoteFor(null)} title={noteFor ? `Priority like for ${noteFor.firstName}` : undefined}>
-        <T tone="muted">Your note lands at the top of their likes. Mention something from their profile.</T>
+      <BottomSheet open={!!noteFor} onClose={() => setNoteFor(null)} title={noteFor ? `Super Like ⭐ ${noteFor.firstName}` : undefined}>
+        <T tone="muted">Your Super Like and note land at the top of their likes, and they'll see it's you. Mention something from their profile.</T>
         <TextInput value={note} onChangeText={setNote} maxLength={200} multiline autoFocus accessibilityLabel="Your note"
           style={{ minHeight: 96, borderRadius: 16, backgroundColor: c.raised, padding: 14, fontSize: 17, color: c.text, fontFamily: "Figtree_500Medium", textAlignVertical: "top" }} />
         <T v="caption" tone="faint">{me?.features.dailyPriorityLikes ?? 1} a day on your plan · {200 - note.length} characters left</T>
-        <Button title="Send priority like" v="accent" size="lg" full icon="star"
+        <Button title="Send Super Like ⭐" v="accent" size="lg" full icon="star"
           onPress={() => { const card = noteFor!; setNoteFor(null); haptic.success(); decide("PRIORITY", card, note.trim()); }} />
       </BottomSheet>
     </Screen>

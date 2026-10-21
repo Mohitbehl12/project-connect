@@ -13,7 +13,7 @@ export const orderedPair = (x: string, y: string): [string, string] => (x < y ? 
 /** Creates a match if both people have liked each other. Idempotent. */
 export async function matchIfMutual(fromId: string, toId: string) {
   const back = await db.query.likes.findFirst({
-    where: and(eq(schema.likes.fromId, toId), eq(schema.likes.toId, fromId), inArray(schema.likes.kind, ["LIKE", "PRIORITY"])),
+    where: and(eq(schema.likes.fromId, toId), eq(schema.likes.toId, fromId), inArray(schema.likes.kind, ["LIKE", "PRIORITY", "SPARK"])),
   });
   if (!back) return null;
   const [userAId, userBId] = orderedPair(fromId, toId);
@@ -26,8 +26,8 @@ export async function matchIfMutual(fromId: string, toId: string) {
   const s = mutualScore(a.person, b.person, weights);
   const [m] = await db.insert(schema.matches).values({ userAId, userBId, score: s.score, reasons: JSON.stringify(s.reasons) }).returning();
 
-  await notify(fromId, "MATCH", `You matched with ${b.row.profile.firstName}`, "Say hello while it's fresh.", `/matches/${m.id}`);
-  await notify(toId, "MATCH", `You matched with ${a.row.profile.firstName}`, "Say hello while it's fresh.", `/matches/${m.id}`);
+  await notify(fromId, "MATCH", "You have a new match! 💕", `It's mutual with ${b.row.profile.firstName} 😉 Say hello while it's fresh.`, `/matches/${m.id}`);
+  await notify(toId, "MATCH", "You have a new match! 💕", `It's mutual with ${a.row.profile.firstName} 😉 Say hello while it's fresh.`, `/matches/${m.id}`);
   return m;
 }
 

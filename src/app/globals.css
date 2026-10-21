@@ -38,3 +38,12 @@
 /* The single orchestrated motion: the compatibility arc drawing in when a profile opens. */
 @keyframes arc-in { from { stroke-dashoffset: var(--arc-len); } }
 .arc-draw { animation: arc-in 900ms cubic-bezier(.2,.7,.2,1) both; }
+
+/* Landing hero: deep wine-black with rose/purple glow, floating hearts. */
+.kn-hero { background: radial-gradient(1200px 600px at 15% -10%, rgba(232,70,124,0.45), transparent 60%), radial-gradient(900px 500px at 95% 20%, rgba(123,47,176,0.45), transparent 60%), linear-gradient(180deg, #0F0709 0%, #1A0810 60%, #0F0709 100%); }
+.kn-float { position: absolute; bottom: -40px; opacity: 0; animation: kn-rise 16s linear infinite; }
+@keyframes kn-rise { 0% { transform: translateY(0) rotate(0); opacity: 0; } 10% { opacity: 0.55; } 85% { opacity: 0.4; } 100% { transform: translateY(-110vh) rotate(25deg); opacity: 0; } }
+.kn-glow { box-shadow: 0 10px 40px -8px rgba(232,70,124,0.75); transition: box-shadow .25s, transform .25s; }
+.kn-glow:hover { box-shadow: 0 14px 54px -6px rgba(232,70,124,0.95); transform: translateY(-1px); }
+.kn-pop { transition: transform .2s; } .kn-pop:hover { transform: scale(1.12); }
+@media (prefers-reduced-motion: reduce) { .kn-float { animation: none; display: none; } .kn-glow, .kn-pop { transition: none; } }

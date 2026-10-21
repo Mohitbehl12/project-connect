@@ -110,7 +110,7 @@ export async function createCallRequest(user: User, input: { matchId?: string; u
 
   const me = await db.query.profiles.findFirst({ where: eq(schema.profiles.userId, user.id) });
   const name = me?.firstName ?? "Your match";
-  await notify(other, "CALL", `${name} wants to call you`, `${input.kind === "VIDEO" ? "Video" : "Voice"} call request. Open the chat to accept or decline — you won't be connected unless you accept.`, `/matches/${matchId}`);
+  await notify(other, "CALL", `${name} wants to have a call with you. ❤️`, `${input.kind === "VIDEO" ? "Video" : "Voice"} call request. Open the chat to accept or decline — you won't be connected unless you accept.`, `/matches/${matchId}`);
   bumpChat(matchId);
   return view(r, user.id);
 }
@@ -131,7 +131,7 @@ export async function respondToCallRequest(user: User, id: string, action: "acce
     if (await isBlockedBetween(r.fromId, r.toId)) throw new ApiError(410, "This match has ended.", "match_ended");
     await set("ACCEPTED", { expiresAt: new Date(Date.now() + ACCEPTED_MS) });
     await audit(user.id, "call_request.accepted", "match", r.matchId);
-    await notify(r.fromId, "CALL", "Call request accepted", "Call request accepted. You can now start the call.", `/matches/${r.matchId}`);
+    await notify(r.fromId, "CALL", "Your call request was accepted ❤️📞", "It's a yes! Time to talk. 💕📞", `/matches/${r.matchId}`);
     return { state: "ACCEPTED" };
   }
   if (action === "cancel") {

@@ -57,19 +57,19 @@ export default function LikesScreen() {
             </View>
           ) : null}
           renderItem={({ item: cell }) => cell.kind === "card" ? (
-            <Pressable accessibilityRole="button" accessibilityLabel={`${cell.card.firstName}, ${cell.card.age}${cell.card.likeKind === "PRIORITY" ? ", sent a priority like" : ""}`}
+            <Pressable accessibilityRole="button" accessibilityLabel={`${cell.card.firstName}, ${cell.card.age}${cell.card.likeKind === "PRIORITY" ? ", sent you a Super Like" : cell.card.likeKind === "SPARK" ? ", sent you a Spark" : ""}`}
               onPress={() => router.push({ pathname: "/profile/[id]", params: { id: cell.card.id } })} style={{ width: w, height: w * 1.35, borderRadius: 22, overflow: "hidden" }}>
               <PhotoView photo={cell.card.photos[0]} style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0 } as any} />
-              <LinearGradient colors={["transparent", "rgba(22,17,42,0.9)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: 12, paddingTop: 40 }}>
+              <LinearGradient colors={["transparent", "rgba(15,7,9,0.9)"]} style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: 12, paddingTop: 40 }}>
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                   <T v="headline" tone="white" numberOfLines={1} style={{ flexShrink: 1 }}>{cell.card.firstName}, {cell.card.age}</T>
                   {cell.card.verified && <VerifiedBadge size={16} />}
                 </View>
                 <T v="caption" tone="white" style={{ opacity: 0.8 }}>{cell.card.score}% compatible</T>
               </LinearGradient>
-              {cell.card.likeKind === "PRIORITY" && (
+              {(cell.card.likeKind === "PRIORITY" || cell.card.likeKind === "SPARK") && (
                 <View style={{ position: "absolute", top: 10, left: 10, flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: c.accent, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 4 }}>
-                  <Icon name="star" size={14} color={c.accentText} filled /><T v="caption" style={{ color: c.accentText, fontFamily: "Figtree_700Bold" }}>Note</T>
+                  <T v="caption" style={{ color: c.accentText, fontFamily: "Figtree_700Bold" }}>{cell.card.likeKind === "SPARK" ? "Spark ✨" : "Super Like ⭐"}</T>
                 </View>
               )}
             </Pressable>
