@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { SponsoredSlot } from "@/components/Sponsored";
 import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useEffect } from "react";
@@ -32,6 +33,7 @@ export default function LikesScreen() {
   return (
     <Screen>
       <Header title="Likes you" sub={q.data?.total ? `${q.data.total} ${q.data.total === 1 ? "person likes" : "people like"} you` : "People who like you show up here"} />
+      <SponsoredSlot placement="BANNER" compact style={{ marginBottom: 12 }} />
       {q.isLoading && <View style={{ flexDirection: "row", gap: 12 }}><Skeleton w={w} h={w * 1.35} r={22} /><Skeleton w={w} h={w * 1.35} r={22} /></View>}
       {q.error && <ErrorState message={(q.error as Error).message} onRetry={() => q.refetch()} />}
       {q.data && q.data.total === 0 && (

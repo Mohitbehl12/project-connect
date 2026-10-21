@@ -21,6 +21,7 @@ import type { Card } from "@/lib/types";
 import { useTheme } from "@/theme/ThemeProvider";
 import { MOMENTS, celebrate } from "@/lib/fx";
 import { LoveMoment } from "@/components/LoveMoment";
+import { SponsoredCard, useAd } from "@/components/Sponsored";
 
 const MODES = [
   ["recommended", "Top picks"],
@@ -49,6 +50,10 @@ export default function Discover() {
   const [extra, setExtra] = useState<Card[]>([]); // cards restored by undo
   const x = useSharedValue(0);
   const deck = useRef<DeckHandle>(null);
+  // Ads stay light: at most one sponsored card every N profiles (set by admins), never mid-swipe.
+  const sponsored = useAd("DISCOVER");
+  const [swipes, setSwipes] = useState(0);
+  const [showAd, setShowAd] = useState(false);
 
   const cards = [...extra, ...(q.data?.cards ?? []).slice(index)];
   const top = cards[0];
@@ -64,6 +69,9 @@ export default function Discover() {
 
   function advance() {
     x.value = 0;
+    const n = swipes + 1;
+    setSwipes(n);
+    if (sponsored.data && n % (sponsored.data.every ?? 10) === 0) setShowAd(true);
     if (extra.length) setExtra(extra.slice(1));
     else setIndex((i) => i + 1);
   }
@@ -159,7 +167,13 @@ export default function Discover() {
               action={{ label: "Adjust preferences", onPress: () => router.push("/preferences") }} />
           </Animated.View>
         )}
-        {top && (
+        {showAd && sponsored.data && (
+          <Animated.View entering={FadeIn} style={{ flex: 1, justifyContent: "center", gap: 14, paddingHorizontal: 6 }}>
+            <SponsoredCard ad={sponsored.data} tall onGone={(m) => { setShowAd(false); setNotice({ tone: "trust", text: m }); }} />
+            <Button title="Keep discovering" v="outline" full onPress={() => { setShowAd(false); sponsored.refetch(); }} />
+          </Animated.View>
+        )}
+        {top && !showAd && (
           <CardDeck ref={deck} top={top} next={next} x={x}
             onDecision={(d, card) => decide(d, card)}
             onOpen={(card) => router.push({ pathname: "/profile/[id]", params: { id: card.id } })}
@@ -167,7 +181,7 @@ export default function Discover() {
         )}
       </View>
 
-      {top && (
+      {top && !showAd && (
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingTop: 14, paddingBottom: 8 }}>
           <Orb icon="undo" label="Undo last pass" size={40} disabled={!lastPassed} onPress={undo} />
           <Orb icon="pass" label={`Pass on ${top.firstName}`} size={56} onPress={() => deck.current?.swipe("PASS")} />

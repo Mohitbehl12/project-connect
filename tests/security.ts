@@ -56,7 +56,8 @@ function routes(): string[] {
 
 // Routes that are deliberately public (sign-in, legal pages, signed links, health, cron with its own secret…).
 const PUBLIC = [/^\/api\/auth\//, /^\/api\/legal\//, /^\/api\/public\//, /^\/api\/health/, /^\/api\/privacy\/retention/, /^\/api\/grievances/, /^\/api\/appeals/,
-  /^\/api\/billing\/(confirm|mock|pay|invoices|payments)/, /^\/api\/webhooks\//, /^\/api\/cron\//, /^\/api\/media\//, /^\/api\/plans/];
+  /^\/api\/billing\/(confirm|mock|pay|invoices|payments)/, /^\/api\/webhooks\//, /^\/api\/cron\//, /^\/api\/media\//, /^\/api\/plans/,
+  /^\/api\/ads\/(register|meta|events|click|convert|home)$/]; // ad sign-up, builder options, signed ad tokens, conversion pixel, homepage banner
 
 async function main() {
   console.log(`Security checks against ${BASE}`);
@@ -140,6 +141,7 @@ async function main() {
 
   section("Injection and stored scripts");
   const evil = `<img src=x onerror=alert(1)><script>alert(2)</script>' OR 1=1; DROP TABLE users; --`;
+  await B.post(`/api/matches/${mid}/messages`, { body: "Sounds good to me!", confirmed: true }); // re-runnable: the no-reply message limit
   const send = await A.post(`/api/matches/${mid}/messages`, { body: evil, confirmed: true });
   check("a message with SQL and script text is stored as plain text", send.status === 201);
   const back = ((await B.get(`/api/matches/${mid}/messages`)).data?.messages ?? []).find((m: any) => m.id === send.data?.id);
@@ -195,6 +197,39 @@ async function main() {
   check("no coordinates", !/"lat"|"lng"/.test(blob));
   check("no other members' email, phone or date of birth", !blob.includes(meA?.user?.email) && !/"phone"|"dob"/.test(blob));
   check("no internal risk or moderation fields", !/riskLevel|restrictedAt|signupIp|signupInstallId/.test(blob));
+
+  section("Advertising: business accounts are walled off from member data");
+  const adv = new C("10.9.0.20"), adv2 = new C("10.9.0.21"), stamp = Date.now();
+  const advBase = { businessName: "Sec Test Co", contactName: "Sec Tester", phone: "+91 90000 00000", category: "RETAIL", password: "Business123", acceptTerms: true };
+  const ar = await adv.post("/api/ads/register", { ...advBase, email: `sec-adv-${stamp}@business.test`, role: "SUPER_ADMIN", verification: "TRUSTED", balanceMinor: 99999999, status: "ACTIVE" });
+  await adv2.post("/api/ads/register", { ...advBase, businessName: "Other Sec Co", email: `sec-adv2-${stamp}@business.test` });
+  const acct = (await adv.get("/api/ads/account")).data?.advertiser;
+  check("advertiser sign-up ignores role, verification and balance fields", ar.status === 201 && (await adv.get("/api/me")).data?.user?.role === "ADVERTISER" && acct?.verification === "UNVERIFIED" && acct?.balanceMinor === 0, acct);
+  await adv.put("/api/ads/account", { contactName: "Sec Tester", phone: "+91 90000 00000", verification: "TRUSTED", balanceMinor: 5000000 });
+  const acct2 = (await adv.get("/api/ads/account")).data?.advertiser;
+  check("…and so does editing business details", acct2?.verification === "UNVERIFIED" && acct2?.balanceMinor === 0, acct2);
+  const advAllowed = /^\/api\/(ads|auth|me|notifications|security|consents|legal)(\/|$)/;
+  const advIn: string[] = [];
+  for (const r of all.filter((x) => !advAllowed.test(x) && !PUBLIC.some((p) => p.test(x)))) {
+    const res = await adv.get(r);
+    if (res.status !== 403 && res.status !== 405) advIn.push(`${r} → ${res.status}`);
+  }
+  check(`an advertiser gets 403 on every member and staff route (${all.filter((x) => !advAllowed.test(x)).length} checked)`, !advIn.length, advIn);
+  const memberAds: string[] = [];
+  for (const r of all.filter((x) => /^\/api\/ads\/(account|campaigns|reach|creatives|billing|topups|receipts|refunds)/.test(x))) {
+    const res = await A.get(r);
+    if (res.status !== 403 && res.status !== 405) memberAds.push(`${r} → ${res.status}`);
+  }
+  check("a member gets 403 on every advertiser tool", !memberAds.length, memberAds);
+  const tu = await adv.post("/api/ads/topups", { amountMinor: 50000 });
+  check("another advertiser can't confirm someone's top-up", (await adv2.post(`/api/ads/topups/${tu.data?.id}`, { test: true })).status === 404);
+  check("…or download their receipt", (await adv2.get(`/api/ads/receipts/${tu.data?.id}`)).status === 404);
+  check("forged ad tokens are refused", (await anon.post("/api/ads/events", { token: "Y2FtcC54LkZFRUQuOTk5OTk5OTk5OQ.AAAAAAAAAAAAAAAAAAAAAA", kind: "IMPRESSION" })).status === 400);
+  const redir = await anon.get("/api/ads/click?t=https://evil.example.com");
+  check("the ad click link can't be used as an open redirect", redir.status === 400 && !redir.headers.get("location"), redir.status);
+  check("conversions with a made-up click id count nothing", (await anon.post("/api/ads/convert?key=x&click=y")).data?.counted === false);
+  const served = await A.get("/api/ads/serve?placement=FEED");
+  check("ads served to members carry no targeting, budgets or advertiser contacts", !/targeting|dailyBudget|balanceMinor|"email"|"phone"|gstin/.test(JSON.stringify(served.data)), served.data);
 
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) { console.log("Failed:\n - " + failures.join("\n - ")); process.exit(1); }

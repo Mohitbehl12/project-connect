@@ -136,6 +136,7 @@ export default function PrivacyCenter() {
           <Toggle label="Show when I'm active" value={p?.showOnline !== false} onChange={(v) => set("showOnline", v)} />
           <Toggle label="Read receipts" sub="Let matches see when you've read their messages." value={p?.readReceipts !== false} onChange={(v) => set("readReceipts", v)} />
         </Group>
+        <AdsGroup />
         <Group title="People you've blocked">
           <LinkRow icon="block" label={`${blocked.data?.blocked.length ?? 0} blocked`} sub="They can't see you or message you." onPress={() => setSheet("blocked")} />
         </Group>
@@ -206,5 +207,17 @@ export default function PrivacyCenter() {
         <Button title="Delete permanently" v="danger" size="lg" full disabled={!pw} loading={busy} onPress={deleteAccount} />
       </BottomSheet>
     </Screen>
+  );
+}
+
+/** Ads: a few Sponsored items are shown either way; this decides whether gender and interests are used to pick them. */
+function AdsGroup() {
+  const q = useQuery({ queryKey: ["consents", "ads"], queryFn: () => api<{ current: { kind: string; granted: boolean }[] }>("/api/consents") });
+  const on = q.data?.current.find((x) => x.kind === "PERSONALISED_ADS")?.granted ?? false;
+  return (
+    <Group title="Ads">
+      <Toggle label="Personalised ads" sub="Use my gender and interests to choose the few Sponsored ads I see. Advertisers never learn who I am. Off: ads are less relevant, not more frequent."
+        value={on} disabled={!q.data} onChange={async (v) => { await api("/api/consents", { body: { kind: "PERSONALISED_ADS", granted: v } }).catch(() => {}); q.refetch(); }} />
+    </Group>
   );
 }

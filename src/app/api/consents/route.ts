@@ -18,10 +18,11 @@ export const POST = route(async ({ req, user }) => {
   const b = await parseBody(req, Body);
   const def = CONSENT_KINDS[b.kind];
   if (!def.withdrawable) throw new ApiError(422, "This one is needed to use Kinara. To withdraw it, delete your account in Privacy Center.", "required_consent");
-  await recordConsent(user.id, b.kind, b.granted, { source: b.source, ip: await clientIp(), version: b.kind === "MARKETING" ? "marketing-v1" : undefined });
+  await recordConsent(user.id, b.kind, b.granted, { source: b.source, ip: await clientIp(), version: b.kind === "MARKETING" ? "marketing-v1" : b.kind === "PERSONALISED_ADS" ? "ads-v1" : undefined });
   if (b.kind === "MARKETING") await db.update(schema.preferences).set({ marketing: b.granted }).where(eq(schema.preferences.userId, user.id));
   if (b.kind === "PROFILE_VISIBLE") await db.update(schema.preferences).set({ discoverable: b.granted }).where(eq(schema.preferences.userId, user.id));
   if (b.kind === "LOCATION") await db.update(schema.preferences).set({ showDistance: b.granted }).where(eq(schema.preferences.userId, user.id));
+  if (b.kind === "PERSONALISED_ADS") await db.update(schema.preferences).set({ personalisedAds: b.granted }).where(eq(schema.preferences.userId, user.id));
   if (b.kind === "VIDEO_CALLS" && !b.granted) await db.update(schema.preferences).set({ callRequests: "NOBODY" }).where(eq(schema.preferences.userId, user.id));
   return ok(await consentSummary(user.id));
 }, { allowSuspended: true, allowOnboarding: true });

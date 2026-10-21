@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { SponsoredSlot } from "@/components/Sponsored";
 import { Image } from "expo-image";
 import { useEffect } from "react";
 import { Icon } from "@/components/Icon";
@@ -62,6 +63,7 @@ export default function MatchesTab() {
         <T v="caption" tone="muted">{fresh.length ? `${fresh.length} waiting for a hello` : "Everyone you've matched with"}</T>
       </View>
       <LikesStrip />
+      <SponsoredSlot placement="BANNER" compact style={{ marginBottom: 12 }} />
       {q.isLoading && <Skeleton h={w * 1.3} r={22} />}
       {q.error && <ErrorState message={(q.error as Error).message} onRetry={() => q.refetch()} />}
       {q.data && !q.data.matches.length && (

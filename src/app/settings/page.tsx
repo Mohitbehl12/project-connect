@@ -92,6 +92,7 @@ function Settings() {
             <Toggle label="Show me in Discover" description="Turn off to pause. Your matches can still message you." checked={prefs.discoverable !== false} onChange={(v) => setPref("discoverable", v)} />
             <Toggle label="Show when I'm active" checked={prefs.showOnline !== false} onChange={(v) => setPref("showOnline", v)} />
             <Toggle label="Send read receipts" checked={prefs.readReceipts !== false} onChange={(v) => setPref("readReceipts", v)} />
+            <AdsToggle />
             <Toggle label="Incognito" description={me.features.incognito ? "Only people you've liked can see you." : "Only people you've liked can see you. Part of Premium Plus."} checked={!!prefs.incognito} disabled={!me.features.incognito} onChange={(v) => setPref("incognito", v)} />
           </div>
         </Section>
@@ -140,4 +141,15 @@ function Settings() {
 
 export default function Page() {
   return <AppShell><Settings /></AppShell>;
+}
+
+/** Personalised ads (consent-backed). Ads still show either way; this only decides whether gender and interests are used. */
+function AdsToggle() {
+  const q = useApi<{ current: { kind: string; granted: boolean }[] }>("/api/consents");
+  const on = q.data?.current.find((c) => c.kind === "PERSONALISED_ADS")?.granted ?? false;
+  if (!q.data) return null;
+  return (
+    <Toggle label="Personalised ads" description="Use my gender and interests to choose the few Sponsored ads I see. Advertisers never see who I am. With this off, ads are less relevant, not fewer."
+      checked={on} onChange={async (v) => { await api("/api/consents", { body: { kind: "PERSONALISED_ADS", granted: v, source: "web" } }); q.reload(); }} />
+  );
 }

@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { applyEvent } from "@/lib/billing";
+import { captureAdTopup } from "@/lib/adsManage";
 import { parseRazorpayEvent, verifyWebhookSignature } from "@/lib/payments/razorpay";
 
 /**
@@ -28,6 +29,16 @@ export async function POST(req: Request) {
     if (prev?.status !== "FAILED") return NextResponse.json({ ok: true, duplicate: true });
   }
   try {
+    // Advertising top-ups are one-off orders, not subscriptions: credit them first, then stop.
+    const pay = body?.payload?.payment?.entity;
+    if ((type === "payment.captured" || type === "order.paid") && pay?.id && pay?.order_id) {
+      const adTx = await captureAdTopup(String(pay.order_id), String(pay.id));
+      if (adTx) {
+        await db.update(schema.webhookEvents).set({ status: "PROCESSED", processedAt: new Date(), error: null })
+          .where(and(eq(schema.webhookEvents.provider, "RAZORPAY"), eq(schema.webhookEvents.eventId, eventId)));
+        return NextResponse.json({ ok: true, adTopup: adTx });
+      }
+    }
     const events = parseRazorpayEvent(body);
     const results = [];
     for (const ev of events) {

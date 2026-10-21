@@ -29,6 +29,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
             <li><Link href="/contact" className="hover:text-ink">Contact</Link></li>
             <li><Link href="/grievance" className="hover:text-ink">File a complaint</Link></li>
             <li><Link href="/appeal" className="hover:text-ink">Appeal a decision</Link></li>
+            <li><Link href="/advertise" className="hover:text-ink">Advertise with us</Link></li>
           </ul>
           <ul className="space-y-1.5">
             <li><Link href="/legal/terms" className="hover:text-ink">Terms of Service</Link></li>
@@ -38,6 +39,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
             <li><Link href="/legal/payments" className="hover:text-ink">Subscription Terms</Link></li>
             <li><Link href="/legal/refunds" className="hover:text-ink">Refund Policy</Link></li>
             <li><Link href="/legal/cookies" className="hover:text-ink">Cookie Policy</Link></li>
+            <li><Link href="/legal/advertising" className="hover:text-ink">Advertising Policy</Link></li>
             <li><Link href="/legal/service-providers" className="hover:text-ink">Service providers</Link></li>
           </ul>
         </div>

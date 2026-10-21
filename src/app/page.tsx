@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { PublicShell } from "@/components/PublicShell";
 import { CompatRing } from "@/components/CompatRing";
+import { HomeAd } from "@/components/ads/HomeAd";
 
 const SAMPLE_REASONS = [
   "Looking for the same kind of relationship",
@@ -86,6 +87,8 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      <HomeAd />
 
       <section className="mx-auto max-w-3xl px-4 py-20 text-center md:px-8">
         <h2 className="text-4xl font-extrabold md:text-5xl">Safety is a feature, not a footnote.</h2>

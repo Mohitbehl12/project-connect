@@ -1,6 +1,8 @@
 import { storage, verifyMediaSignature } from "@/lib/storage";
 
 const TYPES: Record<string, string> = { webp: "image/webp", m4a: "audio/mp4", mp4: "audio/mp4", webm: "audio/webm", ogg: "audio/ogg", aac: "audio/aac" };
+/** Ad creatives: images and short videos. */
+const AD_TYPES: Record<string, string> = { webp: "image/webp", mp4: "video/mp4", webm: "video/webm" };
 
 /**
  * Serves locally stored media behind a signed, expiring link (local driver only).
@@ -17,7 +19,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ key: string[] }
   if (!body) return new Response("Not found", { status: 404 });
   const maxAge = Math.max(0, Math.floor(exp - Date.now() / 1000));
   const headers: Record<string, string> = {
-    "content-type": TYPES[key.split(".").pop() ?? ""] ?? "application/octet-stream",
+    "content-type": (key.startsWith("ads/") ? AD_TYPES : TYPES)[key.split(".").pop() ?? ""] ?? "application/octet-stream",
     "cache-control": `private, max-age=${maxAge}, immutable`,
     "x-content-type-options": "nosniff",
     "accept-ranges": "bytes",

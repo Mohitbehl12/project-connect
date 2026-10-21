@@ -1221,6 +1221,153 @@ async function main() {
     check("a Super Like arrives as “You received a Super Like ⭐”", sup.status === 200 && (((await P1.get("/api/notifications")).data?.notifications ?? []).some((n: any) => n.title === "You received a Super Like ⭐")), sup.data);
   }
 
+  section("Advertising: business accounts, review, serving, privacy, billing");
+  {
+    // Earlier runs leave campaigns live in the dev database: pause them so this run's ads are the ones served.
+    for (const c of ((await admin.get("/api/admin/ads")).data?.campaigns ?? []).filter((c: any) => c.status === "ACTIVE"))
+      await admin.post(`/api/admin/ads/campaigns/${c.id}`, { action: "pause", note: "e2e clean-up" });
+    check("the 'Advertise with us' page is public", (await fetch(`${BASE}/advertise`)).status === 200);
+    const meta = await anon.get("/api/ads/meta");
+    check("the ad builder options include Delhi NCR and the 8 objectives and CTAs", meta.data?.regions?.["Delhi NCR"]?.includes("Delhi") && Object.keys(meta.data.objectives).length === 8 && Object.keys(meta.data.ctas).length === 8, meta.data);
+    const Adv = new Client("AdvertiserClientOne1");
+    const base = { businessName: `Chai & Candles ${run}`, contactName: "Meera Shah", email: `ads-${run}@business.test`, phone: "+91 98100 00000", category: "FOOD", website: "https://chai-candles.example.com", password: "Business123", acceptTerms: true };
+    check("advertisers must accept the Advertising Terms", (await anon.post("/api/ads/register", { ...base, acceptTerms: false })).status === 422);
+    check("…and use https websites", (await anon.post("/api/ads/register", { ...base, website: "http://x.example.com" })).status === 422);
+    const reg = await Adv.post("/api/ads/register", base);
+    check("a business account is created and sent to /ads", reg.status === 201 && reg.data?.next === "/ads", reg.data);
+    check("the email can't be reused", (await anon.post("/api/ads/register", base)).status === 409);
+    check("logging in sends a business account to /ads", (await new Client("AdvLogin1").post("/api/auth/login", { email: base.email, password: base.password })).data?.next === "/ads");
+    await Adv.post("/api/auth/otp", { action: "verify", channel: "EMAIL", code: reg.data?.devOtp });
+
+    section("Advertising: advertisers never reach member data, members never reach advertiser tools");
+    const W = new Client("AdMemberWomanClient1"), M = new Client("AdMemberManClient12");
+    const wId = await onboard(W, `adw-${run}@test.local`, "WOMAN", "MAN", "Riya", answersA);
+    const mId = await onboard(M, `adm-${run}@test.local`, "MAN", "WOMAN", "Dev", answersB);
+    for (const path of ["/api/discovery", `/api/people/${wId}`, "/api/matches", "/api/likes", "/api/admin/ads", "/api/admin/users"])
+      check(`advertiser is refused ${path}`, [403].includes((await Adv.get(path)).status));
+    check("…with a clear 'business account' message", (await Adv.get("/api/discovery")).data?.code === "advertiser_only");
+    check("a member can't open advertiser tools", (await W.get("/api/ads/account")).data?.code === "not_advertiser" && (await W.post("/api/ads/campaigns", {})).status === 403);
+    check("signed-out people can't either", (await anon.get("/api/ads/account")).status === 401);
+    check("members can't open the staff ads queue", (await W.get("/api/admin/ads")).status === 403);
+
+    section("Advertising: creative upload and automatic checks");
+    const img = await Adv.upload("/api/ads/creatives", { file: jpeg, kind: "image" });
+    check("an ad image is uploaded and re-encoded", img.status === 201 && /\.webp$/.test(img.data?.key ?? ""), img.data);
+    const fakeVid = await Adv.upload("/api/ads/creatives", { file: Buffer.from("not a video at all, just text pretending"), kind: "video" });
+    check("a fake video is refused", fakeVid.status === 422, fakeVid.data);
+    check("a fake image is refused", (await Adv.upload("/api/ads/creatives", { file: Buffer.from("<script>alert(1)</script>"), kind: "image" })).status === 422);
+    const creative = { headline: "Candlelit dinner for two", description: "20% off this weekend at our Hauz Khas café.", cta: "BOOK_NOW", url: "https://chai-candles.example.com/offer", imageKeys: [img.data?.key] };
+    const camp = (over: object = {}) => ({ name: `Weekend offer ${run}`, objective: "WEBSITE", placements: ["FEED"], pricing: "CPM", dailyBudgetMinor: 50000, totalBudgetMinor: 1000000, targeting: { countries: ["IN"], regions: ["Delhi NCR"], ageMin: 21, ageMax: 45 }, creative, ...over });
+    const bad = await Adv.post("/api/ads/campaigns", camp({ name: `Scam ${run}`, creative: { ...creative, headline: "Guaranteed returns, double your money" } }));
+    const badSub = await Adv.post(`/api/ads/campaigns/${bad.data?.campaign?.id}/submit`);
+    check("a prohibited ad is rejected automatically with a general reason", badSub.data?.status === "REJECTED" && /does not meet our advertising guidelines/.test(badSub.data?.message), badSub.data);
+    check("short links are refused", (await Adv.post(`/api/ads/campaigns`, camp({ creative: { ...creative, url: "https://bit.ly/abc" } })).then((r) => Adv.post(`/api/ads/campaigns/${r.data?.campaign?.id}/submit`))).data?.status === "REJECTED");
+    check("sensitive targeting isn't even possible", (await Adv.post("/api/ads/campaigns", camp({ targeting: { religion: ["X"], ageMin: 16 } }))).status === 422);
+    const reach = await Adv.post("/api/ads/reach", { regions: ["Delhi NCR"], ageMin: 21, ageMax: 45 });
+    check("estimated reach is a rounded range, never an exact small number", /^(About [\d,]+ people|Fewer than 100 people)$/.test(reach.data?.audience ?? ""), reach.data);
+
+    section("Advertising: review, verification and payment");
+    const c1 = await Adv.post("/api/ads/campaigns", camp());
+    const cid = c1.data?.campaign?.id;
+    check("a campaign starts as a draft", c1.status === 201 && c1.data.campaign.status === "DRAFT", c1.data);
+    check("drafts are not shown to anyone", (await W.get("/api/ads/serve?placement=FEED")).data?.ad?.id !== cid);
+    const sub = await Adv.post(`/api/ads/campaigns/${cid}/submit`);
+    check("submitting sends it to Pending Review", sub.data?.status === "PENDING_REVIEW", sub.data);
+    const q1 = (await admin.get("/api/admin/ads")).data?.pending?.find((p: any) => p.id === cid);
+    check("staff see it in the review queue with business details and landing page", q1?.advertiser?.businessName === base.businessName && q1.creative.url === creative.url && q1.images.length === 1, q1);
+    check("ads need a verified business before approval", (await admin.post(`/api/admin/ads/campaigns/${cid}`, { action: "approve" })).data?.code === "unverified");
+    check("…and a balance", (await admin.post(`/api/admin/ads/campaigns/${cid}`, { action: "approve", verifyAdvertiser: true })).data?.code === "balance");
+    check("a top-up below the minimum is refused", (await Adv.post("/api/ads/topups", { amountMinor: 1000 })).data?.code === "min_topup");
+    const tu = await Adv.post("/api/ads/topups", { amountMinor: 200000 });
+    check("a top-up starts (test mode here)", tu.status === 201 && tu.data?.provider === "TEST", tu.data);
+    const tc = await Adv.post(`/api/ads/topups/${tu.data?.id}`, { test: true });
+    check("…and is credited with a receipt number", tc.data?.status === "PAID" && /^KN-AD-\d{4}-\d{5}$/.test(tc.data?.receiptNo ?? ""), tc.data);
+    check("confirming twice doesn't double the balance", (await Adv.post(`/api/ads/topups/${tu.data?.id}`, { test: true })).status === 200 && (await Adv.get("/api/ads/account")).data?.advertiser?.balanceMinor === 200000);
+    const rc = await fetch(`${BASE}/api/ads/receipts/${tu.data?.id}`, { headers: { cookie: Adv.cookie } });
+    check("the receipt downloads as a PDF", rc.status === 200 && rc.headers.get("content-type") === "application/pdf");
+    check("nobody else can download it", (await fetch(`${BASE}/api/ads/receipts/${tu.data?.id}`, { headers: { cookie: W.cookie } })).status === 403);
+    const ap = await admin.post(`/api/admin/ads/campaigns/${cid}`, { action: "approve", verifyAdvertiser: true, note: "Checked GST and website (e2e)" });
+    check("approved: the business is verified and the campaign goes live", ap.data?.status === "ACTIVE" && (await Adv.get("/api/ads/account")).data?.advertiser?.verification === "VERIFIED", ap.data);
+    check("the advertiser is told", ((await Adv.get("/api/notifications")).data?.notifications ?? []).some((n: any) => /approved/.test(n.title)));
+
+    section("Advertising: what members see");
+    const s1 = await W.get("/api/ads/serve?placement=FEED");
+    const ad = s1.data?.ad;
+    check("a member in Delhi gets the ad, labelled Sponsored", ad?.id === cid && ad.label === "Sponsored" && ad.advertiser.name === base.businessName && ad.advertiser.verified === true, s1.data);
+    check("the ad carries no targeting, budget or advertiser contact details", ad && !("targeting" in ad) && !JSON.stringify(ad).includes(base.email) && !JSON.stringify(ad).includes("dailyBudget"));
+    check("'Why am I seeing this?' names broad reasons only", /Delhi NCR/.test(ad?.why ?? "") && /never see who you are/.test(ad?.why ?? ""), ad?.why);
+    check("ads are never served for chats or calls", (await W.get("/api/ads/serve?placement=CHAT")).status === 422);
+    check("an advertiser account gets no ads", (await Adv.get("/api/ads/serve?placement=FEED")).status === 200 && (await Adv.get("/api/ads/serve?placement=FEED")).data?.ad === null);
+    let counted = 0;
+    for (let i = 0; i < 5; i++) if ((await W.post("/api/ads/events", { token: ad.token, kind: "IMPRESSION" })).data?.counted) counted++;
+    check("the same ad counts at most 3 times a day for one member", counted === 3, counted);
+    check("…and isn't served again today after that", (await W.get("/api/ads/serve?placement=FEED")).data?.ad?.id !== cid);
+    check("a forged ad token is refused", (await anon.post("/api/ads/events", { token: ad.token.slice(0, -2) + "xx", kind: "IMPRESSION" })).status === 400);
+    const click = await fetch(`${BASE}/api/ads/click?t=${encodeURIComponent(ad.token)}`, { redirect: "manual" });
+    const loc = click.headers.get("location") ?? "";
+    check("a click goes to the advertiser with only a random click code", click.status === 302 && loc.startsWith(creative.url) && /kn_click=[\w-]{10,}/.test(loc) && !loc.includes(wId), loc);
+    const clickId = new URL(loc).searchParams.get("kn_click");
+    const convKey = (await Adv.get(`/api/ads/campaigns/${cid}`)).data?.campaign?.conversionKey;
+    check("a conversion needs the campaign's key", (await anon.post(`/api/ads/convert?key=wrong&click=${clickId}`)).data?.counted === false);
+    check("a conversion is recorded once", (await anon.post(`/api/ads/convert?key=${convKey}&click=${clickId}`)).data?.counted === true && (await anon.post(`/api/ads/convert?key=${convKey}&click=${clickId}`)).data?.counted === false);
+    const pix = await fetch(`${BASE}/api/ads/convert?key=${convKey}&click=${clickId}`);
+    check("the conversion pixel works as an image", pix.status === 200 && pix.headers.get("content-type") === "image/gif");
+    const st = await Adv.get(`/api/ads/campaigns/${cid}`);
+    const tot = st.data?.stats?.totals;
+    check("the advertiser sees totals: 3 impressions, 1 person, 1 click, 1 conversion", tot?.impressions === 3 && tot.reach === 1 && tot.clicks === 1 && tot.conversions === 1 && tot.ctr === 33.33, tot);
+    check("CPM is charged per view (₹100 per 1,000 → 3 × ₹0.10)", tot?.spendMinor === 30 && (await Adv.get("/api/ads/account")).data?.advertiser?.balanceMinor === 200000 - 30, tot);
+    const statsJson = JSON.stringify(st.data);
+    check("advertiser statistics contain no member identity", !statsJson.includes(wId) && !statsJson.includes(`adw-${run}`) && !statsJson.includes("Riya"));
+    check("the advertiser's dashboard shows campaign counts and balance", (await Adv.get("/api/ads/account")).data?.counts?.active >= 1);
+
+    section("Advertising: hide, report, personalised ads");
+    const c2 = await Adv.post("/api/ads/campaigns", camp({ name: `Banner for men ${run}`, placements: ["BANNER"], targeting: { genders: ["MAN"] } }));
+    const c2id = c2.data?.campaign?.id;
+    await Adv.post(`/api/ads/campaigns/${c2id}/submit`);
+    await admin.post(`/api/admin/ads/campaigns/${c2id}`, { action: "approve" });
+    check("a gender-targeted ad reaches a member with personalised ads on (default in India)", (await M.get("/api/ads/serve?placement=BANNER")).data?.ad?.id === c2id);
+    check("…not someone outside the audience", (await W.get("/api/ads/serve?placement=BANNER")).data?.ad?.id !== c2id);
+    const off = await M.post("/api/consents", { kind: "PERSONALISED_ADS", granted: false });
+    check("personalised ads can be switched off, recorded as a consent", off.data?.current?.find((x: any) => x.kind === "PERSONALISED_ADS")?.granted === false, off.data?.current);
+    check("…then gender isn't used, so that ad isn't shown", (await M.get("/api/ads/serve?placement=BANNER")).data?.ad?.id !== c2id);
+    await M.post("/api/consents", { kind: "PERSONALISED_ADS", granted: true });
+    check("…and on again", (await M.get("/api/ads/serve?placement=BANNER")).data?.ad?.id === c2id);
+    check("hiding an ad works", (await M.post(`/api/ads/${c2id}/hide`)).data?.hidden === true && (await M.get("/api/ads/serve?placement=BANNER")).data?.ad?.id !== c2id);
+    check("reports need a listed reason", (await W.post(`/api/ads/${c2id}/report`, { reason: "BORING" })).status === 422);
+    const rep = await W.post(`/api/ads/${c2id}/report`, { reason: "MISLEADING", details: "The offer doesn't exist (e2e)" });
+    check("a reported ad gets a case number", rep.status === 201 && /^KN-R-\d{4}-/.test(rep.data?.caseNo ?? ""), rep.data);
+    check("staff see the report", ((await admin.get("/api/admin/ads")).data?.reports ?? []).some((r: any) => r.caseNo === rep.data?.caseNo));
+    check("the advertiser only sees a hide count, not who", (await Adv.get(`/api/ads/campaigns/${c2id}`)).data?.stats?.totals?.hides === 1);
+
+    section("Advertising: advertiser controls, refunds, suspension");
+    check("the advertiser can pause", (await Adv.post(`/api/ads/campaigns/${cid}/pause`, { paused: true })).data?.status === "PAUSED");
+    check("…and resume", (await Adv.post(`/api/ads/campaigns/${cid}/pause`, { paused: false })).data?.status === "ACTIVE");
+    const ed = await Adv.put(`/api/ads/campaigns/${cid}`, camp({ creative: { ...creative, headline: "Now 25% off" } }));
+    check("changing a live ad's content sends it back for review", ed.data?.campaign?.status === "DRAFT" && ed.data.backToDraft === true, ed.data);
+    const Adv2 = new Client("AdvertiserClientTwo22");
+    await Adv2.post("/api/ads/register", { ...base, businessName: `Other Co ${run}`, email: `ads2-${run}@business.test` });
+    check("an advertiser can't see or change another business's campaign", (await Adv2.get(`/api/ads/campaigns/${cid}`)).status === 404 && (await Adv2.post(`/api/ads/campaigns/${cid}/pause`, { paused: true })).status === 404);
+    check("refunds are limited to unused balance", (await Adv.post("/api/ads/refunds", { amountMinor: 99999999, reason: "Too much" })).data?.code === "amount");
+    const rf = await Adv.post("/api/ads/refunds", { amountMinor: 50000, reason: "Pausing advertising for now" });
+    check("a refund can be requested", rf.status === 201, rf.data);
+    check("moderators can't decide refunds", (await mod.post(`/api/admin/ads/refunds/${rf.data?.id}`, { approve: true, note: "ok" })).status === 403);
+    const rd = await finance.post(`/api/admin/ads/refunds/${rf.data?.id}`, { approve: true, note: "Unused balance (e2e)" });
+    check("finance approves it and the balance drops", rd.status === 200 && (await Adv.get("/api/ads/account")).data?.advertiser?.balanceMinor === 200000 - 30 - 50000, rd.data);
+    const advId = (await Adv.get("/api/ads/account")).data?.advertiser?.id;
+    await admin.post(`/api/admin/ads/advertisers/${advId}`, { action: "suspend", why: "e2e" });
+    check("suspending an advertiser pauses their running ads", (await admin.get("/api/admin/ads")).data?.campaigns?.find((c: any) => c.id === c2id)?.status === "PAUSED");
+    check("…and they can't submit new ones", (await Adv.post(`/api/ads/campaigns/${cid}/submit`)).data?.code === "suspended");
+    await admin.post(`/api/admin/ads/advertisers/${advId}`, { action: "restore" });
+    check("the homepage banner works for visitors (no personal data used)", (await anon.get("/api/ads/home")).status === 200);
+    check("ad prices are set by admins", (await admin.put("/api/admin/config", { config: { "ads.pricing": { cpmMinor: 12000, cpcMinor: 500, cpaMinor: 5000, fixedPerDayMinor: 200000 } } })).status === 200 && (await anon.get("/api/ads/meta")).data?.prices?.cpmMinor === 12000);
+    await admin.put("/api/admin/config", { config: { "ads.pricing": { cpmMinor: 10000, cpcMinor: 500, cpaMinor: 5000, fixedPerDayMinor: 200000 } } });
+    check("the Advertising Policy is published", (await anon.get("/api/legal/advertising")).status === 200);
+    check("the Privacy Policy explains sponsored ads", /Sponsored/.test((await anon.get("/api/legal/privacy")).data?.body ?? ""));
+    const job = await fetch(`${BASE}/api/cron/billing`, { method: "POST", headers: { "x-cron-secret": envVal("CRON_SECRET") } }).then((r) => r.json());
+    check("scheduled jobs start and finish campaigns on their dates", job?.ads && "started" in job.ads, job?.ads);
+    check("ad actions are in the audit log and the chain is intact", (await admin.get("/api/admin/compliance")).data?.auditChain?.ok === true);
+  }
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) {
     console.log("Failed:\n - " + failures.join("\n - "));

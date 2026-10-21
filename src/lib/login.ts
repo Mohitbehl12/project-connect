@@ -81,6 +81,7 @@ export async function authenticate(email: string, password: string, ipOrCtx: str
 }
 
 export function nextRoute(user: User) {
+  if (user.role === "ADVERTISER") return "/ads";
   return can(user.role, "admin.access") ? "/admin" : user.onboardingStep < 3 ? "/onboarding" : "/discover";
 }
 

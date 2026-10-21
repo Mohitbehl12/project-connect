@@ -28,6 +28,8 @@ export async function parseBody<T>(req: Request, schema: ZodType<T>): Promise<T>
 
 type Ctx<P> = { params: Promise<P> };
 
+const ADVERTISER_PATHS = /^\/api\/(ads|auth|me|notifications|security|consents|legal)(\/|$)/;
+
 /** Wraps a route handler with auth, optional permission check, and uniform error handling. */
 export function route<P = Record<string, string>>(
   handler: (args: { req: Request; user: User; params: P }) => Promise<Response>,
@@ -39,6 +41,9 @@ export function route<P = Record<string, string>>(
       if (!user) throw new ApiError(401, "Please log in to continue.", "unauthenticated");
       if (user.status === "SUSPENDED" && !opts.allowSuspended)
         throw new ApiError(403, "Your account is suspended. Check your notifications for details.", "suspended");
+      // Business (advertiser) logins only reach the advertiser pages and their own account — never member data.
+      if (user.role === "ADVERTISER" && !ADVERTISER_PATHS.test(new URL(req.url).pathname))
+        throw new ApiError(403, "This is a business account. It can only use the advertiser pages.", "advertiser_only");
       if (opts.permission && !can(user.role, opts.permission))
         throw new ApiError(403, "You don't have permission to do that.", "forbidden");
       if (opts.permission && user.role !== "USER") await (await import("./staff")).staffGate(user);

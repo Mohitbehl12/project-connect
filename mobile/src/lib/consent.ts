@@ -1,6 +1,6 @@
 import { api } from "./api";
 
-export type ConsentKind = "MARKETING" | "LOCATION" | "CAMERA" | "MICROPHONE" | "VIDEO_CALLS" | "PUSH" | "PROFILE_VISIBLE";
+export type ConsentKind = "MARKETING" | "LOCATION" | "CAMERA" | "MICROPHONE" | "VIDEO_CALLS" | "PUSH" | "PROFILE_VISIBLE" | "PERSONALISED_ADS";
 
 /**
  * Records the person's choice next to a phone permission prompt (camera, microphone, notifications), so it

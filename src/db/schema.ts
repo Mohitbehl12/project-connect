@@ -92,6 +92,7 @@ export const preferences = sqliteTable("preferences", {
   photosVisibility: text("photos_visibility").notNull().default("EVERYONE"), // EVERYONE | MATCHES: extra photos (the first is always shown)
   showCity: bool("show_city").notNull().default(true), // off → others see only the country
   marketing: bool("marketing").notNull().default(false), // optional; never pre-ticked; consent history in `consents`
+  personalisedAds: bool("personalised_ads"), // null = country default (on in most countries, off in the UK/EU)
   travelCity: text("travel_city"), // travel mode (plan feature): appear in and discover this city until travelUntil
   travelUntil: ts("travel_until"),
   notifyLikes: bool("notify_likes").notNull().default(true),
@@ -700,3 +701,100 @@ export const boosts = sqliteTable("boosts", {
   startedAt: now("started_at"),
   endsAt: ts("ends_at").notNull(),
 }, (t) => [index("boosts_user").on(t.userId, t.startedAt)]);
+
+// ---- Advertising (businesses advertise to members; members' personal data never reaches advertisers) ----
+export const advertisers = sqliteTable("advertisers", {
+  id: id(),
+  userId: text("user_id").notNull().unique().references(() => users.id, { onDelete: "cascade" }), // the login (role ADVERTISER)
+  businessName: text("business_name").notNull(),
+  contactName: text("contact_name").notNull(),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  category: text("category").notNull(),
+  website: text("website"),
+  address: text("address"),
+  gstin: text("gstin"),
+  verification: text("verification").notNull().default("UNVERIFIED"), // UNVERIFIED | VERIFIED | TRUSTED
+  status: text("status").notNull().default("ACTIVE"), // ACTIVE | SUSPENDED
+  balanceMinor: integer("balance_minor").notNull().default(0), // prepaid advertising balance (paise)
+  currency: text("currency").notNull().default("INR"),
+  verifiedById: text("verified_by_id"),
+  verifiedAt: ts("verified_at"),
+  createdAt: now("created_at"),
+});
+
+export const adCampaigns = sqliteTable("ad_campaigns", {
+  id: id(),
+  advertiserId: text("advertiser_id").notNull().references(() => advertisers.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  objective: text("objective").notNull(),
+  status: text("status").notNull().default("DRAFT"), // DRAFT | PENDING_REVIEW | APPROVED | REJECTED | ACTIVE | PAUSED | COMPLETED
+  placements: text("placements").notNull().default("DISCOVER"), // csv of DISCOVER | FEED | STORY | BANNER | HOME | RECOMMENDATION
+  pricing: text("pricing").notNull().default("CPM"), // CPM | CPC | CPA | FIXED
+  dailyBudgetMinor: integer("daily_budget_minor").notNull().default(0),
+  totalBudgetMinor: integer("total_budget_minor").notNull().default(0),
+  spentMinor: integer("spent_minor").notNull().default(0),
+  spentTodayMinor: integer("spent_today_minor").notNull().default(0),
+  spentDay: text("spent_day"), // YYYY-MM-DD the daily counter belongs to
+  startAt: ts("start_at"),
+  endAt: ts("end_at"),
+  targeting: text("targeting").notNull().default("{}"), // JSON: countries, cities, ageMin, ageMax, genders, interests, devices, languages
+  creative: text("creative").notNull().default("{}"), // JSON: headline, description, cta, url, logoKey, imageKeys, videoKey
+  autoFlags: text("auto_flags"), // automated check notes for reviewers
+  reviewNote: text("review_note"), // internal
+  publicReason: text("public_reason"), // shown to the advertiser on rejection (general)
+  reviewedById: text("reviewed_by_id"),
+  reviewedAt: ts("reviewed_at"),
+  submittedAt: ts("submitted_at"),
+  conversionKey: text("conversion_key").notNull().$defaultFn(() => crypto.randomUUID().replace(/-/g, "")),
+  createdAt: now("created_at"),
+  updatedAt: now("updated_at"),
+}, (t) => [index("adc_adv").on(t.advertiserId), index("adc_status").on(t.status)]);
+
+/** One row per ad event. `viewer` is a keyed hash of the member id (frequency caps and unique reach) — never the id. */
+export const adEvents = sqliteTable("ad_events", {
+  id: id(),
+  campaignId: text("campaign_id").notNull().references(() => adCampaigns.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(), // IMPRESSION | CLICK | VIDEO_VIEW | CONVERSION | HIDE | REPORT
+  placement: text("placement"),
+  viewer: text("viewer"),
+  clickId: text("click_id"),
+  costMinor: integer("cost_minor").notNull().default(0),
+  day: text("day").notNull(),
+  createdAt: now("created_at"),
+}, (t) => [index("ade_campaign_day").on(t.campaignId, t.day, t.kind), index("ade_viewer").on(t.viewer, t.day), uniqueIndex("ade_click").on(t.clickId)]);
+
+export const adTransactions = sqliteTable("ad_transactions", {
+  id: id(),
+  advertiserId: text("advertiser_id").notNull().references(() => advertisers.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(), // TOPUP | REFUND | FIXED_PLACEMENT | ADJUSTMENT
+  status: text("status").notNull().default("PENDING"), // PENDING | PAID | FAILED | REQUESTED | APPROVED | REJECTED | DONE
+  amountMinor: integer("amount_minor").notNull(),
+  provider: text("provider"), // RAZORPAY | TEST
+  providerOrderId: text("provider_order_id"),
+  providerPaymentId: text("provider_payment_id"),
+  receiptNo: text("receipt_no"),
+  note: text("note"),
+  decidedById: text("decided_by_id"),
+  createdAt: now("created_at"),
+  paidAt: ts("paid_at"),
+}, (t) => [index("adt_adv").on(t.advertiserId, t.createdAt), index("adt_order").on(t.providerOrderId)]);
+
+export const adReports = sqliteTable("ad_reports", {
+  id: id(),
+  caseNo: text("case_no").notNull(),
+  campaignId: text("campaign_id").notNull().references(() => adCampaigns.id, { onDelete: "cascade" }),
+  reporterId: text("reporter_id").references(() => users.id, { onDelete: "set null" }),
+  reason: text("reason").notNull(),
+  details: text("details").notNull().default(""),
+  status: text("status").notNull().default("OPEN"), // OPEN | ACTIONED | DISMISSED
+  resolution: text("resolution"),
+  createdAt: now("created_at"),
+}, (t) => [index("adr_status").on(t.status)]);
+
+/** Ads a member chose to hide. */
+export const adHidden = sqliteTable("ad_hidden", {
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  campaignId: text("campaign_id").notNull().references(() => adCampaigns.id, { onDelete: "cascade" }),
+  createdAt: now("created_at"),
+}, (t) => [uniqueIndex("ad_hidden_pair").on(t.userId, t.campaignId)]);

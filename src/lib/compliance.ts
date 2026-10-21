@@ -17,6 +17,7 @@ export type CountryRules = {
   coolingOffDays: number; // right to cancel a new subscription for a refund (0 = none required)
   pricesIncludeTax: boolean;
   dataTransferNote: string;
+  personalisedAdsDefault: boolean; // interest/gender ad targeting before the member chooses (off where law needs opt-in)
   legalReviewed: boolean;
   reviewer: string;
   reviewedAt: string | null;
@@ -25,13 +26,16 @@ export type CountryRules = {
 const base: CountryRules = {
   launchEnabled: true, minAge: MIN_AGE, ageAssurance: "SELF_DECLARED", privacyLaw: "", marketingConsent: "OPT_IN",
   grievanceReplyDays: 30, urgentTakedownHours: 24, coolingOffDays: 0, pricesIncludeTax: true,
-  dataTransferNote: "Data is processed where our hosting provider runs the service; see Service providers.", legalReviewed: false, reviewer: "", reviewedAt: null,
+  dataTransferNote: "Data is processed where our hosting provider runs the service; see Service providers.", personalisedAdsDefault: true, legalReviewed: false, reviewer: "", reviewedAt: null,
 };
 
 export const COMPLIANCE_DEFAULTS: Record<string, CountryRules> = {
   "*": { ...base, privacyLaw: "Local law (to be confirmed)" },
   IN: { ...base, privacyLaw: "Digital Personal Data Protection Act 2023; IT Act 2000 and IT Rules 2021", grievanceReplyDays: 15, urgentTakedownHours: 24 },
-  GB: { ...base, privacyLaw: "UK GDPR and Data Protection Act 2018; Online Safety Act 2023", coolingOffDays: 14, grievanceReplyDays: 30 },
+  GB: { ...base, privacyLaw: "UK GDPR and Data Protection Act 2018; Online Safety Act 2023", coolingOffDays: 14, grievanceReplyDays: 30, personalisedAdsDefault: false },
+  DE: { ...base, privacyLaw: "GDPR; TDDDG; Digital Services Act", coolingOffDays: 14, personalisedAdsDefault: false },
+  FR: { ...base, privacyLaw: "GDPR; Loi Informatique et Libertés; Digital Services Act", coolingOffDays: 14, personalisedAdsDefault: false },
+  NL: { ...base, privacyLaw: "GDPR (UAVG); Digital Services Act", coolingOffDays: 14, personalisedAdsDefault: false },
   US: { ...base, privacyLaw: "State privacy laws (e.g. CCPA/CPRA); FTC Act; state online-dating safety laws", pricesIncludeTax: false },
   CA: { ...base, privacyLaw: "PIPEDA and provincial laws", pricesIncludeTax: false },
   AU: { ...base, privacyLaw: "Privacy Act 1988; Online Safety Act 2021; Online Dating Industry Code" },

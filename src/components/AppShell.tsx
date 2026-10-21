@@ -38,6 +38,7 @@ export function AppShell({ children, bare = false }: { children: ReactNode; bare
   useEffect(() => {
     if (!me) return;
     if (me.user.permissions.includes("admin.access") && me.user.role !== "USER" && !path.startsWith("/admin")) router.replace("/admin");
+    if (me.user.role === "ADVERTISER") router.replace("/ads"); // business accounts have no dating profile
     else if (me.user.onboardingStep < 3 && !path.startsWith("/onboarding")) router.replace("/onboarding");
   }, [me, path, router]);
 

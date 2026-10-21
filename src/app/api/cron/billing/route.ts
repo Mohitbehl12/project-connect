@@ -4,6 +4,7 @@ import { runBillingJobs } from "@/lib/billing";
 import { maybeBackup } from "@/lib/backup";
 import { purgeEndedChatMedia } from "@/lib/chatMedia";
 import { runRetention } from "@/lib/privacy";
+import { runAdJobs } from "@/lib/adsManage";
 
 /** Scheduled jobs (call every 15–60 minutes from a cron service with the CRON_SECRET header). */
 export async function POST(req: Request) {
@@ -14,6 +15,7 @@ export async function POST(req: Request) {
   const billing = await runBillingJobs();
   const retention = await runRetention();
   const backup = await maybeBackup();
+  const ads = await runAdJobs().catch(() => null);
   const chatMediaPurged = await purgeEndedChatMedia().catch(() => 0);
-  return NextResponse.json({ ok: true, billing, retention, backup, chatMediaPurged });
+  return NextResponse.json({ ok: true, billing, retention, backup, chatMediaPurged, ads });
 }

@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { AppShell, PageHeader } from "@/components/AppShell";
+import { SponsoredSlot } from "@/components/ads/SponsoredSlot";
 import { ProfileView, type Card } from "@/components/ProfileView";
 import { Alert, Empty, Modal, Spinner } from "@/components/ui";
 import { api, useApi } from "@/lib/client";
@@ -23,6 +24,7 @@ function Likes() {
   return (
     <div className="mx-auto max-w-2xl">
       <PageHeader title="Likes" sub={data ? (data.total ? `${data.total} ${data.total === 1 ? "person likes" : "people like"} you` : undefined) : undefined} />
+      <SponsoredSlot placement="BANNER" compact className="mb-4" />
       <div className="space-y-6 px-4 md:px-8">
         {loading && <Spinner />}
         {error && <Alert tone="error">{error.message}</Alert>}

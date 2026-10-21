@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 // Cheap edge gate: no session cookie → send to login. Real auth (signature, status, role) is enforced in every API route.
-const PROTECTED = ["/onboarding", "/discover", "/likes", "/matches", "/notifications", "/profile", "/settings", "/plans", "/safety-center", "/admin"];
+const PROTECTED = ["/onboarding", "/discover", "/likes", "/matches", "/notifications", "/profile", "/settings", "/plans", "/safety-center", "/admin", "/ads"];
 
 // Browser origins allowed to call the API with bearer tokens (the Expo web preview, for example).
 // Native apps don't send an Origin header and are unaffected. Comma-separated; empty = none.

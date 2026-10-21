@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { AppShell, PageHeader } from "@/components/AppShell";
+import { SponsoredSlot } from "@/components/ads/SponsoredSlot";
 import { Alert, Avatar, Empty, Spinner, Verified } from "@/components/ui";
 import { timeAgo, useApi } from "@/lib/client";
 
@@ -18,6 +19,7 @@ function Matches() {
   return (
     <div className="mx-auto max-w-2xl">
       <PageHeader title="Chats" />
+      <SponsoredSlot placement="BANNER" compact className="mb-4" />
       <div className="px-4 md:px-8">
         {loading && <Spinner />}
         {error && <Alert tone="error">{error.message}</Alert>}

@@ -11,6 +11,7 @@ export default function Index() {
   const { c } = useTheme();
   if (status === "signedOut") return <Redirect href="/welcome" />;
   if (status === "signedIn" && me) {
+    if (me.user.role === "ADVERTISER") return <ErrorState message="This is a business account. Manage your ads on the Kinara website (Advertise › Log in). To date on Kinara, create a separate personal account." />;
     if (me.user.role !== "USER") return <ErrorState message="Staff accounts use the web admin panel." />;
     return <Redirect href={me.user.onboardingStep < 3 ? "/onboarding" : "/discover"} />;
   }

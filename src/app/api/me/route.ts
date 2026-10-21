@@ -15,7 +15,7 @@ import { grantStartingMembership, membershipStatus } from "@/lib/billing";
 /** The signed-in user's own data. This is the only endpoint that returns private fields, and only to their owner. */
 export const GET = route(async ({ user }) => {
   // Moves existing members onto the current membership rules (free forever / free trial). Cheap when nothing to do.
-  if (user.onboardingStep >= 3 && user.planCode !== "VIP") await grantStartingMembership(user.id).catch(() => {});
+  if (user.role === "USER" && user.onboardingStep >= 3 && user.planCode !== "VIP") await grantStartingMembership(user.id).catch(() => {});
   const [profile, prefs, answers, [{ unread }], legal] = await Promise.all([
     db.query.profiles.findFirst({ where: eq(schema.profiles.userId, user.id) }),
     db.query.preferences.findFirst({ where: eq(schema.preferences.userId, user.id) }),

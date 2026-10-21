@@ -2,6 +2,7 @@ import "server-only";
 import { and, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { audit } from "./audit";
+import { countryRules } from "./compliance";
 
 // Consent records. Each change is a new row (never edited), so we can show what someone agreed to,
 // when, and under which wording. Terms and policies are also recorded in legal_acceptances per version.
@@ -20,6 +21,7 @@ export const CONSENT_KINDS = {
   VIDEO_CALLS: { label: "Take part in voice and video calls (only after you accept a request)", required: false, withdrawable: true },
   PUSH: { label: "Notifications on this device", required: false, withdrawable: true },
   PROFILE_VISIBLE: { label: "Show my profile in Discover", required: false, withdrawable: true },
+  PERSONALISED_ADS: { label: "Personalised ads (use my gender and interests to choose sponsored ads; advertisers never see who I am)", required: false, withdrawable: true },
 } as const;
 export type ConsentKind = keyof typeof CONSENT_KINDS;
 
@@ -42,18 +44,22 @@ export async function currentConsent(userId: string, kind: ConsentKind) {
  */
 export async function consentSummary(userId: string) {
   const rows = await db.select().from(schema.consents).where(eq(schema.consents.userId, userId)).orderBy(desc(schema.consents.createdAt));
-  const [user, prefs, accepted] = await Promise.all([
+  const [user, prefs, accepted, profile] = await Promise.all([
     db.query.users.findFirst({ where: eq(schema.users.id, userId) }),
     db.query.preferences.findFirst({ where: eq(schema.preferences.userId, userId) }),
     db.select({ slug: schema.legalDocuments.slug, at: schema.legalAcceptances.acceptedAt, version: schema.legalVersions.version })
       .from(schema.legalAcceptances).innerJoin(schema.legalVersions, eq(schema.legalVersions.id, schema.legalAcceptances.versionId))
       .innerJoin(schema.legalDocuments, eq(schema.legalDocuments.id, schema.legalVersions.documentId)).where(eq(schema.legalAcceptances.userId, userId)),
+    db.query.profiles.findFirst({ where: eq(schema.profiles.userId, userId), columns: { country: true } }),
   ]);
+  // Personalised ads: on by default only where the country's rules allow it without asking (not UK/EU).
+  const adsDefault = profile ? (await countryRules(profile.country)).personalisedAdsDefault : false;
   const legal = (slug: string) => accepted.filter((a) => a.slug === slug).sort((a, b) => b.version - a.version)[0];
   const fallback = (k: ConsentKind): { granted: boolean; version: string | null; at: Date | null } | null => {
     const l = k === "TERMS" ? legal("terms") : k === "PRIVACY" ? legal("privacy") : k === "SAFETY_RULES" ? legal("guidelines") : undefined;
     if (l) return { granted: true, version: `${l.slug}@v${l.version}`, at: l.at };
     if (k === "AGE_18" && user?.dob) return { granted: true, version: null, at: user.createdAt };
+    if (k === "PERSONALISED_ADS") return profile ? { granted: prefs?.personalisedAds ?? adsDefault, version: prefs?.personalisedAds == null ? "default" : null, at: null } : null;
     if (!prefs) return null;
     if (k === "MARKETING") return { granted: prefs.marketing, version: null, at: null };
     if (k === "LOCATION") return { granted: prefs.showDistance, version: null, at: null };

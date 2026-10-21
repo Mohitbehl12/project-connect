@@ -25,6 +25,14 @@ export const CONFIG_DEFAULTS = {
   "flirt.dailySparks": 3, // Sparks ✨ a member can send per day (a like that shows who sent it)
   "flirt.maxUnansweredFlirts": 3, // winks/hearts in a row before the other person replies
   "chat.massMessagingMatches": 15, // new chats started within 10 minutes before we ask the person to slow down (0 = off)
+  // Advertising
+  "ads.enabled": true, // master switch for showing ads to members
+  "ads.pricing": { cpmMinor: 10000, cpcMinor: 500, cpaMinor: 5000, fixedPerDayMinor: 200000 } as { cpmMinor: number; cpcMinor: number; cpaMinor: number; fixedPerDayMinor: number },
+  "ads.frequencyPerCampaignPerDay": 3, // the same ad at most this many times a day per member
+  "ads.maxPerMemberPerDay": 8, // all ads together
+  "ads.discoverEvery": 10, // one sponsored card after this many profiles
+  "ads.minDailyBudgetMinor": 10000, // ₹100
+  "ads.minTopupMinor": 50000, // ₹500
   // Staff security
   "admin.idleTimeoutMinutes": 30, // staff must re-enter their 2-step code after this long without admin activity
   "admin.sensitiveViewsPerHourAlert": 60, // a staff member opening more private records than this in an hour alerts super admins

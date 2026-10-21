@@ -6,6 +6,7 @@ import Animated, { FadeInDown } from "react-native-reanimated";
 import { Icon, type IconName } from "@/components/Icon";
 import { T } from "@/components/Text";
 import { Screen } from "@/components/ui";
+import { SponsoredSlot, SponsoredStoryTile } from "@/components/Sponsored";
 import { useAuth } from "@/lib/auth";
 import { haptic } from "@/lib/haptics";
 import type { Glow, Palette } from "@/theme/themes";
@@ -49,7 +50,10 @@ export default function Explore() {
               </Pressable>
             </Animated.View>
           ))}
+          <SponsoredStoryTile />
         </ScrollView>
+
+        <SponsoredSlot placement="FEED" style={{ paddingHorizontal: 20, paddingTop: 20 }} />
 
         <View style={{ paddingHorizontal: 20, paddingTop: 24, gap: 12 }}>
           <T v="headline">{mine.length ? "Your interests, and more" : "Popular interests"}</T>
@@ -66,6 +70,7 @@ export default function Explore() {
             ))}
           </View>
         </View>
+        <SponsoredSlot placement="RECOMMENDATION" after="FEED" compact style={{ paddingHorizontal: 20, paddingTop: 24 }} />
       </ScrollView>
     </Screen>
   );

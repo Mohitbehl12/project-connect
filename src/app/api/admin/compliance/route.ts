@@ -31,7 +31,7 @@ const Rules = z.object({
   launchEnabled: z.boolean(), minAge: z.number().int().min(18).max(25), ageAssurance: z.enum(["SELF_DECLARED", "SELFIE_REQUIRED"]),
   privacyLaw: z.string().max(300), marketingConsent: z.literal("OPT_IN"), grievanceReplyDays: z.number().int().min(1).max(90),
   urgentTakedownHours: z.number().int().min(1).max(168), coolingOffDays: z.number().int().min(0).max(30), pricesIncludeTax: z.boolean(),
-  dataTransferNote: z.string().max(500), legalReviewed: z.boolean(), reviewer: z.string().max(120), reviewedAt: z.string().max(40).nullable(),
+  dataTransferNote: z.string().max(500), personalisedAdsDefault: z.boolean(), legalReviewed: z.boolean(), reviewer: z.string().max(120), reviewedAt: z.string().max(40).nullable(),
 }).partial();
 
 const Body = z.object({
