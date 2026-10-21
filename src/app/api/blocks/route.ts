@@ -14,7 +14,7 @@ export const POST = route(async ({ req, user }) => {
   if (userId === user.id) throw new ApiError(400, "You can't block yourself.", "self");
   await db.insert(schema.blocks).values({ blockerId: user.id, blockedId: userId }).onConflictDoNothing();
   const [a, b] = orderedPair(user.id, userId);
-  await db.update(schema.matches).set({ status: "UNMATCHED", unmatchedBy: user.id })
+  await db.update(schema.matches).set({ status: "UNMATCHED", unmatchedBy: user.id, endedAt: new Date() })
     .where(and(eq(schema.matches.userAId, a), eq(schema.matches.userBId, b)));
   await audit(user.id, "user.block", "user", userId);
   await endCallsBetween(user.id, userId);

@@ -8,7 +8,10 @@ import { requireMatch } from "@/lib/matches";
 import { isBlockedBetween } from "@/lib/people";
 import { getConfig } from "@/lib/config";
 import { rateLimit } from "@/lib/ratelimit";
-import { REPORTABLE_FLAGS, screenMessage, warningFor, type Flag } from "@/lib/moderation";
+import { BLOCKING_FLAGS, REPORTABLE_FLAGS, screenMessage, warningFor, type Flag } from "@/lib/moderation";
+import { assertCanStartContact, assertNotPaused, fileAutomatedReport, logAutomatedDecision } from "@/lib/safety";
+import { addRiskSignal } from "@/lib/risk";
+import { isMuted } from "@/lib/matches";
 import { notify } from "@/lib/notify";
 import { bumpChat, setTyping } from "@/lib/realtime";
 import { mediaFor } from "@/lib/chatMedia";
@@ -44,6 +47,7 @@ export const GET = route<{ id: string }>(async ({ req, user, params }) => {
 
   return ok({
     ended: match.status !== "ACTIVE",
+    muted: await isMuted(user.id, match.id),
     mediaUnlocked: match.status === "ACTIVE" && (need <= 0 || (n(user.id) >= need && n(otherId) >= need)),
     messages: rows.map((m, i) => {
       const mine = m.senderId === user.id;
@@ -80,7 +84,26 @@ export const POST = route<{ id: string }>(async ({ req, user, params }) => {
   if (recent.length >= limit && recent.every((r) => r.senderId === user.id))
     throw new ApiError(429, `You've sent ${limit} messages in a row. Give them a chance to reply.`, "awaiting_reply");
 
+  // A restricted account can keep talking in chats it has already started, but can't open new ones.
+  const mineBefore = await db.select({ id: schema.messages.id }).from(schema.messages)
+    .where(and(eq(schema.messages.matchId, match.id), eq(schema.messages.senderId, user.id))).limit(1);
+  if (!mineBefore.length) assertCanStartContact(user);
+  await assertNotPaused(otherId);
+
+  // Mass messaging: the same opener to lots of matches in a few minutes looks like spam or a bot.
+  const massLimit = await getConfig("chat.massMessagingMatches");
+  if (massLimit > 0 && !mineBefore.length) {
+    const recentChats = await db.selectDistinct({ m: schema.messages.matchId }).from(schema.messages)
+      .where(and(eq(schema.messages.senderId, user.id), gte(schema.messages.createdAt, new Date(Date.now() - 10 * 60_000))));
+    if (recentChats.length >= massLimit) {
+      await addRiskSignal(user.id, "MASS_MESSAGING", 20, `${recentChats.length} new chats in 10 minutes`);
+      throw new ApiError(429, "You're starting a lot of conversations at once. Take a short break and come back in a few minutes.", "mass_messaging");
+    }
+  }
+
   const flags = screenMessage(body);
+  if (flags.some((f) => BLOCKING_FLAGS.includes(f)))
+    throw new ApiError(422, "For safety, links from shorteners, raw IP addresses or app files can't be sent. Share the full website address instead.", "risky_link");
   // Kindness check: a nudge before sending something that may hurt. Sending anyway is allowed (and still screened).
   if (flags.includes("ABUSE") && !confirmed && (await getConfig("chat.kindnessCheck")))
     throw new ApiError(409, "This might come across as hurtful. Do you want to change it before sending?", "kindness_check");
@@ -89,20 +112,12 @@ export const POST = route<{ id: string }>(async ({ req, user, params }) => {
   if (flags.length) await messageFlagCheck(user.id);
   const reportable = flags.filter((f) => REPORTABLE_FLAGS.includes(f));
   if (reportable.length) {
-    // One open automated report per sender per category per day to avoid flooding the queue.
-    const since = new Date(Date.now() - 86400_000);
-    const category = reportable.includes("SCAM") ? "SCAM" : "HARASSMENT";
-    const dup = await db.query.reports.findFirst({
-      where: and(eq(schema.reports.reportedId, user.id), eq(schema.reports.automated, true), eq(schema.reports.category, category), gte(schema.reports.createdAt, since)),
-    });
-    if (!dup)
-      await db.insert(schema.reports).values({
-        reportedId: user.id, matchId: match.id, messageId: msg.id, category, automated: true, priority: "HIGH",
-        details: `Automated screening flagged a message: ${reportable.join(", ")}`,
-      });
+    const category = reportable.includes("THREAT") ? "THREATS" : reportable.includes("SCAM") || reportable.includes("FINANCIAL_INFO") ? "SCAM" : "HARASSMENT";
+    const report = await fileAutomatedReport({ reportedId: user.id, matchId: match.id, messageId: msg.id, category, details: `Automated screening flagged a message: ${reportable.join(", ")}` });
+    await logAutomatedDecision({ userId: user.id, kind: "MESSAGE_FLAG", decision: "SENT_FOR_HUMAN_REVIEW", reason: `A message matched our safety rules (${reportable.join(", ").toLowerCase()}). A person will review it; nothing happens to the account automatically.`, system: "rules:moderation-v2", refId: report.id });
   }
 
-  await notify(otherId, "MESSAGE", "New message", "You have a new message.", `/matches/${match.id}`);
+  if (!(await isMuted(otherId, match.id))) await notify(otherId, "MESSAGE", "New message", "You have a new message.", `/matches/${match.id}`);
   setTyping(match.id, user.id, false, false); // cleared together with the message, so the other side wakes once and sees both
   bumpChat(match.id);
   return ok({ id: msg.id, createdAt: msg.createdAt, flagged: flags.length > 0 }, 201);

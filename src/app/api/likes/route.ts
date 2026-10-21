@@ -1,3 +1,5 @@
+import { countryRules } from "@/lib/compliance";
+import { assertCanStartContact } from "@/lib/safety";
 import { z } from "zod";
 import { and, count, eq, gte, inArray, notInArray } from "drizzle-orm";
 import { db, schema } from "@/db";
@@ -27,14 +29,18 @@ export const POST = route(async ({ req, user }) => {
   await rateLimit(`like:${user.id}`, 120, 60_000);
   const b = await parseBody(req, Body);
   if (b.toId === user.id) throw new ApiError(400, "You can't like your own profile.", "self");
+  if (b.kind !== "PASS") assertCanStartContact(user);
   if (user.onboardingStep < 3) throw new ApiError(409, "Finish setting up your profile first.", "onboarding");
 
   const target = await db.query.users.findFirst({ where: eq(schema.users.id, b.toId) });
-  if (!target || target.status !== "ACTIVE" || target.role !== "USER" || target.onboardingStep < 3)
+  if (!target || target.status !== "ACTIVE" || target.role !== "USER" || target.onboardingStep < 3 || target.deactivatedAt)
     throw new ApiError(404, "This profile isn't available anymore.", "not_found");
   if (await isBlockedBetween(user.id, b.toId)) throw new ApiError(404, "This profile isn't available anymore.", "not_found");
 
   if (b.kind !== "PASS" && user.selfieStatus !== "VERIFIED") {
+    const mine = await db.query.profiles.findFirst({ where: eq(schema.profiles.userId, user.id), columns: { country: true } });
+    if ((await countryRules(mine?.country)).ageAssurance === "SELFIE_REQUIRED")
+      throw new ApiError(403, "In your country, members complete the selfie check before liking anyone. It takes a minute in Safety.", "verification_required");
     const theirPrefs = await db.query.preferences.findFirst({ where: eq(schema.preferences.userId, b.toId) });
     if (theirPrefs?.likesFrom === "VERIFIED") throw new ApiError(403, "This person only connects with verified profiles. Verify your profile to like them.", "verified_only");
   }

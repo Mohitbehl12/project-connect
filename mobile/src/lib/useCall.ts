@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { canFlipCamera, flipCamera, getMedia, rtc } from "@/lib/webrtc";
+import { recordConsent } from "./consent";
 
 // One call, start to finish. The server rings the other person and passes the connection setup
 // messages between the two apps; audio and video go directly between the phones (or through the TURN
@@ -69,6 +70,9 @@ export function useCall(id: string, accept: boolean) {
 
       try {
         const stream = await getMedia({ audio: true, video: c.kind === "VIDEO" ? { facingMode: "user", width: 640, height: 480 } : false });
+        recordConsent("MICROPHONE", true);
+        if (c.kind === "VIDEO") recordConsent("CAMERA", true);
+        recordConsent("VIDEO_CALLS", true);
         if (stop) { stream.getTracks().forEach((t: any) => t.stop()); return; }
         localRef.current = stream; setLocal(stream);
         pc = new rtc.RTCPeerConnection({ iceServers: ice.iceServers, iceTransportPolicy: ice.iceTransportPolicy });

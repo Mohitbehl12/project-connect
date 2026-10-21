@@ -22,7 +22,26 @@ describe("screenMessage", () => {
     expect(screenMessage("you are so stupid")).toContain("ABUSE");
     expect(screenMessage("chutiya")).toContain("ABUSE");
   });
+  it("flags requests for codes, PINs and bank details", () => {
+    expect(screenMessage("please send me the OTP you just got")).toContain("FINANCIAL_INFO");
+    expect(screenMessage("what's your UPI PIN")).toContain("FINANCIAL_INFO");
+    expect(screenMessage("share your bank account and IFSC")).toContain("FINANCIAL_INFO");
+    expect(screenMessage("I sent you an OTP joke lol")).not.toContain("FINANCIAL_INFO");
+  });
+  it("flags threats and sextortion", () => {
+    expect(screenMessage("I know where you live")).toContain("THREAT");
+    expect(screenMessage("I will find you")).toContain("THREAT");
+    expect(screenMessage("pay me or I'll leak your photos")).toContain("THREAT");
+    expect(screenMessage("I'll find you a good book")).not.toContain("THREAT");
+  });
+  it("refuses risky links but not ordinary ones", () => {
+    expect(screenMessage("check https://bit.ly/abc")).toContain("RISKY_LINK");
+    expect(screenMessage("go to http://192.168.1.20/login")).toContain("RISKY_LINK");
+    expect(screenMessage("install this kinara-pro.apk")).toContain("RISKY_LINK");
+    expect(screenMessage("menu at https://www.example.com/cafe")).not.toContain("RISKY_LINK");
+  });
   it("gives the most important warning first", () => {
+    expect(warningFor(["SCAM", "THREAT"])).toMatch(/threat/);
     expect(warningFor(["LINK", "SCAM"])).toMatch(/money/);
     expect(warningFor([])).toBeNull();
   });

@@ -56,7 +56,7 @@ export async function authenticate(email: string, password: string, ipOrCtx: str
   if (user.status === "DELETED") throw new ApiError(401, "That email or password isn't right.", "bad_credentials");
   if (user.status === "BANNED") {
     await record(user.id, false, "banned", ctx);
-    throw new ApiError(403, "This account has been banned for breaking our community guidelines.", "banned");
+    throw new ApiError(403, "This account has been banned for breaking our community guidelines. If you think this is a mistake, you can appeal at /appeal.", "banned");
   }
   if (user.totpSecret) {
     if (!ctx.totp) {
@@ -72,7 +72,8 @@ export async function authenticate(email: string, password: string, ipOrCtx: str
     await db.update(schema.users).set({ totpLastStep: step }).where(eq(schema.users.id, user.id));
   }
 
-  await db.update(schema.users).set({ failedLogins: 0, lockedUntil: null, lastActiveAt: new Date() }).where(eq(schema.users.id, user.id));
+  // Staff who just signed in (with their 2-step code where it's on) start with the admin tools unlocked.
+  await db.update(schema.users).set({ failedLogins: 0, lockedUntil: null, lastActiveAt: new Date(), ...(user.role !== "USER" ? { staffUnlockedAt: new Date() } : {}) }).where(eq(schema.users.id, user.id));
   if (needsRehash(user.passwordHash)) await db.update(schema.users).set({ passwordHash: await hashPassword(password) }).where(eq(schema.users.id, user.id));
   await newDeviceCheck(user, ctx);
   await record(user.id, true, "ok", ctx);
@@ -95,4 +96,7 @@ async function newDeviceCheck(user: User, ctx: LoginContext) {
   const recentFails = await db.select({ id: schema.loginEvents.id }).from(schema.loginEvents)
     .where(and(eq(schema.loginEvents.userId, user.id), eq(schema.loginEvents.success, false), gte(schema.loginEvents.createdAt, new Date(Date.now() - 3600_000))));
   if (recentFails.length >= 3) await addRiskSignal(user.id, "NEW_DEVICE_LOGIN", 10, `${recentFails.length} failed attempts before a new-device sign-in`);
+  // Many different devices in a week can mean a shared or taken-over account. A signal for review, nothing more.
+  const week = past.filter((e) => e.createdAt.getTime() > Date.now() - 7 * 86400_000 && e.installId).map((e) => e.installId);
+  if (new Set([...week, ctx.installId]).size >= 5) await addRiskSignal(user.id, "DEVICE_CHURN", 10, "5+ devices in 7 days");
 }

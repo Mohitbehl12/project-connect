@@ -1,3 +1,5 @@
+import { sensitiveAccessCheck } from "@/lib/staff";
+import { liftRestriction } from "@/lib/safety";
 import { grantStartingMembership } from "@/lib/billing";
 import { onVerified } from "@/lib/referrals";
 import { z } from "zod";
@@ -26,6 +28,7 @@ export const GET = route<{ id: string }>(async ({ user, params }) => {
     db.select().from(schema.subscriptions).where(eq(schema.subscriptions.userId, u.id)).orderBy(desc(schema.subscriptions.startedAt)),
   ]);
   await audit(user.id, "admin.view_user", "user", u.id);
+  await sensitiveAccessCheck(user.id);
 
   // Precise coordinates are not shown even to admins; city is enough for moderation.
   const profile = p ? { ...p, lat: undefined, lng: undefined, age: ageFromDob(p.dob), interests: p.interests.split(",").filter(Boolean), prompts: JSON.parse(p.prompts) } : null;
@@ -70,11 +73,12 @@ export const POST = route<{ id: string }>(async ({ req, user, params }) => {
       break;
     case "BAN":
       await db.update(U).set({ status: "BANNED", tokenVersion: target.tokenVersion + 1 }).where(eq(U.id, target.id));
-      await db.update(schema.matches).set({ status: "UNMATCHED", unmatchedBy: user.id })
+      await db.update(schema.matches).set({ status: "UNMATCHED", unmatchedBy: user.id, endedAt: new Date() })
         .where(and(eq(schema.matches.status, "ACTIVE"), or(eq(schema.matches.userAId, target.id), eq(schema.matches.userBId, target.id))));
       break;
     case "RESTORE":
       await db.update(U).set({ status: "ACTIVE" }).where(eq(U.id, target.id));
+      await liftRestriction(target.id, user.id, "restored by staff");
       await notify(target.id, "MODERATION", "Your account is active again", b.reason);
       break;
     case "VERIFY":
@@ -83,6 +87,7 @@ export const POST = route<{ id: string }>(async ({ req, user, params }) => {
       await grantStartingMembership(target.id).catch(() => {}); // e.g. free forever after a verified gender change
       await notify(target.id, "VERIFICATION", "You're verified", "Your profile now shows a verified badge.");
       await onVerified(target.id); // referral reward + optional verification reward
+      await liftRestriction(target.id, user.id, "selfie verified");
       break;
     case "REJECT_VERIFICATION":
       await db.update(U).set({ selfieStatus: "REJECTED" }).where(eq(U.id, target.id));

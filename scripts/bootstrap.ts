@@ -4,6 +4,7 @@
 import "./env";
 import { execSync } from "node:child_process";
 import { createClient } from "@libsql/client";
+import { applyLegalDrafts } from "./legal-drafts";
 
 async function main() {
   await setUp();
@@ -20,6 +21,7 @@ async function setUp() {
   if (Number(rows[0]?.n ?? 0) > 0) {
     console.log("[bootstrap] database already set up");
     await resetAdminPassword(db);
+    await applyLegalDrafts(db).catch((e) => console.warn("[bootstrap] ⚠ legal drafts step failed:", e));
     return;
   }
   if (!process.env.SEED_ADMIN_EMAIL) {

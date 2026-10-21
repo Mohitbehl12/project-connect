@@ -16,7 +16,9 @@ export async function api<T = any>(path: string, opts: { method?: string; body?:
   });
   let data: any = null;
   try { data = await res.json(); } catch { /* empty */ }
-  if (res.status === 401 && typeof window !== "undefined" && !path.startsWith("/api/auth")) {
+  if (typeof window !== "undefined" && (data?.code === "staff_unlock_required" || data?.code === "staff_mfa_required")) {
+    window.dispatchEvent(new Event("staff-locked")); // AdminShell shows the unlock screen
+  } else if (res.status === 401 && typeof window !== "undefined" && !path.startsWith("/api/auth") && path !== "/api/staff/unlock") {
     window.location.href = `/login?next=${encodeURIComponent(window.location.pathname)}`;
   }
   if (!res.ok) throw new ClientError(res.status, data?.error ?? "Something went wrong.", data?.code);

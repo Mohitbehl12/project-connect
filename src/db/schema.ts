@@ -37,6 +37,9 @@ export const users = sqliteTable("users", {
   welcomeGiftAt: ts("welcome_gift_at"), // free-months gift given (once per account)
   signupIp: text("signup_ip"),
   signupInstallId: text("signup_install_id"),
+  deactivatedAt: ts("deactivated_at"), // profile paused by the member: hidden everywhere until they come back
+  staffUnlockedAt: ts("staff_unlocked_at"), // staff only: last 2-step check for admin tools (idle timeout)
+  restrictedAt: ts("restricted_at"), // high risk: can't start new contact until verified or reviewed (never a ban)
   createdAt: now("created_at"),
   lastActiveAt: now("last_active_at"),
 }, (t) => [index("users_status_role").on(t.status, t.role)]);
@@ -85,6 +88,10 @@ export const preferences = sqliteTable("preferences", {
   notifyMatches: bool("notify_matches").notNull().default(true),
   notifyMessages: bool("notify_messages").notNull().default(true),
   callRequests: text("call_requests").notNull().default("MATCHES"), // MATCHES | NOBODY: who may ask to call
+  profileVisibility: text("profile_visibility").notNull().default("EVERYONE"), // EVERYONE | VERIFIED: who sees me in Discover
+  photosVisibility: text("photos_visibility").notNull().default("EVERYONE"), // EVERYONE | MATCHES: extra photos (the first is always shown)
+  showCity: bool("show_city").notNull().default(true), // off → others see only the country
+  marketing: bool("marketing").notNull().default(false), // optional; never pre-ticked; consent history in `consents`
   notifyLikes: bool("notify_likes").notNull().default(true),
   notifyEmail: bool("notify_email").notNull().default(false),
   theme: text("theme").notNull().default("SYSTEM"), // SYSTEM | LIGHT | DARK
@@ -114,6 +121,7 @@ export const matches = sqliteTable("matches", {
   reasons: text("reasons").notNull().default("[]"),
   status: text("status").notNull().default("ACTIVE"), // ACTIVE | UNMATCHED
   unmatchedBy: text("unmatched_by"),
+  endedAt: ts("ended_at"), // when the chat ended (retention clock)
   createdAt: now("created_at"),
 }, (t) => [uniqueIndex("matches_pair").on(t.userAId, t.userBId), index("matches_b").on(t.userBId)]);
 
@@ -157,6 +165,7 @@ export const reports = sqliteTable("reports", {
   reportedId: text("reported_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   matchId: text("match_id"),
   messageId: text("message_id"),
+  caseNo: text("case_no"), // human case id shown to the reporter, e.g. KN-R-2026-000123
   category: text("category").notNull(),
   details: text("details").notNull().default(""),
   status: text("status").notNull().default("OPEN"), // OPEN | ACTIONED | DISMISSED
@@ -187,7 +196,10 @@ export const auditLogs = sqliteTable("audit_logs", {
   meta: text("meta").notNull().default("{}"),
   ip: text("ip"),
   createdAt: now("created_at"),
-}, (t) => [index("audit_entity").on(t.entity, t.entityId), index("audit_time").on(t.createdAt)]);
+  seq: integer("seq"), // position in the hash chain
+  prevHash: text("prev_hash"),
+  hash: text("hash"), // sha256(prevHash + this row) — editing or deleting a row breaks the chain
+}, (t) => [uniqueIndex("audit_seq").on(t.seq), index("audit_entity").on(t.entity, t.entityId), index("audit_time").on(t.createdAt)]);
 
 export const notifications = sqliteTable("notifications", {
   id: id(),
@@ -434,6 +446,10 @@ export const legalVersions = sqliteTable("legal_versions", {
   status: text("status").notNull().default("DRAFT"), // DRAFT | IN_REVIEW | PUBLISHED | SUPERSEDED
   effectiveAt: ts("effective_at"),
   publishedAt: ts("published_at"),
+  changeSummary: text("change_summary"), // what changed, shown to members
+  material: bool("material").notNull().default(true), // material change → members must accept again
+  lawyerReviewedBy: text("lawyer_reviewed_by"), // name/firm of the qualified reviewer, entered by staff
+  lawyerReviewedAt: ts("lawyer_reviewed_at"),
   createdById: text("created_by_id"),
   createdAt: now("created_at"),
 }, (t) => [uniqueIndex("legal_doc_version").on(t.documentId, t.version)]);
@@ -611,3 +627,66 @@ export const callRequests = sqliteTable("call_requests", {
   respondedAt: ts("responded_at"),
   expiresAt: ts("expires_at").notNull(), // a pending request lapses; an accepted one stops allowing calls
 }, (t) => [index("callreq_match").on(t.matchId, t.createdAt), index("callreq_to").on(t.toId, t.state)]);
+
+// ---- Privacy, safety and compliance (21 Oct 2026) --------------------------------------------------
+/** Append-only consent history: what, when, which version, from where. The latest row per kind is current. */
+export const consents = sqliteTable("consents", {
+  id: id(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(), // see CONSENT_KINDS in src/lib/consent.ts
+  granted: bool("granted").notNull(),
+  version: text("version"), // policy/terms version or wording id the person saw
+  source: text("source").notNull().default("app"), // app | web | signup | system
+  ip: text("ip"),
+  createdAt: now("created_at"),
+}, (t) => [index("consents_user_kind").on(t.userId, t.kind, t.createdAt)]);
+
+/** Appeals against suspensions, bans, report outcomes, verification and automated decisions. Decided by a person. */
+export const appeals = sqliteTable("appeals", {
+  id: id(),
+  caseNo: text("case_no").notNull(),
+  userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+  contactEmail: text("contact_email"), // only for banned members who can't sign in
+  kind: text("kind").notNull(), // SUSPENSION | BAN | RESTRICTION | REPORT_OUTCOME | VERIFICATION | PHOTO | AUTOMATED | OTHER
+  refId: text("ref_id"), // moderation action, report, photo or automated decision
+  details: text("details").notNull(),
+  status: text("status").notNull().default("OPEN"), // OPEN | UPHELD | OVERTURNED
+  decision: text("decision"),
+  decidedById: text("decided_by_id"),
+  decidedAt: ts("decided_at"),
+  createdAt: now("created_at"),
+}, (t) => [index("appeals_status").on(t.status, t.createdAt), index("appeals_user").on(t.userId)]);
+
+/** Automated decisions that affect a person (photo screening, message flags, risk levels…), so they can be reviewed and appealed. */
+export const automatedDecisions = sqliteTable("automated_decisions", {
+  id: id(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(), // PHOTO_SCREEN | MESSAGE_FLAG | RISK_LEVEL | SELFIE_MATCH | RESTRICTION
+  decision: text("decision").notNull(),
+  reason: text("reason").notNull(), // plain-language reason (no sensitive inferences)
+  system: text("system").notNull(), // which rule set / model and version
+  refId: text("ref_id"),
+  reviewedById: text("reviewed_by_id"),
+  reviewOutcome: text("review_outcome"),
+  createdAt: now("created_at"),
+}, (t) => [index("autodec_user").on(t.userId, t.createdAt)]);
+
+/** Muted chats: no notifications for that conversation. */
+export const chatMutes = sqliteTable("chat_mutes", {
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  matchId: text("match_id").notNull().references(() => matches.id, { onDelete: "cascade" }),
+  createdAt: now("created_at"),
+}, (t) => [uniqueIndex("chat_mute_pair").on(t.userId, t.matchId)]);
+
+/** Legal hold: stops retention purges for one account (serious report, lawful request). */
+export const legalHolds = sqliteTable("legal_holds", {
+  id: id(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  reason: text("reason").notNull(),
+  kind: text("kind").notNull().default("SAFETY"), // SAFETY | LAWFUL_REQUEST | LITIGATION
+  reference: text("reference"), // e.g. authority's request number
+  createdById: text("created_by_id").notNull(),
+  until: ts("until"),
+  releasedAt: ts("released_at"),
+  createdAt: now("created_at"),
+}, (t) => [index("legal_holds_user").on(t.userId)]);

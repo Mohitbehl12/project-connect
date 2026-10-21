@@ -13,7 +13,7 @@ export const GET = route<{ id: string }>(async ({ user, params }) => {
   if (!me || !other || other.row.user.status === "BANNED") throw new ApiError(410, "This person is no longer available.", "gone");
 
   const photoMap = await photosFor([otherId]);
-  const card = publicCard(me.person, other.row, { score: match.score, reasons: JSON.parse(match.reasons), photos: photoMap.get(otherId) });
+  const card = publicCard(me.person, other.row, { score: match.score, reasons: JSON.parse(match.reasons), photos: photoMap.get(otherId), matched: match.status === "ACTIVE" });
   const online = other.row.prefs?.showOnline !== false && Date.now() - other.row.user.lastActiveAt.getTime() < 5 * 60_000;
   const dates = await db.select().from(schema.datePlans).where(eq(schema.datePlans.matchId, match.id)).orderBy(asc(schema.datePlans.startsAt));
   return ok({
@@ -22,7 +22,7 @@ export const GET = route<{ id: string }>(async ({ user, params }) => {
     connect: alignedTraits(me.person, other.person, 3),
     starters: conversationStarters(
       { interests: me.person.interests, city: me.person.city },
-      { interests: other.person.interests, city: other.person.city, prompts: card.prompts, firstName: card.firstName },
+      { interests: other.person.interests, city: card.city, prompts: card.prompts, firstName: card.firstName },
     ),
     dates: dates.map((d) => ({ ...d, mine: d.proposerId === user.id, proposerId: undefined })),
   });

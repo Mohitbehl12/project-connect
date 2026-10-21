@@ -6,11 +6,8 @@ import { currentUser } from "./auth";
 import { can, type Permission } from "./rbac";
 import type { User } from "@/db/schema";
 
-export class ApiError extends Error {
-  constructor(public status: number, message: string, public code = "error") {
-    super(message);
-  }
-}
+import { ApiError } from "./http-error";
+export { ApiError };
 
 export const ok = <T>(data: T, status = 200) => NextResponse.json(data, { status });
 
@@ -44,6 +41,7 @@ export function route<P = Record<string, string>>(
         throw new ApiError(403, "Your account is suspended. Check your notifications for details.", "suspended");
       if (opts.permission && !can(user.role, opts.permission))
         throw new ApiError(403, "You don't have permission to do that.", "forbidden");
+      if (opts.permission && user.role !== "USER") await (await import("./staff")).staffGate(user);
       return await handler({ req, user, params: (await ctx?.params) as P });
     } catch (e) {
       return errorResponse(e);

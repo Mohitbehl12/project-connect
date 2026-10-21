@@ -5,6 +5,8 @@ import { db, schema } from "@/db";
 import { ApiError, ok, parseBody, route } from "@/lib/http";
 import { GENDERS, INTENTS } from "@/lib/constants";
 import { planFeatures } from "@/lib/config";
+import { currentConsent, recordConsent } from "@/lib/consent";
+import { audit } from "@/lib/audit";
 
 const g = Object.keys(GENDERS) as [string, ...string[]];
 const i = Object.keys(INTENTS) as [string, ...string[]];
@@ -29,7 +31,12 @@ const Body = z.object({
   theme: z.enum(["SYSTEM", "LIGHT", "DARK"]).optional(),
   showDistance: z.boolean().optional(),
   likesFrom: z.enum(["EVERYONE", "VERIFIED"]).optional(),
+  profileVisibility: z.enum(["EVERYONE", "VERIFIED"]).optional(),
+  photosVisibility: z.enum(["EVERYONE", "MATCHES"]).optional(),
+  showCity: z.boolean().optional(),
 });
+
+const PRIVACY_FIELDS = ["discoverable", "showOnline", "readReceipts", "incognito", "showDistance", "likesFrom", "callRequests", "profileVisibility", "photosVisibility", "showCity"] as const;
 
 export const PUT = route(async ({ req, user }) => {
   const b = await parseBody(req, Body);
@@ -50,8 +57,12 @@ export const PUT = route(async ({ req, user }) => {
     ...(interestedIn ? { interestedIn: interestedIn.join(",") } : {}),
     ...(intents ? { intents: intents.join(",") } : {}),
   };
-  await db.insert(schema.preferences).values({ userId: user.id, interestedIn: interestedIn?.join(",") ?? "", ...values })
+  const marketing = current ? undefined : (await currentConsent(user.id, "MARKETING"))?.granted ?? false;
+  await db.insert(schema.preferences).values({ userId: user.id, interestedIn: interestedIn?.join(",") ?? "", ...values, ...(marketing !== undefined ? { marketing } : {}) })
     .onConflictDoUpdate({ target: schema.preferences.userId, set: values });
+  if (b.discoverable !== undefined && b.discoverable !== (current?.discoverable ?? true)) await recordConsent(user.id, "PROFILE_VISIBLE", b.discoverable);
+  const changed = PRIVACY_FIELDS.filter((k) => b[k] !== undefined && current && (current as Record<string, unknown>)[k] !== b[k]);
+  if (changed.length) await audit(user.id, "privacy.settings", "user", user.id, Object.fromEntries(changed.map((k) => [k, b[k]])));
   const onboardingStep = await syncOnboardingStep(user.id);
   return ok({ saved: true, onboardingStep });
 });

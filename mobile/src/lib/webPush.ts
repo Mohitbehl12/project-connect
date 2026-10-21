@@ -2,6 +2,7 @@
 // iPhone only allows them once the app has been added to the Home Screen (iOS 16.4+), and the request
 // must come from a tap, so the app shows a button rather than asking on its own.
 import { api } from "./api";
+import { recordConsent } from "./consent";
 
 export type WebPushState = "unsupported" | "needs-install" | "denied" | "off" | "on";
 const G = globalThis as any;
@@ -37,6 +38,7 @@ export async function enableWebPush(): Promise<WebPushState> {
   const state = await webPushState();
   if (state === "unsupported" || state === "needs-install" || state === "denied") return state;
   const perm = await G.Notification.requestPermission();
+  recordConsent("PUSH", perm === "granted");
   if (perm !== "granted") return perm === "denied" ? "denied" : "off";
   const { publicKey, enabled } = await api<{ publicKey: string | null; enabled: boolean }>("/api/push/web");
   if (!enabled || !publicKey) return "unsupported";

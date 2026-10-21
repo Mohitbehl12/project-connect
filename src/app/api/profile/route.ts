@@ -1,3 +1,5 @@
+import { ageFromDob, roundCoord } from "@/lib/matching";
+import { countryRules } from "@/lib/compliance";
 import { grantStartingMembership } from "@/lib/billing";
 import { syncOnboardingStep } from "@/lib/photos";
 import { z } from "zod";
@@ -45,6 +47,10 @@ async function saveProfile(user: User, b: ProfileInput) {
   if (flags.includes("ABUSE")) throw new ApiError(422, "Your profile includes language that breaks our community guidelines.", "abusive_profile");
 
   const c = CITIES[b.city];
+  // Country rules (Admin → Privacy & compliance): minimum age and whether we've launched there.
+  const rules = await countryRules(c.country);
+  if (!rules.launchEnabled) throw new ApiError(403, "Kinara isn't available in this country yet.", "country_unavailable");
+  if (ageFromDob(user.dob) < rules.minAge) throw new ApiError(403, `Kinara is only for people aged ${rules.minAge} and over in this country.`, "underage");
   const existing = await db.query.profiles.findFirst({ where: eq(schema.profiles.userId, user.id) });
   // People may update their gender at any time. Because prices differ by gender in some countries, a change
   // after sign-up is noted for the risk review — it never blocks the change or the person.
@@ -55,8 +61,9 @@ async function saveProfile(user: User, b: ProfileInput) {
   // Store the city centre with a stable per-user jitter (~±3 km). Device GPS is never collected.
   const cityChanged = !existing || existing.city !== b.city;
   const seed = [...user.id].reduce((s, ch) => (s * 31 + ch.charCodeAt(0)) % 10007, 7);
-  const lat = cityChanged ? c.lat + ((seed % 100) / 100 - 0.5) * 0.06 : existing!.lat;
-  const lng = cityChanged ? c.lng + ((Math.floor(seed / 100) % 100) / 100 - 0.5) * 0.06 : existing!.lng;
+  // Location = the chosen city's centre with a small fixed offset, rounded to ~1 km. We never ask for GPS.
+  const lat = roundCoord(cityChanged ? c.lat + ((seed % 100) / 100 - 0.5) * 0.06 : existing!.lat);
+  const lng = roundCoord(cityChanged ? c.lng + ((Math.floor(seed / 100) % 100) / 100 - 0.5) * 0.06 : existing!.lng);
 
   const values = {
     firstName: b.firstName, dob: user.dob, gender: b.gender, bio: b.bio, country: c.country, city: b.city, lat, lng,

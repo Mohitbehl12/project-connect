@@ -20,6 +20,7 @@ export type Card = {
   shared: { key: string; label: string; emoji: string }[];
   prompts: { q: string; a: string }[];
   photos: Photo[];
+  morePhotosForMatches?: boolean;
   verified: boolean;
   score?: number;
   reasons?: string[];
@@ -35,6 +36,7 @@ export type Me = {
     id: string; email: string; phone: string | null; dob: string | null; role: string; status: string;
     emailVerified: boolean; phoneVerified: boolean; selfieStatus: "NONE" | "PENDING" | "VERIFIED" | "REJECTED";
     planCode: string; planEndsAt: string | null; onboardingStep: number; permissions: string[];
+    paused?: boolean; restricted?: boolean;
   };
   profile: null | {
     firstName: string; gender: string; city: string; country: string; bio: string; intent: string; interests: string;
@@ -46,6 +48,7 @@ export type Me = {
     discoverable: boolean; showOnline: boolean; readReceipts: boolean; incognito: boolean;
     notifyMatches: boolean; notifyMessages: boolean; notifyLikes: boolean; theme: "SYSTEM" | "LIGHT" | "DARK";
     showDistance: boolean; likesFrom: "EVERYONE" | "VERIFIED";
+    profileVisibility?: "EVERYONE" | "VERIFIED"; photosVisibility?: "EVERYONE" | "MATCHES"; showCity?: boolean; marketing?: boolean;
   };
   answers: Record<string, number>;
   features: { dailyLikes: number; dailyPriorityLikes: number; seeWhoLiked: boolean; advancedFilters: boolean; incognito: boolean; travelMode: boolean; monthlyBoosts: number };

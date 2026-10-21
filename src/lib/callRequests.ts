@@ -7,6 +7,7 @@ import { ApiError } from "./http";
 import { notify } from "./notify";
 import { isBlockedBetween } from "./people";
 import { rateLimit } from "./ratelimit";
+import { assertCanStartContact, assertNotPaused } from "./safety";
 import { bumpChat } from "./realtime";
 import { addRiskSignal } from "./risk";
 import { storage } from "./storage";
@@ -87,6 +88,7 @@ async function activeMatchBetween(a: string, b: string) {
 /** Sends a call request to someone you've matched with. */
 export async function createCallRequest(user: User, input: { matchId?: string; userId?: string; kind: Kind }, eligibility: (matchId: string, userId: string) => Promise<{ ok: boolean; reason: string | null; code: string | null; otherId: string }>) {
   await rateLimit(`callreq:${user.id}`, 5, HOUR);
+  assertCanStartContact(user);
   let matchId = input.matchId;
   if (!matchId && input.userId) matchId = (await activeMatchBetween(user.id, input.userId))?.id;
   if (!matchId) throw new ApiError(403, "You can ask to call people you've matched with.", "not_matched");
@@ -94,6 +96,7 @@ export async function createCallRequest(user: User, input: { matchId?: string; u
   if (!e.ok && e.code !== "needs_request") throw new ApiError(403, e.reason ?? "Calls aren't available.", e.code ?? "calls_unavailable");
   const other = e.otherId;
   if (await isBlockedBetween(user.id, other)) throw new ApiError(403, "You can't call this person.", "blocked");
+  await assertNotPaused(other);
   const rows = await requestsFor(matchId);
   const stop = await blocker(matchId, user.id, other, rows);
   if (stop) throw new ApiError(409, stop.reason, stop.code);

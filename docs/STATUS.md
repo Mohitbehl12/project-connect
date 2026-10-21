@@ -222,3 +222,33 @@ Voice/video calls, voice messages, image and GIF sharing in chat, typing indicat
 - **Clothing section removed (21 Oct 2026):** Kinara Style was taken out at the owner's request. Migration 0012 drops its tables (including body measurements), and any TAILOR staff accounts become ordinary users.
 - **Admin dashboard:** men and women, free trials, free-forever members, paid memberships, ₹100 subscriptions, payments, call requests (accepted / declined), calls.
 - **Tests:** 72 unit, 601+ end-to-end, 9 two-server.
+
+## Privacy, safety and legal readiness (21 October 2026)
+Built to the 30-section "Privacy by Design / Safety by Design" brief. The full map is in docs/COMPLIANCE.md.
+- **Consent records:** sign-up, optional marketing (never pre-ticked), camera/mic/notifications/calls. Members can view and change them in Privacy Center.
+- **Legal documents:** full first drafts of all 7 documents (`legal/*.md`), filled from live settings. Versioning records what changed, minor vs material changes, and lawyer review; pages say "Draft for review" until a review is recorded.
+- **Privacy controls:**
+  - who sees my profile and all my photos
+  - hide city
+  - pause profile
+  - coarser distances, coordinates stored at about 1 km
+- **Safety:**
+  - risky links refused
+  - requests for codes, PINs or bank details and threats are flagged
+  - mass messaging slowed
+  - mute a chat
+  - report case numbers and new categories
+  - possible minors hidden after two reports
+  - risk-based restriction (never a ban)
+  - appeals decided by a different person
+  - automated decisions logged and visible to members
+- **Admin:**
+  - staff 2-step required, 30-minute idle lock, alerts on unusual private-record access
+  - hash-chained audit log
+  - legal holds
+  - per-country rules in configuration
+  - service-provider inventory with data processing agreement (DPA) status
+  - retention schedule for 17 categories
+  - Launch readiness checklist
+- **Tests:** 75 unit, 684 end-to-end, 9 two-server; iOS and Android bundles export.
+- **Needs people, not code:** lawyer review, DPAs, an independent penetration test, a law-enforcement/CSAM process, a breach plan.

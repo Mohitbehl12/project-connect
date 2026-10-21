@@ -13,7 +13,7 @@ type Ctx = {
   meError: string | null;
   refetchMe: () => Promise<unknown>;
   signIn: (email: string, password: string, totp?: string) => Promise<void>;
-  signUp: (input: { email: string; password: string; dob: string; referralCode?: string }) => Promise<{ devOtp?: string }>;
+  signUp: (input: { email: string; password: string; dob: string; referralCode?: string; marketing?: boolean }) => Promise<{ devOtp?: string }>;
   signOut: () => Promise<void>;
 };
 
@@ -45,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus("signedIn");
   }, [qc]);
 
-  const signUp = useCallback(async (input: { email: string; password: string; dob: string; referralCode?: string }) => {
+  const signUp = useCallback(async (input: { email: string; password: string; dob: string; referralCode?: string; marketing?: boolean }) => {
     const r = await api("/api/auth/register", {
       body: { ...input, referralCode: input.referralCode?.trim() || undefined, acceptLegal: true, confirmAdult: true, safetyAcknowledged: true, client: "app", platform },
       auth: false,

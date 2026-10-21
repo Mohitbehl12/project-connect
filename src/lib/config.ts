@@ -22,6 +22,10 @@ export const CONFIG_DEFAULTS = {
   "calls.minMessagesEach": 1, // both people must have sent at least this many messages before either can call
   "discovery.batchSize": 20,
   "safety.autoSuspendReportThreshold": 5, // distinct reporters within 30 days → auto-suspend pending review
+  "chat.massMessagingMatches": 15, // new chats started within 10 minutes before we ask the person to slow down (0 = off)
+  // Staff security
+  "admin.idleTimeoutMinutes": 30, // staff must re-enter their 2-step code after this long without admin activity
+  "admin.sensitiveViewsPerHourAlert": 60, // a staff member opening more private records than this in an hour alerts super admins
   // Billing
   "billing.genderPricingCountries": ["IN"] as string[], // gender price groups / offers apply only here
   "billing.reminderDays": 2, // renewal reminder this many days before each charge
@@ -37,15 +41,31 @@ export const CONFIG_DEFAULTS = {
   // Data retention
   "retention.deletedMessageDays": 90, // deleted messages are kept this long for safety review, then purged
   "retention.loginEventDays": 180,
+  "retention.endedChatDays": 90, // messages in ended chats (unmatched, blocked, deleted account) — unless reported or on legal hold
+  "retention.reportedChatDays": 365, // evidence in reported chats, counted from the chat ending
+  "retention.closedReportDays": 730, // closed reports: free-text details removed after this; category/outcome kept
+  "retention.callMetadataDays": 180, // who called whom, when, how long (never audio or video — calls aren't recorded)
+  "retention.callRequestDays": 90,
+  "retention.notificationDays": 90,
+  "retention.resolvedRiskSignalDays": 365,
+  "retention.automatedDecisionDays": 730,
+  "retention.auditLogDays": 1095, // security and admin audit trail (3 years)
+  "retention.inactiveAccountMonths": 0, // 0 = off. When set, accounts unused this long are warned, then deleted 30 days later
   // Photo checks before anyone else sees a photo: "auto" (scanner, else staff review) | "review" | "off" (testing).
   "moderation.photoScreening": "auto" as "auto" | "review" | "off",
   // Last database backup (written by the backup job, shown in Admin → Settings).
   "ops.lastBackup": { at: null, key: null, bytes: 0, error: null } as { at: string | null; key: string | null; bytes: number; error: string | null; failedAt?: string },
+  // Country rules (src/lib/compliance.ts has the starting values); only overrides are stored here.
+  "compliance.countries": {} as Record<string, Partial<import("./compliance").CountryRules>>,
+  // Data processing agreement status per service provider (src/lib/vendors.ts).
+  "vendors.status": {} as Record<string, { dpa: "NOT_STARTED" | "IN_PROGRESS" | "SIGNED" | "NOT_NEEDED"; notes: string }>,
+  // Launch checklist (Admin → Launch readiness): item id → sign-off.
+  "launch.checklist": {} as Record<string, { status: "OPEN" | "DONE" | "NOT_APPLICABLE"; by: string; at: string; note: string }>,
   // Published contacts (Contact page, Grievance page, app). Empty officer name = shown as "being appointed".
   "legal.contacts": {
-    companyName: "", supportEmail: "", safetyEmail: "", privacyEmail: "",
+    companyName: "", supportEmail: "", safetyEmail: "", privacyEmail: "", registeredAddress: "", courtsCity: "",
     grievanceOfficer: { name: "", designation: "Grievance Officer", email: "", phone: "", address: "" },
-  } as { companyName: string; supportEmail: string; safetyEmail: string; privacyEmail: string; grievanceOfficer: { name: string; designation: string; email: string; phone: string; address: string } },
+  } as { companyName: string; supportEmail: string; safetyEmail: string; privacyEmail: string; registeredAddress?: string; courtsCity?: string; grievanceOfficer: { name: string; designation: string; email: string; phone: string; address: string } },
 };
 export type ConfigKey = keyof typeof CONFIG_DEFAULTS;
 

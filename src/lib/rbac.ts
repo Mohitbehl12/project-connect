@@ -28,7 +28,6 @@ export type Permission = (typeof PERMISSIONS)[number];
 export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   USER: [],
   SUPPORT: ["admin.access", "users.view", "reports.view", "payments.refund_request", "grievances.handle"],
-  // The workshop: sees and updates clothing orders (with measurements) and fabric stock — nothing about dating.
   FINANCE: ["admin.access", "plans.edit", "payments.view", "payments.refund_request", "payments.refund_approve", "offers.edit", "coupons.edit", "referrals.manage", "analytics.view"],
   SECURITY: ["admin.access", "users.view", "security.view", "risk.resolve", "referrals.manage", "audit.view"],
   MODERATOR: ["admin.access", "users.view", "users.moderate", "users.verify", "reports.view", "reports.resolve", "messages.view_reported", "grievances.handle"],

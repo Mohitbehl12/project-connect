@@ -11,6 +11,7 @@ import { issueOtp } from "@/lib/otp";
 import { audit } from "@/lib/audit";
 import { attachReferral } from "@/lib/referrals";
 import { signupRiskChecks } from "@/lib/fraud";
+import { recordConsent } from "@/lib/consent";
 
 const Body = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
@@ -22,6 +23,7 @@ const Body = z.object({
   client: z.enum(["web", "app"]).default("web"), // "app" → tokens in the body instead of a cookie
   platform: z.enum(["ios", "android", "web"]).optional(),
   referralCode: z.string().trim().max(20).optional(),
+  marketing: z.boolean().default(false), // optional, never pre-ticked
 });
 
 export const POST = publicRoute(async ({ req }) => {
@@ -49,6 +51,13 @@ export const POST = publicRoute(async ({ req }) => {
 
   const legal = await requiredLegalVersions();
   await recordAcceptances(user.id, legal.map((l) => l.versionId), ip);
+  const ver = (slug: string) => { const l = legal.find((x) => x.slug === slug); return l ? `${slug}@v${l.version}` : undefined; };
+  const src = { source: "signup", ip };
+  await recordConsent(user.id, "TERMS", true, { ...src, version: ver("terms") });
+  await recordConsent(user.id, "PRIVACY", true, { ...src, version: ver("privacy") });
+  await recordConsent(user.id, "AGE_18", true, src);
+  await recordConsent(user.id, "SAFETY_RULES", true, { ...src, version: ver("guidelines") });
+  if (body.marketing) await recordConsent(user.id, "MARKETING", true, { ...src, version: "marketing-v1" });
   await audit(user.id, "user.register", "user", user.id, { legal: legal.map((l) => `${l.slug}@v${l.version}`) });
 
   const devCode = await issueOtp(user.id, "EMAIL", user.email);

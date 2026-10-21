@@ -6,6 +6,7 @@ import { Icon } from "@/components/Icon";
 import { T } from "@/components/Text";
 import type { Message } from "@/lib/types";
 import { useTheme } from "@/theme/ThemeProvider";
+import { recordConsent } from "@/lib/consent";
 
 const clock = (ms: number) => { const s = Math.round(ms / 1000); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
 
@@ -91,6 +92,7 @@ export function VoiceRecorder({ onSend, onCancel }: { onSend: (file: { uri: stri
     let tick: ReturnType<typeof setInterval> | null = null;
     (async () => {
       const perm = await requestRecordingPermissionsAsync().catch(() => ({ granted: false }));
+      recordConsent("MICROPHONE", perm.granted);
       if (!perm.granted) return onCancel("Allow microphone access to send voice messages.");
       try {
         await setAudioModeAsync({ playsInSilentMode: true, allowsRecording: true }).catch(() => {});

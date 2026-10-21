@@ -33,6 +33,7 @@ export const GET = route(async ({ user }) => {
       emailVerified: user.emailVerified, phoneVerified: user.phoneVerified, selfieStatus: user.selfieStatus,
       planCode: fresh.planCode, planEndsAt: fresh.planEndsAt, onboardingStep: user.onboardingStep,
       permissions: ROLE_PERMISSIONS[user.role as Role] ?? [],
+      paused: !!user.deactivatedAt, restricted: !!user.restrictedAt,
     },
     profile: profile ? safeProfile : null,
     preferences: prefs ?? null,

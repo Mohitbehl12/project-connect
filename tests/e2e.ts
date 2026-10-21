@@ -1004,6 +1004,165 @@ async function main() {
     check("switching to man ends free-forever", (await W.get("/api/me")).data?.membership?.state !== "FREE_FOREVER");
   }
 
+  section("Privacy by design: consent records, legal drafts, privacy controls");
+  // Names set the test IP (x-forwarded-for), so these use lengths nothing else uses (sign-up is rate-limited per IP).
+  const P1 = new Client("PrivacyOne123"), P2 = new Client("PrivacyTwo1234"), P4 = new Client("PrivacyFour1234"), P3 = new Client("PrivacyThree1234");
+  const viewer = new Client("PrivacyOutsider123");
+  const p1Id = await onboard(P1, `priv1-${run}@test.local`, "WOMAN", "MAN", "Ira", answersA);
+  const p2Id = await onboard(P2, `priv2-${run}@test.local`, "MAN", "WOMAN", "Dev", answersB);
+  const p4Id = await onboard(P4, `priv4-${run}@test.local`, "WOMAN", "MAN", "Mira", answersA);
+  {
+    const mk = await new Client("MarketingOne12345").post("/api/auth/register", { email: `mkt-${run}@test.local`, password: "Testing123", dob: "1994-02-02", acceptLegal: true, confirmAdult: true, safetyAcknowledged: true, marketing: true });
+    const mkc = new Client("MarketingOne12345"); await mkc.post("/api/auth/login", { email: `mkt-${run}@test.local`, password: "Testing123" });
+    const cons = (await mkc.get("/api/consents")).data;
+    const cur = (k: string) => cons?.current?.find((x: any) => x.kind === k);
+    check("sign-up records terms, privacy, age and safety consent with the version", mk.status === 201 && cur("TERMS")?.granted && /^terms@v\d+$/.test(cur("TERMS")?.version ?? "") && cur("PRIVACY")?.granted && cur("AGE_18")?.granted && cur("SAFETY_RULES")?.granted, cons?.current);
+    check("optional marketing is recorded only when ticked", cur("MARKETING")?.granted === true);
+    const p1c = (await P1.get("/api/consents")).data;
+    check("…and is off when not ticked (never pre-selected)", p1c?.current?.find((x: any) => x.kind === "MARKETING")?.granted === false);
+    const off = await mkc.post("/api/consents", { kind: "MARKETING", granted: false });
+    check("marketing can be withdrawn, keeping the history", off.status === 200 && off.data.history.filter((h: any) => h.kind === "MARKETING").length === 2, off.data?.history);
+    check("required consents can't be withdrawn without deleting the account", (await mkc.post("/api/consents", { kind: "TERMS", granted: false })).data?.code === "required_consent");
+    const t = (await anon.get("/api/legal/privacy")).data;
+    check("the Privacy Policy is a real draft filled from live settings", /How long we keep data/.test(t?.body ?? "") && !/\{\{/.test(t?.body ?? "") && /Messages in chats that have ended/.test(t?.body ?? ""), t?.body?.slice(0, 200));
+    check("…and says it hasn't been reviewed by a lawyer yet", t?.lawyerReviewed === false);
+    const tos = (await anon.get("/api/legal/terms")).data?.body ?? "";
+    check("the Terms cover prohibited conduct, appeals, liability and governing law", ["harass", "Appeals", "Limitation of liability", "Disputes and governing law", "Changes to these terms"].every((w) => tos.includes(w)));
+    check("service providers page is public", (await fetch(`${BASE}/legal/service-providers`)).status === 200);
+    const ret = (await anon.get("/api/privacy/retention")).data;
+    check("the retention schedule is public and covers each kind of data", ret?.schedule?.length >= 12 && ret.schedule.some((r: any) => /Payment records/.test(r.what)), ret?.schedule?.length);
+  }
+  // Match P2 with P1 and with P4.
+  for (const [a, b, bid, aid] of [[P2, P1, p1Id, p2Id], [P2, P4, p4Id, p2Id]] as const) {
+    await a.post("/api/likes", { toId: bid, kind: "LIKE" });
+    await b.post("/api/likes", { toId: aid, kind: "LIKE" });
+  }
+  const m12 = ((await P1.get("/api/matches")).data?.matches ?? []).find((m: any) => m.other?.id === p2Id)?.id;
+  const m24 = (await P4.get("/api/matches")).data?.matches?.[0]?.id;
+  check("test members matched", !!m12 && !!m24, { m12, m24 });
+  {
+    await P1.put("/api/preferences", { photosVisibility: "MATCHES", showCity: false });
+    const card = (await P2.get(`/api/matches/${m12}`)).data;
+    const c = card?.other;
+    check("a match still sees every photo with “matches only”", c && !c.morePhotosForMatches, c?.morePhotosForMatches);
+    check("hiding the city shows only the country", c?.city === "India", c?.city);
+    await onboard(viewer, `privout-${run}@test.local`, "MAN", "WOMAN", "Out", answersB);
+    const seen = (await viewer.get("/api/discovery?mode=new")).data?.cards ?? [];
+    const ira = seen.find((x: any) => x.id === p1Id);
+    check("non-matches see one photo at most and a rounded distance", !ira || ((ira.photos?.length ?? 0) <= 1 && /^(Within \d+ km|About \d+ km away|\d+\+ km away|Distance hidden)$/.test(ira.distance)), ira && { photos: ira.photos?.length, distance: ira.distance });
+    check("no coordinates, email, phone or date of birth in discovery", !JSON.stringify(seen).match(/"(lat|lng|email|phone|dob)"/));
+    await P4.post("/api/privacy/pause", { paused: true });
+    const again = ((await viewer.get("/api/discovery?mode=new")).data?.cards ?? []);
+    check("a paused profile disappears from Discover", !again.some((x: any) => x.id === p4Id));
+    check("…can't be liked", (await viewer.post("/api/likes", { toId: p4Id, kind: "LIKE" })).status === 404);
+    check("…and can't get new messages", (await P2.post(`/api/matches/${m24}/messages`, { body: "Hi Mira!" })).data?.code === "other_paused");
+    check("/me shows the pause", (await P4.get("/api/me")).data?.user?.paused === true);
+    await P4.post("/api/privacy/pause", { paused: false });
+    await P1.put("/api/preferences", { photosVisibility: "EVERYONE", showCity: true });
+  }
+
+  section("Messaging safety: risky links, code requests, mute, mass messaging");
+  {
+    check("shortened links can't be sent", (await P2.post(`/api/matches/${m12}/messages`, { body: "look at bit.ly/xyz123" })).data?.code === "risky_link");
+    check("app files can't be sent", (await P2.post(`/api/matches/${m12}/messages`, { body: "install kinara-gold.apk" })).data?.code === "risky_link");
+    const ask = await P2.post(`/api/matches/${m12}/messages`, { body: "can you send me the OTP you just got" });
+    check("asking for a one-time code is flagged (sent, but warned)", ask.status === 201 && ask.data?.flagged === true, ask.data);
+    const got = (await P1.get(`/api/matches/${m12}/messages`)).data?.messages ?? [];
+    check("the recipient sees a warning about codes and PINs", got.some((m: any) => /one-time codes, PINs/.test(m.warning ?? "")), got.map((m: any) => m.warning));
+    const dec = (await P2.get("/api/privacy/decisions")).data;
+    check("the sender can see the automated decision and that a person will review it", dec?.decisions?.some((d: any) => d.kind === "MESSAGE_FLAG" && /person will review/.test(d.reason)), dec);
+    const mute = await P1.post(`/api/matches/${m12}/mute`, { muted: true });
+    check("a chat can be muted", mute.data?.muted === true && (await P1.get(`/api/matches/${m12}/messages`)).data?.muted === true);
+    const before = ((await P1.get("/api/notifications")).data?.notifications ?? []).length;
+    await P1.post(`/api/matches/${m12}/messages`, { body: "Hey Dev" });
+    await P2.post(`/api/matches/${m12}/messages`, { body: "Hey Ira, how was your day?" });
+    const after = ((await P1.get("/api/notifications")).data?.notifications ?? []).length;
+    check("…and then sends no message notifications", after === before, { before, after });
+    await P1.post(`/api/matches/${m12}/mute`, { muted: false });
+    await admin.put("/api/admin/config", { config: { "chat.massMessagingMatches": 1 } });
+    const mass = await P2.post(`/api/matches/${m24}/messages`, { body: "Hi Mira, nice to match!" });
+    check("starting many chats within minutes is slowed down", mass.status === 429 && mass.data?.code === "mass_messaging", mass.data);
+    await admin.put("/api/admin/config", { config: { "chat.massMessagingMatches": 15 } });
+    check("…normal pace is fine again", (await P2.post(`/api/matches/${m24}/messages`, { body: "Hi Mira, nice to match!" })).status === 201);
+  }
+
+  section("Reports, escalation, restriction and appeals");
+  {
+    const r1 = await P1.post("/api/reports", { reportedId: p2Id, category: "UNDERAGE", details: "Says he's 16 in chat", alsoBlock: false });
+    check("a report gets a case number and a clear confirmation", r1.status === 201 && /^KN-R-\d{4}-[2-9A-HJ-NP-Z]{6}$/.test(r1.data?.caseNo ?? "") && /Your report has been received/.test(r1.data?.message ?? ""), r1.data);
+    check("the reporter's list shows the case number", ((await P1.get("/api/reports")).data?.reports ?? []).some((r: any) => r.caseNo === r1.data?.caseNo));
+    check("one report about age doesn't restrict anyone by itself", (await P2.get("/api/me")).data?.user?.restricted === false);
+    await P4.post("/api/reports", { reportedId: p2Id, category: "UNDERAGE", details: "Looks very young", alsoBlock: false });
+    const me2 = (await P2.get("/api/me")).data?.user;
+    check("two people reporting a possible minor restricts the account while it's checked", me2?.restricted === true && me2.status === "ACTIVE", me2);
+    const looker = new Client("PrivacyWomanLooker1");
+    await onboard(looker, `privlook-${run}@test.local`, "WOMAN", "MAN", "Lia", answersA);
+    const lookCards = (await looker.get("/api/discovery?mode=new")).data?.cards;
+    check("…hidden from Discover", Array.isArray(lookCards) && !lookCards.some((x: any) => x.id === p2Id), lookCards?.length);
+    check("…can't like anyone new", (await P2.post("/api/likes", { toId: p1Id, kind: "LIKE" })).data?.code === "restricted");
+    check("…can't send call requests", (await P2.post("/api/call-requests", { matchId: m12, kind: "AUDIO" })).data?.code === "restricted");
+    check("…but can still reply in existing chats", (await P2.post(`/api/matches/${m12}/messages`, { body: "I'm 29, happy to verify" })).status === 201);
+    const ap = await P2.post("/api/appeals", { kind: "RESTRICTION", details: "I'm 29 and happy to show ID or do the selfie check. Please review." });
+    check("the person can appeal and gets a case number", ap.status === 201 && /^KN-A-/.test(ap.data?.caseNo ?? ""), ap.data);
+    check("…only one open appeal of the same kind", (await P2.post("/api/appeals", { kind: "RESTRICTION", details: "Second appeal about the very same thing, please." })).status === 409);
+    const queue = (await admin.get("/api/admin/appeals")).data?.appeals ?? [];
+    const mine = queue.find((a: any) => a.caseNo === ap.data?.caseNo);
+    check("staff see the appeal with the automated decision history", mine && mine.automated.some((d: any) => d.kind === "RESTRICTION"), mine);
+    check("a decision needs an explanation", (await admin.post(`/api/admin/appeals/${mine?.id}`, { outcome: "OVERTURNED", decision: "ok" })).status === 422);
+    const dec = await admin.post(`/api/admin/appeals/${mine?.id}`, { outcome: "OVERTURNED", decision: "Checked the profile: the member is an adult. Restriction lifted." });
+    check("overturning the appeal lifts the restriction", dec.status === 200 && (await P2.get("/api/me")).data?.user?.restricted === false, dec.data);
+    check("the member sees the outcome", ((await P2.get("/api/appeals")).data?.appeals ?? []).some((a: any) => a.caseNo === ap.data?.caseNo && a.status === "OVERTURNED"));
+
+    // Four-eyes: whoever suspended someone can't decide their appeal.
+    const p3Id = await onboard(P3, `priv3-${run}@test.local`, "MAN", "WOMAN", "Raj", answersB);
+    await admin.post(`/api/admin/users/${p3Id}`, { action: "SUSPEND", reason: "E2E: suspected spam" });
+    const ap3 = await P3.post("/api/appeals", { kind: "SUSPENSION", details: "I wasn't spamming anyone, I only sent a few messages to my matches." });
+    check("a suspended member can still appeal", ap3.status === 201, ap3.data);
+    const q3 = ((await admin.get("/api/admin/appeals")).data?.appeals ?? []).find((a: any) => a.caseNo === ap3.data?.caseNo);
+    check("the staff member who suspended can't decide the appeal", (await admin.post(`/api/admin/appeals/${q3?.id}`, { outcome: "OVERTURNED", decision: "Reviewed my own decision." })).data?.code === "four_eyes");
+    const by2 = await mod.post(`/api/admin/appeals/${q3?.id}`, { outcome: "OVERTURNED", decision: "Second reviewer: messages were normal. Account restored." });
+    check("a different moderator can, and overturning restores the account", by2.status === 200 && (await P3.get("/api/me")).data?.user?.status === "ACTIVE", by2.data);
+    const banned = await anon.post("/api/appeals", { kind: "BAN", email: `someone-${run}@test.local`, details: "My account was banned and I can't sign in. I think it was a mistake." });
+    check("someone who can't sign in can appeal with their email", banned.status === 201, banned.data);
+    check("…but must give an email", (await anon.post("/api/appeals", { kind: "BAN", details: "I can't sign in and want to appeal my ban please." })).status === 422);
+  }
+
+  section("Staff security, compliance layer, legal holds, launch readiness");
+  {
+    const st = (await admin.get("/api/staff/unlock")).data;
+    check("staff are unlocked straight after signing in", st?.unlocked === true, st);
+    check("members can't use the staff unlock", (await P1.get("/api/staff/unlock")).status === 403);
+    check("unlocking needs the right password (test mode without 2-step)", (await admin.post("/api/staff/unlock", { password: "wrong-one-123" })).status === 401);
+    check("…and works with it", (await admin.post("/api/staff/unlock", { password: ADMIN_PASSWORD })).status === 200);
+    const comp = (await admin.get("/api/admin/compliance")).data;
+    check("the audit trail is a verified hash chain", comp?.auditChain?.ok === true && comp.auditChain.checked > 20, comp?.auditChain);
+    check("country rules come from configuration", comp?.countries?.IN?.minAge === 18 && comp.countries.JP?.ageAssurance === "SELFIE_REQUIRED" && comp.countries.AE?.launchEnabled === false, comp?.countries?.IN);
+    check("every outside service is listed with its data and status", comp?.vendors?.some((v: any) => v.id === "render" && v.active) && comp.vendors.every((v: any) => v.data && v.where), comp?.vendors?.length);
+    const dubai = await P1.put("/api/profile", { firstName: "Ira", gender: "WOMAN", city: "Dubai", intent: "FRIENDS", bio: "Moving soon and checking what changes." });
+    check("sign-ups are refused in countries not open yet", dubai.data?.code === "country_unavailable", dubai.data);
+    const hold = await admin.post("/api/admin/legal-holds", { userId: p2Id, kind: "LAWFUL_REQUEST", reason: "E2E: preservation request from an authority", reference: `REQ-${run}` });
+    check("staff can place a legal hold", hold.status === 201);
+    check("…which shows in compliance", ((await admin.get("/api/admin/compliance")).data?.holds ?? []).some((h: any) => h.userId === p2Id));
+    check("…and can be released", (await admin.del(`/api/admin/legal-holds/${hold.data?.hold?.id}`)).status === 200);
+    check("members can't place holds", (await P1.post("/api/admin/legal-holds", { userId: p2Id, kind: "SAFETY", reason: "I am not staff at all here" })).status === 403);
+    const launch = (await admin.get("/api/admin/launch")).data;
+    check("launch readiness flags sample accounts and unreviewed legal text", launch?.ready === false && launch.checks.some((c: any) => c.id === "samples" && !c.ok) && launch.checks.some((c: any) => c.id === "legaldocs" && !c.ok), launch?.checks?.filter((c: any) => !c.ok).map((c: any) => c.id));
+    check("…and lists the security tests to do before launch", launch?.items?.some((i: any) => i.label === "Location leakage") && launch.items.some((i: any) => i.label === "Call-request bypass attempts"));
+    check("a sign-off needs who did it", (await admin.put("/api/admin/launch", { id: "legal.1", status: "DONE", by: "" })).status === 422);
+    const so = await admin.put("/api/admin/launch", { id: "legal.1", status: "DONE", by: "E2E Law Chambers", note: "test" });
+    check("…and is recorded", so.status === 200 && ((await admin.get("/api/admin/launch")).data?.items ?? []).find((i: any) => i.id === "legal.1")?.by === "E2E Law Chambers");
+    check("only staff who can change settings may sign off", (await mod.put("/api/admin/launch", { id: "legal.2", status: "DONE", by: "Me" })).status === 403);
+    await admin.put("/api/admin/launch", { id: "legal.1", status: "OPEN", by: "" });
+    const legal2 = (await admin.get("/api/admin/legal")).data?.documents?.find((d: any) => d.slug === "cookies");
+    const pub = legal2?.versions?.find((v: any) => v.status === "PUBLISHED");
+    check("a lawyer review can't be recorded without a name", (await admin.post(`/api/admin/legal/${pub?.id}`, { action: "record_lawyer_review" })).status === 422);
+    await admin.post(`/api/admin/legal/${pub?.id}`, { action: "record_lawyer_review", reviewer: "E2E Law Chambers" });
+    check("once recorded, the public page drops the draft notice", (await anon.get("/api/legal/cookies")).data?.lawyerReviewed === true);
+    const job = await fetch(`${BASE}/api/cron/billing`, { method: "POST", headers: { "x-cron-secret": envVal("CRON_SECRET") } }).then((r) => r.json());
+    check("the retention job reports each category it cleaned", job?.retention && "endedChatMessagesDeleted" in job.retention && "callRecordsDeleted" in job.retention && "auditLogsDeleted" in job.retention, job?.retention);
+    check("the audit chain is still intact after all of that", (await admin.get("/api/admin/compliance")).data?.auditChain?.ok === true);
+  }
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) {
     console.log("Failed:\n - " + failures.join("\n - "));

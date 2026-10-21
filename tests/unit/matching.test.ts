@@ -77,9 +77,9 @@ describe("helpers", () => {
     expect(d).toBeLessThan(1200);
   });
   it("distance labels are coarse", () => {
-    expect(distanceLabel(1.2, true)).toBe("Same neighbourhood area");
-    expect(distanceLabel(1.2, false)).toBe("Under 3 km away");
-    expect(distanceLabel(23, false)).toBe("About 25 km away");
+    expect(distanceLabel(1.2, true)).toBe("Within 5 km");
+    expect(distanceLabel(7.9, false)).toBe("Within 10 km");
+    expect(distanceLabel(23, false)).toBe("About 20 km away");
     expect(distanceLabel(1149, false)).toBe("1150+ km away");
   });
   it("computes age correctly around birthdays", () => {

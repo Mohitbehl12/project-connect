@@ -40,3 +40,8 @@ export async function requireMatch(matchId: string, userId: string, { allowEnded
   if (m.status !== "ACTIVE" && !allowEnded) throw new ApiError(410, "This match has ended.", "match_ended");
   return { match: m, otherId: m.userAId === userId ? m.userBId : m.userAId };
 }
+
+/** True when `userId` has muted notifications for this chat. */
+export async function isMuted(userId: string, matchId: string) {
+  return !!(await db.query.chatMutes.findFirst({ where: and(eq(schema.chatMutes.userId, userId), eq(schema.chatMutes.matchId, matchId)) }));
+}

@@ -1,4 +1,5 @@
 import "server-only";
+import { logAutomatedDecision } from "./safety";
 import { randomUUID } from "node:crypto";
 import { and, count, eq, gte, inArray, isNotNull, isNull, ne, notInArray } from "drizzle-orm";
 import { db, schema } from "@/db";
@@ -7,7 +8,7 @@ import { audit } from "./audit";
 import { getConfig } from "./config";
 import { seal } from "./crypto";
 import { ApiError } from "./http";
-import { requireMatch } from "./matches";
+import { requireMatch, isMuted } from "./matches";
 import { notify } from "./notify";
 import { isBlockedBetween } from "./people";
 import { screenPhoto } from "./photoScreen";
@@ -46,7 +47,7 @@ async function prepare(user: User, matchId: string) {
 
 async function deliver(user: User, matchId: string, otherId: string, kind: "PHOTO" | "VOICE", key: string, meta: MediaMeta, preview: string) {
   const [msg] = await db.insert(schema.messages).values({ matchId, senderId: user.id, kind, body: seal(preview, matchId), mediaKey: key, mediaMeta: JSON.stringify(meta) }).returning();
-  await notify(otherId, "MESSAGE", "New message", kind === "PHOTO" ? "You received a photo." : "You received a voice message.", `/matches/${matchId}`);
+  if (!(await isMuted(otherId, matchId))) await notify(otherId, "MESSAGE", "New message", kind === "PHOTO" ? "You received a photo." : "You received a voice message.", `/matches/${matchId}`);
   bumpChat(matchId);
   return msg;
 }
@@ -57,6 +58,7 @@ export async function sendPhoto(user: User, matchId: string, input: Buffer) {
   const check = await screenPhoto(p.data);
   if (check.status === "REJECTED") {
     await audit(user.id, "chat.photo_rejected", "match", match.id, { reason: check.reason });
+    await logAutomatedDecision({ userId: user.id, kind: "PHOTO_SCREEN", decision: "NOT_SENT", reason: "A chat photo was stopped because automated screening found it explicit. You can appeal if this is wrong.", system: "photo-screen" });
     throw new ApiError(422, "This photo can't be sent because it looks explicit. See our Community Guidelines.", "photo_rejected");
   }
   const key = `chat/${match.id}/${randomUUID()}.webp`;

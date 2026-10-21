@@ -1,3 +1,4 @@
+import { sensitiveAccessCheck } from "@/lib/staff";
 import { openSafe } from "@/lib/crypto";
 import { storage } from "@/lib/storage";
 import { z } from "zod";
@@ -20,6 +21,7 @@ export const GET = route<{ id: string }>(async ({ user, params }) => {
       kind: m.kind, media: m.mediaKey ? { url: await storage().url(m.mediaKey, 900), kind: m.kind } : null,
     })));
     await audit(user.id, "admin.view_evidence", "report", r.id, { matchId: r.matchId, messages: evidence.length });
+    await sensitiveAccessCheck(user.id);
   }
   const reported = await db.select({ u: schema.users, p: schema.profiles }).from(schema.users)
     .leftJoin(schema.profiles, eq(schema.profiles.userId, schema.users.id)).where(eq(schema.users.id, r.reportedId));

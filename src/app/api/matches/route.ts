@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { ok, route } from "@/lib/http";
 import { ageFromDob } from "@/lib/matching";
 import { photosFor } from "@/lib/photos";
+import { COUNTRIES } from "@/lib/constants";
 
 export const GET = route(async ({ user }) => {
   const ms = await db.select().from(schema.matches)
@@ -12,8 +13,9 @@ export const GET = route(async ({ user }) => {
   if (!ms.length) return ok({ matches: [] });
 
   const otherIds = ms.map((m) => (m.userAId === user.id ? m.userBId : m.userAId));
-  const people = await db.select({ u: schema.users, p: schema.profiles }).from(schema.users)
+  const people = await db.select({ u: schema.users, p: schema.profiles, pr: schema.preferences }).from(schema.users)
     .innerJoin(schema.profiles, eq(schema.profiles.userId, schema.users.id))
+    .leftJoin(schema.preferences, eq(schema.preferences.userId, schema.users.id))
     .where(inArray(schema.users.id, otherIds));
   const byId = new Map(people.map((x) => [x.u.id, x]));
 
@@ -32,7 +34,7 @@ export const GET = route(async ({ user }) => {
       id: m.id,
       score: m.score,
       createdAt: m.createdAt,
-      other: { id: otherId, firstName: o.p.firstName, age: ageFromDob(o.p.dob), city: o.p.city, verified: o.u.selfieStatus === "VERIFIED", photo: photoMap.get(otherId)?.[0] ?? null },
+      other: { id: otherId, firstName: o.p.firstName, age: ageFromDob(o.p.dob), city: o.pr?.showCity === false ? (COUNTRIES[o.p.country]?.name ?? o.p.country) : o.p.city, verified: o.u.selfieStatus === "VERIFIED", photo: photoMap.get(otherId)?.[0] ?? null },
       lastMessage: last ? { body: last.deletedAt ? "Message deleted" : openSafe(last.body, last.matchId).slice(0, 80), mine: last.senderId === user.id, at: last.createdAt } : null,
       unread: unread.filter((x) => x.matchId === m.id).length,
     }];

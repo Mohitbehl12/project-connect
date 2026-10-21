@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { and, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { PublicShell } from "@/components/PublicShell";
+import { fillLegal } from "@/lib/legalText";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,13 @@ export default async function LegalPage({ params }: { params: Promise<{ slug: st
     <PublicShell>
       <article className="mx-auto max-w-2xl space-y-4 px-4 py-12 md:px-8">
         <p className="text-sm text-ink-faint">Version {v.version} · effective {v.effectiveAt?.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</p>
-        {render(v.body)}
+        {!v.lawyerReviewedAt && (
+          <p role="note" className="rounded-xl bg-marigold-wash px-4 py-3 text-sm text-marigold-deep">
+            Draft for review: this document has not yet been checked by a qualified lawyer and may change before Kinara launches publicly.
+          </p>
+        )}
+        {v.changeSummary && <p className="rounded-xl bg-paper-sunk px-4 py-3 text-sm"><strong>What changed in this version:</strong> {v.changeSummary}</p>}
+        {render(await fillLegal(v.body))}
       </article>
     </PublicShell>
   );

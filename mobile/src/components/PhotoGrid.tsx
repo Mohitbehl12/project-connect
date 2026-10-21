@@ -119,7 +119,7 @@ export function PhotoGrid({ onCountChange }: { onCountChange?: (n: number) => vo
         })}
       </View>
       {hint && <Animated.View entering={FadeIn}><Banner tone={hint.tone}>{hint.text}</Banner></Animated.View>}
-      <T v="caption" tone="faint">Tap a photo to make it your main one or remove it. Photos where your face is clear and well lit get the most likes.</T>
+      <T v="caption" tone="faint">Tap a photo to make it your main one or remove it. Photos where your face is clear and well lit get the most likes. Only add photos of you that you have the right to share (see our Terms); location data is removed and every photo is checked for nudity and violence.</T>
     </View>
   );
 }

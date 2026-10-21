@@ -10,6 +10,7 @@ export default function Register() {
   const router = useRouter();
   const [f, setF] = useState({ email: "", password: "", dob: "" });
   const [checks, setChecks] = useState({ confirmAdult: false, acceptLegal: false, safetyAcknowledged: false });
+  const [marketing, setMarketing] = useState(false); // optional, never pre-ticked
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const maxDob = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 18); return d.toISOString().slice(0, 10); })();
@@ -20,7 +21,7 @@ export default function Register() {
     if (!checks.confirmAdult || !checks.acceptLegal || !checks.safetyAcknowledged) return setErr("Tick all three boxes to continue.");
     setBusy(true);
     try {
-      await api("/api/auth/register", { body: { ...f, ...checks } });
+      await api("/api/auth/register", { body: { ...f, ...checks, marketing } });
       router.push("/onboarding");
     } catch (e: any) {
       setErr(e.message);
@@ -53,6 +54,11 @@ export default function Register() {
             {box("acceptLegal", <>I agree to the <Link href="/legal/terms" target="_blank" className="underline">Terms</Link>, <Link href="/legal/privacy" target="_blank" className="underline">Privacy Policy</Link> and <Link href="/legal/guidelines" target="_blank" className="underline">Community Guidelines</Link>.</>)}
             {box("safetyAcknowledged", <>I've read the <Link href="/safety" target="_blank" className="underline">safety tips</Link> and will meet new people in public places.</>)}
           </div>
+          <label className="flex gap-3 text-[15px]">
+            <input type="checkbox" className="mt-1 h-4 w-4 accent-ink" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} />
+            <span>Optional: send me news and offers. <span className="text-ink-soft">You can change this any time.</span></span>
+          </label>
+          <p className="rounded-xl bg-sage-wash p-3 text-sm"><strong>Pricing in India:</strong> women get everything free, for life. Men get 15 days of Premium free, then ₹100/month if they choose to continue — no card needed for the trial, nothing charged automatically. <Link href="/legal/payments" className="underline">Subscription terms</Link></p>
           {err && <Alert tone="error">{err}</Alert>}
           <button className="btn-primary w-full py-3" disabled={busy}>{busy ? "Creating…" : "Create account"}</button>
         </form>

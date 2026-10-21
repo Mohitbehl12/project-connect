@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, useContext, useEffect, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { api, useApi } from "@/lib/client";
 import { Alert, Spinner } from "./ui";
 
@@ -12,6 +12,7 @@ export const useStaff = () => useContext(StaffCtx)!;
 const NAV: [string, string, string][] = [
   ["/admin", "Dashboard", "analytics.view"],
   ["/admin/reports", "Reports", "reports.view"],
+  ["/admin/appeals", "Appeals", "reports.resolve"],
   ["/admin/grievances", "Complaints", "grievances.handle"],
   ["/admin/verification", "Verification", "users.verify"],
   ["/admin/photos", "Photo review", "users.moderate"],
@@ -23,19 +24,29 @@ const NAV: [string, string, string][] = [
   ["/admin/risk", "Risk & referrals", "security.view"],
   ["/admin/legal", "Legal", "legal.edit"],
   ["/admin/settings", "Settings & prices", "plans.edit"],
+  ["/admin/compliance", "Privacy & compliance", "audit.view"],
+  ["/admin/launch", "Launch readiness", "audit.view"],
   ["/admin/audit", "Audit log", "audit.view"],
 ];
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const { data, error } = useApi<Staff>("/api/me");
+  const lock = useApi<StaffLock>("/api/staff/unlock");
   const path = usePathname();
   const router = useRouter();
   useEffect(() => {
     if (data && !data.user.permissions.includes("admin.access")) router.replace("/discover");
   }, [data, router]);
+  useEffect(() => {
+    const relock = () => lock.reload();
+    window.addEventListener("staff-locked", relock);
+    return () => window.removeEventListener("staff-locked", relock);
+  }, [lock]);
   if (error) return <div className="p-6"><Alert tone="error">{error.message}</Alert></div>;
-  if (!data) return <Spinner />;
+  if (!data || (!lock.data && !lock.error)) return <Spinner />;
   if (!data.user.permissions.includes("admin.access")) return null;
+  if (lock.data && (!lock.data.unlocked || (lock.data.mfaRequired && !lock.data.mfaEnabled)))
+    return <StaffLockScreen state={lock.data} email={data.user.email} onDone={() => { lock.reload(); router.refresh(); }} />;
   const items = NAV.filter(([, , p]) => data.user.permissions.includes(p));
 
   return (
@@ -84,4 +95,62 @@ export function StatusPill({ value }: { value: string }) {
     BANNED: "bg-rose-wash text-rose", CRITICAL: "bg-rose text-white", REJECTED: "bg-rose-wash text-rose", UNMATCHED: "bg-paper-sunk text-ink-faint",
   };
   return <span className={`inline-block rounded-pill px-2 py-0.5 text-xs font-semibold ${tone[value] ?? "bg-paper-sunk text-ink-soft"}`}>{value.replace("_", " ").toLowerCase()}</span>;
+}
+
+type StaffLock = { mfaEnabled: boolean; mfaRequired: boolean; unlocked: boolean; idleMinutes: number };
+
+/** 2-step setup (first time) and the unlock prompt after inactivity. */
+function StaffLockScreen({ state, email, onDone }: { state: StaffLock; email: string; onDone: () => void }) {
+  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
+  const [setup, setSetup] = useState<{ secret: string; otpauthUrl: string } | null>(null);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const needSetup = state.mfaRequired && !state.mfaEnabled;
+  async function run(fn: () => Promise<unknown>) { setBusy(true); setErr(""); try { await fn(); } catch (e: any) { setErr(e.message); } finally { setBusy(false); } }
+  return (
+    <div className="mx-auto max-w-md px-4 py-16">
+      <p className="font-display text-lg font-extrabold">Kinara <span className="font-body text-sm font-semibold text-marigold">Admin</span></p>
+      {needSetup ? (
+        <div className="panel mt-6 space-y-4 p-6">
+          <h1 className="text-2xl font-extrabold">Turn on 2-step verification</h1>
+          <p className="text-ink-soft">Staff accounts can see private information, so admin tools need a code from an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password…) as well as your password.</p>
+          {!setup ? (
+            <button className="btn-primary w-full" disabled={busy} onClick={() => run(async () => setSetup(await api("/api/security/totp", { body: { action: "start" } })))}>Set up 2-step verification</button>
+          ) : (
+            <>
+              <p className="text-sm">In your authenticator app, add an account with this key (or open the link on your phone):</p>
+              <p className="break-all rounded-lg bg-paper-sunk p-3 font-mono text-sm">{setup.secret}</p>
+              <a className="text-sm underline" href={setup.otpauthUrl}>Open in authenticator app</a>
+              <label className="label" htmlFor="c1">6-digit code from the app</label>
+              <input id="c1" className="input" inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
+              <button className="btn-primary w-full" disabled={busy || code.length < 6} onClick={() => run(async () => {
+                await api("/api/security/totp", { body: { action: "confirm", code } });
+                setCode(""); onDone();
+              })}>Turn on</button>
+            </>
+          )}
+        </div>
+      ) : (
+        <form className="panel mt-6 space-y-4 p-6" onSubmit={(e) => { e.preventDefault(); run(async () => { await api("/api/staff/unlock", { body: state.mfaEnabled ? { code } : { password } }); onDone(); }); }}>
+          <h1 className="text-2xl font-extrabold">Admin tools are locked</h1>
+          <p className="text-ink-soft">For safety, admin tools lock after {state.idleMinutes} minutes without activity. Signed in as {email}.</p>
+          {state.mfaEnabled ? (
+            <>
+              <label className="label" htmlFor="c2">6-digit code from your authenticator app</label>
+              <input id="c2" className="input" inputMode="numeric" autoComplete="one-time-code" autoFocus value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
+            </>
+          ) : (
+            <>
+              <Alert tone="warn">Test mode: 2-step verification is optional on this server (ADMIN_MFA_OPTIONAL). Never use this setting in production.</Alert>
+              <label className="label" htmlFor="pw">Password</label>
+              <input id="pw" type="password" className="input" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            </>
+          )}
+          <button className="btn-primary w-full" disabled={busy}>Unlock</button>
+        </form>
+      )}
+      {err && <div className="mt-4"><Alert tone="error">{err}</Alert></div>}
+    </div>
+  );
 }

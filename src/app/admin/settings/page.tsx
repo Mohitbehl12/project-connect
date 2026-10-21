@@ -55,6 +55,9 @@ function Settings() {
               ["chat.maxUnansweredMessages", "Messages allowed before a reply", "Stops one person from flooding a chat."],
               ["safety.autoSuspendReportThreshold", "Independent reports before auto-suspension", "Counted over 30 days. The account is paused until reviewed."],
               ["discovery.batchSize", "Profiles per discovery batch", ""],
+              ["chat.massMessagingMatches", "New chats in 10 minutes before “slow down”", "Stops mass messaging. 0 turns it off."],
+              ["admin.idleTimeoutMinutes", "Lock admin tools after (minutes idle)", "Staff re-enter their 2-step code."],
+              ["admin.sensitiveViewsPerHourAlert", "Alert when one staff member opens this many private records in an hour", ""],
             ].map(([k, label, hint]) => (
               <div key={k}>
                 <label className="label" htmlFor={k}>{label}</label>
@@ -65,6 +68,7 @@ function Settings() {
           </div>
           <button className="btn-primary mt-4" onClick={() => save({ config: {
             "chat.maxUnansweredMessages": cfg["chat.maxUnansweredMessages"], "safety.autoSuspendReportThreshold": cfg["safety.autoSuspendReportThreshold"], "discovery.batchSize": cfg["discovery.batchSize"],
+            "chat.massMessagingMatches": cfg["chat.massMessagingMatches"], "admin.idleTimeoutMinutes": cfg["admin.idleTimeoutMinutes"], "admin.sensitiveViewsPerHourAlert": cfg["admin.sensitiveViewsPerHourAlert"],
           } }, "Limits")}>Save limits</button>
         </section>
       </div>
@@ -86,7 +90,7 @@ function Settings() {
         <h2 className="text-lg font-bold">Published contacts and Grievance Officer</h2>
         <p className="mt-1 text-sm text-ink-soft">Shown on the Contact and Complaint pages and in the app. India&apos;s IT Rules require the Grievance Officer&apos;s name and contact to be published.</p>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          {([["companyName", "Company name"], ["supportEmail", "Support email"], ["safetyEmail", "Safety email"], ["privacyEmail", "Privacy email"]] as const).map(([k, label]) => (
+          {([["companyName", "Company legal name"], ["registeredAddress", "Registered address"], ["courtsCity", "City for courts (Terms)"], ["supportEmail", "Support email"], ["safetyEmail", "Safety email"], ["privacyEmail", "Privacy email"]] as const).map(([k, label]) => (
             <div key={k}><label className="label" htmlFor={`c-${k}`}>{label}</label>
               <input id={`c-${k}`} className="input" value={cfg["legal.contacts"]?.[k] ?? ""} onChange={(e) => setCfg({ ...cfg, "legal.contacts": { ...cfg["legal.contacts"], [k]: e.target.value } })} /></div>
           ))}
@@ -116,10 +120,20 @@ function Settings() {
             ["referral.rewardDays", "Premium days per verified referral", ""],
             ["referral.monthlyCap", "Max referral rewards per person per month", "Limits farming."],
             ["rewards.completeProfileBoostMinutes", "Boost for a 100% profile (minutes)", "0 turns it off."],
-            ["rewards.menTrialDays", "rewards.womenFreeForever", "Free trial for men (days)", "Given once per account and phone when sign-up is finished, in gender-pricing countries. Nothing is charged when it ends. 0 turns it off."],
+            ["rewards.menTrialDays", "Free trial for men (days)", "Given once per account and phone when sign-up is finished, in gender-pricing countries. Nothing is charged when it ends. 0 turns it off."],
             ["rewards.verifiedPremiumDays", "Premium days for completing verification", "0 turns it off."],
             ["retention.deletedMessageDays", "Keep deleted messages for safety review (days)", "Then the text is purged."],
             ["retention.loginEventDays", "Keep sign-in history (days)", ""],
+            ["retention.endedChatDays", "Delete messages in ended chats after (days)", "Unless the chat was reported or is on legal hold."],
+            ["retention.reportedChatDays", "Keep reported chats as evidence (days)", ""],
+            ["retention.closedReportDays", "Remove details of closed reports after (days)", ""],
+            ["retention.callMetadataDays", "Keep call records (days)", "Who, when, how long. Calls are never recorded."],
+            ["retention.callRequestDays", "Keep call requests (days)", ""],
+            ["retention.notificationDays", "Keep notifications (days)", ""],
+            ["retention.resolvedRiskSignalDays", "Keep resolved risk signals (days)", ""],
+            ["retention.automatedDecisionDays", "Keep automated decision log (days)", ""],
+            ["retention.auditLogDays", "Keep audit log (days)", ""],
+            ["retention.inactiveAccountMonths", "Delete inactive accounts after (months)", "0 = never. Members are warned 30 days before."],
           ].map(([k, label, hint]) => (
             <div key={k}>
               <label className="label" htmlFor={k}>{label}</label>
@@ -128,7 +142,7 @@ function Settings() {
             </div>
           ))}
         </div>
-        <button className="btn-primary mt-4" disabled={!staff.permissions.includes("config.edit")} onClick={() => save({ config: Object.fromEntries(["billing.genderPricingCountries", "billing.reminderDays", "billing.graceDays", "referral.rewardDays", "referral.monthlyCap", "rewards.completeProfileBoostMinutes", "rewards.menTrialDays", "rewards.womenFreeForever", "rewards.verifiedPremiumDays", "retention.deletedMessageDays", "retention.loginEventDays"].map((k) => [k, cfg[k]])) }, "Billing settings")}>Save billing settings</button>
+        <button className="btn-primary mt-4" disabled={!staff.permissions.includes("config.edit")} onClick={() => save({ config: Object.fromEntries(["billing.genderPricingCountries", "billing.reminderDays", "billing.graceDays", "referral.rewardDays", "referral.monthlyCap", "rewards.completeProfileBoostMinutes", "rewards.menTrialDays", "rewards.womenFreeForever", "rewards.verifiedPremiumDays", "retention.deletedMessageDays", "retention.loginEventDays", "retention.endedChatDays", "retention.reportedChatDays", "retention.closedReportDays", "retention.callMetadataDays", "retention.callRequestDays", "retention.notificationDays", "retention.resolvedRiskSignalDays", "retention.automatedDecisionDays", "retention.auditLogDays", "retention.inactiveAccountMonths"].map((k) => [k, cfg[k]])) }, "Billing settings")}>Save billing settings</button>
       </section>
 
       <h2 className="mb-3 mt-10 text-2xl font-extrabold">Plans and prices</h2>

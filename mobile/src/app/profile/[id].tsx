@@ -98,6 +98,7 @@ export default function ProfileSheet() {
           </View>
         </Pressable>
 
+        {card.morePhotosForMatches ? <T v="caption" tone="muted" style={{ marginHorizontal: 20 }}>{card.firstName} shares more photos with matches.</T> : null}
         {card.bio ? <Section title="About me"><T>{card.bio}</T></Section> : null}
 
         {card.prompts.map((p) => (

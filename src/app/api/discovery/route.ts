@@ -1,4 +1,4 @@
-import { and, eq, gte, inArray, lte, ne, notInArray } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, lte, ne, notInArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ApiError, ok, route } from "@/lib/http";
 import { getConfig } from "@/lib/config";
@@ -46,6 +46,8 @@ export const GET = route(async ({ req, user }) => {
     gte(schema.profiles.dob, dobBound(viewer.prefs.ageMax + 1)),
     notInArray(schema.users.id, exclude),
     eq(schema.preferences.discoverable, true),
+    isNull(schema.users.deactivatedAt), // paused profiles are hidden
+    isNull(schema.users.restrictedAt), // high-risk accounts under review are not shown to anyone
     ...(verifiedOnly ? [eq(schema.users.selfieStatus, "VERIFIED")] : []),
     ...(mode === "new" ? [gte(schema.users.createdAt, new Date(Date.now() - 14 * 86_400_000))] : []),
   ];
@@ -71,6 +73,8 @@ export const GET = route(async ({ req, user }) => {
     .filter((r) => !r.prefs?.incognito || likedMe.has(r.user.id))
     // "Only verified people can like me": hidden from unverified viewers rather than shown and refused.
     .filter((r) => r.prefs?.likesFrom !== "VERIFIED" || user.selfieStatus === "VERIFIED")
+    // "Who can see my profile: verified members only".
+    .filter((r) => r.prefs?.profileVisibility !== "VERIFIED" || user.selfieStatus === "VERIFIED")
     .filter((r) => !interest || r.profile.interests.split(",").includes(interest))
     .map((r) => ({ r, person: toMatchPerson(r, answers.get(r.user.id) ?? {}) }))
     .filter((x) => eligibility(viewer, x.person) === null)

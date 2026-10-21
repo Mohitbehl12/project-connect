@@ -1,14 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import * as ImagePicker from "expo-image-picker";
-import { ActivityIndicator, Platform, Pressable, ScrollView, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import { REPORT_CATEGORIES } from "@shared/constants";
 import { Button } from "@/components/Button";
 import { Header } from "@/components/Header";
 import { Icon, VerifiedBadge } from "@/components/Icon";
 import { T } from "@/components/Text";
-import { Banner, Screen } from "@/components/ui";
+import { Banner, Chip, Screen } from "@/components/ui";
+import { recordConsent } from "@/lib/consent";
 import { api } from "@/lib/api";
 import { appendPhoto } from "@/lib/photoFile";
 import { useAuth } from "@/lib/auth";
@@ -28,7 +29,19 @@ export default function Safety() {
   const { me, refetchMe } = useAuth();
   const { c } = useTheme();
   const [msg, setMsg] = useState("");
-  const reports = useQuery({ queryKey: ["my-reports"], queryFn: () => api<{ reports: { id: string; category: string; status: string; createdAt: string }[] }>("/api/reports") });
+  const reports = useQuery({ queryKey: ["my-reports"], queryFn: () => api<{ reports: { id: string; caseNo: string | null; category: string; status: string; createdAt: string }[] }>("/api/reports") });
+  const appeals = useQuery({ queryKey: ["my-appeals"], queryFn: () => api<{ kinds: Record<string, string>; appeals: { caseNo: string; kind: string; status: string; decision: string | null; createdAt: string }[] }>("/api/appeals") });
+  const params = useLocalSearchParams<{ appeal?: string }>();
+  const [appealOpen, setAppealOpen] = useState(params.appeal === "1");
+  const [appeal, setAppeal] = useState({ kind: me?.user.restricted ? "RESTRICTION" : "AUTOMATED", details: "" });
+  const [appealMsg, setAppealMsg] = useState<{ tone: "trust" | "alert"; text: string } | null>(null);
+  async function sendAppeal() {
+    setAppealMsg(null);
+    try {
+      const r = await api<{ message: string }>("/api/appeals", { body: appeal });
+      setAppealMsg({ tone: "trust", text: r.message }); setAppeal({ ...appeal, details: "" }); setAppealOpen(false); appeals.refetch(); haptic.success();
+    } catch (e: any) { setAppealMsg({ tone: "alert", text: e.message }); }
+  }
   const blocks = useQuery({ queryKey: ["blocks"], queryFn: () => api<{ blocked: { id: string; firstName: string }[] }>("/api/blocks") });
   const status = me?.user.selfieStatus;
 
@@ -49,6 +62,7 @@ export default function Safety() {
     setMsg("");
     if (Platform.OS !== "web") {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
+      recordConsent("CAMERA", perm.granted);
       if (!perm.granted) { setMsg("Allow camera access in Settings to take your verification selfie."); return; }
     }
     const shot = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], cameraType: ImagePicker.CameraType.front, quality: 0.85 });
@@ -71,7 +85,11 @@ export default function Safety() {
   return (
     <Screen edges={["top", "bottom"]}>
       <Header title="Safety Center" sub="Tools and advice for meeting people safely." />
-      <ScrollView contentContainerStyle={{ gap: 18, paddingBottom: 32 }}>
+      <ScrollView contentContainerStyle={{ gap: 18, paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
+        {me?.user.restricted && (
+          <Banner tone="alert">New likes, call requests and new chats are paused on your account while it's reviewed. Your existing chats still work. Completing the selfie check below usually lifts this; you can also appeal.</Banner>
+        )}
+        {me?.user.status === "SUSPENDED" && <Banner tone="alert">Your account is suspended while our team reviews it. If you think this is a mistake, appeal below.</Banner>}
         <View style={{ backgroundColor: c.trustWash, borderRadius: 22, padding: 16, gap: 10 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             {status === "VERIFIED" ? <VerifiedBadge size={30} /> : <Icon name="shield" size={30} color={c.trust} />}
@@ -89,6 +107,7 @@ export default function Safety() {
             </View>
           ) : null}
           {msg ? <T v="callout">{msg}</T> : null}
+          <T v="caption" tone="muted">What “verified” means: the person's selfie matched their profile photos when we checked. It doesn't prove their name or age, or that they're safe — keep following the tips below.</T>
         </View>
 
         <View style={{ gap: 10 }}>
@@ -110,10 +129,41 @@ export default function Safety() {
           <T v="headline">Your reports</T>
           {!reports.data?.reports.length ? <T tone="muted">You haven't reported anyone.</T> : reports.data.reports.map((r) => (
             <View key={r.id} style={{ flexDirection: "row", justifyContent: "space-between", backgroundColor: c.surface, borderRadius: 16, padding: 14 }}>
-              <T v="callout">{REPORT_CATEGORIES[r.category as keyof typeof REPORT_CATEGORIES]}</T>
+              <View style={{ flex: 1 }}>
+                <T v="callout">{REPORT_CATEGORIES[r.category as keyof typeof REPORT_CATEGORIES] ?? r.category}</T>
+                {r.caseNo ? <T v="caption" tone="faint">Case {r.caseNo}</T> : null}
+              </View>
               <T v="callout" tone={r.status === "Reviewed" ? "trust" : "muted"}>{r.status}</T>
             </View>
           ))}
+        </View>
+
+        <View style={{ gap: 8 }}>
+          <T v="headline">Appeals</T>
+          <T tone="muted">Think we got a decision about you wrong? Someone who wasn't involved in it will review your appeal.</T>
+          {appealMsg && <Banner tone={appealMsg.tone}>{appealMsg.text}</Banner>}
+          {appeals.data?.appeals.map((a) => (
+            <View key={a.caseNo} style={{ backgroundColor: c.surface, borderRadius: 16, padding: 14, gap: 2 }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+                <T v="callout" style={{ flex: 1 }}>{appeals.data!.kinds[a.kind] ?? a.kind}</T>
+                <T v="callout" tone={a.status === "OVERTURNED" ? "trust" : "muted"}>{a.status === "OPEN" ? "Under review" : a.status === "OVERTURNED" ? "Decision reversed" : "Decision kept"}</T>
+              </View>
+              <T v="caption" tone="faint">Case {a.caseNo}</T>
+              {a.decision ? <T v="caption" tone="muted">{a.decision}</T> : null}
+            </View>
+          ))}
+          {!appealOpen ? <Button title="Appeal a decision" v="outline" onPress={() => setAppealOpen(true)} /> : (
+            <View style={{ backgroundColor: c.surface, borderRadius: 18, padding: 14, gap: 10 }}>
+              <T v="callout" strong>What are you appealing?</T>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                {Object.entries(appeals.data?.kinds ?? {}).filter(([k]) => k !== "BAN").map(([k, label]) => <Chip key={k} label={label} selected={appeal.kind === k} onPress={() => setAppeal({ ...appeal, kind: k })} />)}
+              </View>
+              <TextInput value={appeal.details} onChangeText={(t) => setAppeal({ ...appeal, details: t })} multiline maxLength={4000} accessibilityLabel="Why the decision was wrong"
+                placeholder="Tell us why you think the decision was wrong (at least a couple of sentences)." placeholderTextColor={c.faint}
+                style={{ minHeight: 90, borderRadius: 14, backgroundColor: c.raised, padding: 12, fontSize: 16, color: c.text, fontFamily: "Figtree_500Medium", textAlignVertical: "top" }} />
+              <Button title="Send appeal" disabled={appeal.details.trim().length < 20} onPress={sendAppeal} />
+            </View>
+          )}
         </View>
 
         <View style={{ gap: 8 }}>

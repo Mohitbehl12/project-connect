@@ -70,9 +70,14 @@ export const PERSONALITY_QUESTIONS = [
 ] as const;
 
 export const REPORT_CATEGORIES = {
-  FAKE: "Fake profile or catfishing",
+  HARASSMENT: "Harassment or bullying",
+  THREATS: "Threats or blackmail",
+  UNWANTED_CONTACT: "Keeps contacting me after I said no",
+  SEXUAL_MISCONDUCT: "Sexual misconduct or unwanted sexual content",
   SCAM: "Scam or asking for money",
-  HARASSMENT: "Harassment or threats",
+  FRAUD: "Fraud (payments, stolen identity)",
+  FAKE: "Fake profile or catfishing",
+  IMPERSONATION: "Pretending to be me or someone I know",
   INAPPROPRIATE: "Inappropriate content",
   SPAM: "Spam or promotion",
   UNDERAGE: "May be under 18",
@@ -82,8 +87,9 @@ export const REPORT_CATEGORIES = {
 export type ReportCategory = keyof typeof REPORT_CATEGORIES;
 
 export const REPORT_PRIORITY: Record<ReportCategory, string> = {
-  UNDERAGE: "CRITICAL", SAFETY: "CRITICAL", HARASSMENT: "HIGH", SCAM: "HIGH",
-  FAKE: "MEDIUM", INAPPROPRIATE: "MEDIUM", SPAM: "LOW", OTHER: "LOW",
+  UNDERAGE: "CRITICAL", SAFETY: "CRITICAL", THREATS: "CRITICAL", SEXUAL_MISCONDUCT: "CRITICAL",
+  HARASSMENT: "HIGH", SCAM: "HIGH", FRAUD: "HIGH", IMPERSONATION: "HIGH",
+  UNWANTED_CONTACT: "MEDIUM", FAKE: "MEDIUM", INAPPROPRIATE: "MEDIUM", SPAM: "LOW", OTHER: "LOW",
 };
 
 export const DATE_KINDS = { COFFEE: "Coffee", MEAL: "A meal", WALK: "A walk", ACTIVITY: "An activity", OTHER: "Something else" } as const;

@@ -19,6 +19,7 @@ import { cardCache } from "@/lib/cardCache";
 import { haptic } from "@/lib/haptics";
 import type { Card, Message } from "@/lib/types";
 import { useTheme } from "@/theme/ThemeProvider";
+import { recordConsent } from "@/lib/consent";
 
 type Detail = {
   match: { id: string; score: number };
@@ -67,7 +68,7 @@ export default function Chat() {
   // refetch stays as a safety net.
   const msgs = useQuery({
     queryKey: ["messages", id],
-    queryFn: () => api<{ messages: Message[]; ended: boolean; mediaUnlocked?: boolean }>(`/api/matches/${id}/messages`),
+    queryFn: () => api<{ messages: Message[]; ended: boolean; mediaUnlocked?: boolean; muted?: boolean }>(`/api/matches/${id}/messages`),
     refetchInterval: 20_000,
   });
   const [otherTyping, setOtherTyping] = useState(false);
@@ -143,6 +144,7 @@ export default function Chat() {
     setPlus(false);
     if (camera && Platform.OS !== "web") {
       const perm = await ImagePicker.requestCameraPermissionsAsync();
+      recordConsent("CAMERA", perm.granted);
       if (!perm.granted) { setErr("Allow camera access in Settings to send a photo."); return; }
     }
     const r = camera ? await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.85 }) : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.85 });
@@ -391,6 +393,8 @@ export default function Chat() {
       <BottomSheet open={menu} onClose={() => setMenu(false)} title="Safety">
         <SheetAction label={`Report ${o?.firstName ?? ""}`} tone="alert" icon={<Icon name="flag" color={c.alert} />} onPress={() => { setMenu(false); router.push({ pathname: "/report", params: { userId: o?.id ?? "", name: o?.firstName ?? "" } }); }} />
         <SheetAction label={`Block ${o?.firstName ?? ""}`} tone="alert" icon={<Icon name="block" color={c.alert} />} onPress={async () => { setMenu(false); await api("/api/blocks", { body: { userId: o?.id } }).catch(() => {}); qc.invalidateQueries({ queryKey: ["matches"] }); router.back(); }} />
+        <SheetAction label={msgs.data?.muted ? "Unmute notifications" : "Mute notifications"} icon={<Icon name="bell" />} onPress={async () => { setMenu(false); await api(`/api/matches/${id}/mute`, { body: { muted: !msgs.data?.muted } }).catch(() => {}); msgs.refetch(); }} />
+        <SheetAction label="Delete my messages here" icon={<Icon name="trash" />} onPress={async () => { setMenu(false); await api("/api/privacy/messages", { body: { matchId: id } }).catch(() => {}); msgs.refetch(); }} />
         <SheetAction label="Unmatch" icon={<Icon name="close" />} onPress={unmatch} />
         <SheetAction label="Safety tips" icon={<Icon name="shield" color={c.trust} />} onPress={() => { setMenu(false); router.push("/safety"); }} />
       </BottomSheet>

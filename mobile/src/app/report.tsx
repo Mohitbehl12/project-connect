@@ -20,27 +20,28 @@ export default function Report() {
   const [details, setDetails] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [done, setDone] = useState(false);
+  const [done, setDone] = useState<string | false>(false);
 
   async function submit() {
     setErr(""); setBusy(true);
     try {
-      await api("/api/reports", { body: { reportedId: userId, category, details: details.trim(), messageId: messageId || undefined, alsoBlock: true } });
+      const r = await api<{ caseNo: string }>("/api/reports", { body: { reportedId: userId, category, details: details.trim(), messageId: messageId || undefined, alsoBlock: true } });
       haptic.success();
       qc.invalidateQueries({ queryKey: ["matches"] });
       qc.invalidateQueries({ queryKey: ["discovery"] });
-      setDone(true);
+      setDone(r.caseNo ?? "");
     } catch (e: any) { setErr(e.message); } finally { setBusy(false); }
   }
 
-  if (done) {
+  if (done !== false) {
     return (
       <Screen edges={["top", "bottom"]}>
         <View style={{ flex: 1, justifyContent: "center", alignItems: "center", gap: 14 }}>
           <Animated.View entering={ZoomIn.springify()} style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: c.trustWash, alignItems: "center", justifyContent: "center" }}>
             <Icon name="shield" size={48} color={c.trust} />
           </Animated.View>
-          <T v="title" center>Thanks for telling us</T>
+          <T v="title" center>Your report has been received</T>
+          {done ? <T v="callout" strong center>Case number {done}</T> : null}
           <T tone="muted" center>{name} has been blocked, so you won't see each other again. Our safety team will review your report — {name} won't know it was you.</T>
           <Pressable accessibilityRole="link" onPress={() => Linking.openURL(`${API_URL}/grievance`)}><T v="caption" tone="brand" center>Not happy with how a report was handled? File a formal complaint</T></Pressable>
         </View>

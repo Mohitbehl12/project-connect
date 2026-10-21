@@ -1,6 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ApiError, ok, publicRoute } from "@/lib/http";
+import { fillLegal } from "@/lib/legalText";
 
 export const GET = publicRoute<{ slug: string }>(async ({ params }) => {
   const doc = await db.query.legalDocuments.findFirst({ where: eq(schema.legalDocuments.slug, params.slug) });
@@ -10,5 +11,8 @@ export const GET = publicRoute<{ slug: string }>(async ({ params }) => {
     orderBy: desc(schema.legalVersions.version),
   });
   if (!v) throw new ApiError(404, "No published version yet.", "not_found");
-  return ok({ slug: doc.slug, title: doc.title, version: v.version, effectiveAt: v.effectiveAt, body: v.body });
+  return ok({
+    slug: doc.slug, title: doc.title, version: v.version, effectiveAt: v.effectiveAt, body: await fillLegal(v.body),
+    changeSummary: v.changeSummary, lawyerReviewed: !!v.lawyerReviewedAt,
+  });
 });

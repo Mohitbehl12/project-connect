@@ -51,13 +51,19 @@ export function haversineKm(aLat: number, aLng: number, bLat: number, bLng: numb
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-/** Coarse, privacy-preserving distance label. Never shows sub-kilometre precision. */
-export function distanceLabel(km: number, sameCity: boolean): string {
-  if (km < 3) return sameCity ? "Same neighbourhood area" : "Under 3 km away";
-  if (km < 10) return `About ${Math.round(km)} km away`;
-  if (km < 100) return `About ${Math.round(km / 5) * 5} km away`;
+/**
+ * Coarse, privacy-preserving distance label. Buckets are wide on purpose: with 1-km steps someone could
+ * move around and triangulate a person's home. Coordinates are also stored rounded to ~1 km.
+ */
+export function distanceLabel(km: number, _sameCity?: boolean): string {
+  if (km < 5) return "Within 5 km";
+  if (km < 10) return "Within 10 km";
+  if (km < 100) return `About ${Math.round(km / 10) * 10} km away`;
   return `${Math.round(km / 50) * 50}+ km away`;
 }
+
+/** Stored precision for coordinates: 2 decimal places ≈ 1.1 km. We never need more. */
+export const roundCoord = (x: number) => Math.round(x * 100) / 100;
 
 export function ageFromDob(dob: string, today = new Date()): number {
   const d = new Date(dob + "T00:00:00Z");

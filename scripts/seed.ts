@@ -5,6 +5,7 @@
 // All seeded people are fictional test data. Safe to re-run on an empty database.
 import { storeProductId } from "../src/lib/storeProducts";
 import "./env";
+import { LEGAL_DOCS, draftBody } from "./legal-drafts";
 import bcrypt from "bcryptjs";
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
@@ -91,15 +92,11 @@ async function seedBase(now: Date) {
 
   console.log("Seeding config and legal documents…");
   await db.insert(s.appConfig).values({ key: "matching.weights", value: JSON.stringify(DEFAULT_WEIGHTS) });
-  const docs = [
-    ["terms", "Terms of Service", true], ["privacy", "Privacy Policy", true], ["guidelines", "Community Guidelines", true],
-    ["safety", "Safety Policy", true], ["payments", "Payment Terms", false], ["refunds", "Cancellation & Refund Policy", false], ["cookies", "Cookie Policy", false],
-  ] as const;
-  for (const [slug, title, required] of docs) {
+  for (const [slug, title, required] of LEGAL_DOCS) {
     const [doc] = await db.insert(s.legalDocuments).values({ slug, title, requiredAtSignup: required }).returning();
     await db.insert(s.legalVersions).values({
-      documentId: doc.id, version: 1, status: "PUBLISHED", publishedAt: now, effectiveAt: now,
-      body: `# ${title}\n\n**Placeholder text for testing — this is not legal advice.** Have a lawyer draft the real ${title.toLowerCase()} for each country you launch in (including India's DPDP Act 2023 and GDPR for EU/UK users) before going live.\n\n## Summary\n\nThis section will explain, in plain language, what this document covers and how it affects people using Kinara.`,
+      documentId: doc.id, version: 1, status: "PUBLISHED", publishedAt: now, effectiveAt: now, changeSummary: "First draft. Not yet reviewed by a lawyer.",
+      body: draftBody(slug) ?? `# ${title}\n\n**Placeholder text for testing — this is not legal advice.** Have a lawyer draft the real ${title.toLowerCase()} for each country you launch in (including India's DPDP Act 2023 and GDPR for EU/UK users) before going live.\n\n## Summary\n\nThis section will explain, in plain language, what this document covers and how it affects people using Kinara.`,
     });
   }
 

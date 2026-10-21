@@ -3,7 +3,7 @@ import { and, eq, inArray, or } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { MatchPerson } from "./matching";
 import { ageFromDob, distanceLabel, haversineKm } from "./matching";
-import { GENDERS, INTENTS, INTEREST_EMOJI, INTERESTS, LIFESTYLE, type LifestyleKey } from "./constants";
+import { COUNTRIES, GENDERS, INTENTS, INTEREST_EMOJI, INTERESTS, LIFESTYLE, type LifestyleKey } from "./constants";
 
 type Row = { user: typeof schema.users.$inferSelect; profile: typeof schema.profiles.$inferSelect; prefs: typeof schema.preferences.$inferSelect | null };
 
@@ -63,11 +63,24 @@ export async function loadPerson(userId: string): Promise<{ row: Row; person: Ma
   return { row, person: toMatchPerson(row, answers.get(userId) ?? {}) };
 }
 
-/** All user IDs hidden from `userId` because of a block in either direction. */
+/**
+ * All user IDs hidden from `userId` because of a block in either direction — plus, against the simplest
+ * way round a block, other accounts created from the same app install as someone this person blocked.
+ */
 export async function blockedIds(userId: string): Promise<Set<string>> {
   const rows = await db.select().from(schema.blocks)
     .where(or(eq(schema.blocks.blockerId, userId), eq(schema.blocks.blockedId, userId)));
-  return new Set(rows.map((b) => (b.blockerId === userId ? b.blockedId : b.blockerId)));
+  const out = new Set(rows.map((b) => (b.blockerId === userId ? b.blockedId : b.blockerId)));
+  const iBlocked = rows.filter((b) => b.blockerId === userId).map((b) => b.blockedId);
+  if (iBlocked.length) {
+    const installs = (await db.select({ i: schema.users.signupInstallId }).from(schema.users).where(inArray(schema.users.id, iBlocked)))
+      .map((x) => x.i).filter((x): x is string => !!x);
+    if (installs.length) {
+      const twins = await db.select({ id: schema.users.id }).from(schema.users).where(inArray(schema.users.signupInstallId, installs));
+      for (const t of twins) if (t.id !== userId) out.add(t.id);
+    }
+  }
+  return out;
 }
 
 export async function isBlockedBetween(a: string, b: string) {
@@ -83,7 +96,7 @@ export async function isBlockedBetween(a: string, b: string) {
  */
 type CardPhoto = { id: string; url: string; blurhash: string; width: number; height: number };
 
-export function publicCard(viewer: MatchPerson, r: Row, extra: { score?: number; reasons?: string[]; photos?: CardPhoto[] } = {}) {
+export function publicCard(viewer: MatchPerson, r: Row, extra: { score?: number; reasons?: string[]; photos?: CardPhoto[]; matched?: boolean } = {}) {
   const p = r.profile;
   const km = haversineKm(viewer.lat, viewer.lng, p.lat, p.lng);
   const lifestyle = (Object.keys(LIFESTYLE) as LifestyleKey[])
@@ -98,9 +111,9 @@ export function publicCard(viewer: MatchPerson, r: Row, extra: { score?: number;
     firstName: p.firstName,
     age: ageFromDob(p.dob),
     gender: GENDERS[p.gender as keyof typeof GENDERS] ?? p.gender,
-    city: p.city,
-    // People can hide their distance; others then see only the city.
-    distance: r.prefs?.showDistance === false ? "Distance hidden" : distanceLabel(km, viewer.city === p.city),
+    // People can hide their city (then only the country shows) and their distance. Never coordinates.
+    city: r.prefs?.showCity === false ? (COUNTRIES[p.country]?.name ?? p.country) : p.city,
+    distance: r.prefs?.showDistance === false ? "Distance hidden" : distanceLabel(km, viewer.city === p.city && r.prefs?.showCity !== false),
     bio: p.bio,
     intent: INTENTS[p.intent as keyof typeof INTENTS] ?? p.intent,
     profession: p.profession,
@@ -111,7 +124,9 @@ export function publicCard(viewer: MatchPerson, r: Row, extra: { score?: number;
     // Shared interests first; emoji are decorative and come from a fixed list.
     shared: theirInterests.filter((k) => viewerInterests.has(k)).map((k) => ({ key: k, label: INTERESTS[k] ?? k, emoji: INTEREST_EMOJI[k] ?? "" })),
     prompts,
-    photos: extra.photos ?? [],
+    // "Who can see my photos: matches only" → others see the first photo (enough to decide), matches see all.
+    photos: r.prefs?.photosVisibility === "MATCHES" && !extra.matched ? (extra.photos ?? []).slice(0, 1) : extra.photos ?? [],
+    morePhotosForMatches: r.prefs?.photosVisibility === "MATCHES" && !extra.matched && (extra.photos?.length ?? 0) > 1,
     verified: r.user.selfieStatus === "VERIFIED",
     score: extra.score,
     reasons: extra.reasons,

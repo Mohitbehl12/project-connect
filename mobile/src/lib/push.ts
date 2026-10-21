@@ -3,6 +3,7 @@ import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { api } from "./api";
+import { recordConsent } from "./consent";
 
 /**
  * Registers this phone for push notifications once the person is signed in.
@@ -18,7 +19,7 @@ export async function registerForPush() {
       await Notifications.setNotificationChannelAsync("default", { name: "Matches and messages", importance: Notifications.AndroidImportance.HIGH, lightColor: "#5CC9A7" });
     }
     let { status } = await Notifications.getPermissionsAsync();
-    if (status !== "granted") status = (await Notifications.requestPermissionsAsync()).status;
+    if (status !== "granted") { status = (await Notifications.requestPermissionsAsync()).status; recordConsent("PUSH", status === "granted"); }
     if (status !== "granted") return;
     const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
     await api("/api/devices", { body: { pushToken: token, platform: Platform.OS, appVersion: Constants.expoConfig?.version } });

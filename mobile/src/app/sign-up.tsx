@@ -43,6 +43,7 @@ export default function SignUp() {
   const [referral, setReferral] = useState(typeof invite === "string" ? invite.toUpperCase() : "");
   const [dd, setDd] = useState(""); const [mm, setMm] = useState(""); const [yyyy, setYyyy] = useState("");
   const [agree, setAgree] = useState({ adult: false, legal: false, safety: false });
+  const [marketing, setMarketing] = useState(false); // optional, never pre-ticked
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -60,7 +61,7 @@ export default function SignUp() {
     if (!dob || "invalid" in dob) return;
     setErr(""); setBusy(true);
     try {
-      await signUp({ email: email.trim(), password, dob: dob.iso, referralCode: referral });
+      await signUp({ email: email.trim(), password, dob: dob.iso, referralCode: referral, marketing });
       router.replace("/onboarding");
     } catch (e: any) {
       setErr(e.message); setBusy(false);
@@ -116,6 +117,15 @@ export default function SignUp() {
                 <Check on={agree.safety} onToggle={() => setAgree({ ...agree, safety: !agree.safety })}>
                   <T>I'll be respectful, and I'll meet new people in public places.</T>
                 </Check>
+              </View>
+              <View style={{ backgroundColor: c.surface, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 6 }}>
+                <Check on={marketing} onToggle={() => setMarketing(!marketing)}>
+                  <T>Optional: send me news and offers. <T tone="muted">You can change this any time in Privacy Center.</T></T>
+                </Check>
+              </View>
+              <View style={{ backgroundColor: c.trustWash, borderRadius: 16, padding: 12, gap: 4 }}>
+                <T v="callout" strong>Pricing in India</T>
+                <T v="caption" tone="muted">Women: everything free, for life. Men: 15 days of Premium free, then ₹100/month if you choose to continue — no card needed for the trial and nothing is charged automatically. Prices elsewhere are shown in the app.</T>
               </View>
             </>
           )}
