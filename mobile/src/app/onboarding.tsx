@@ -7,6 +7,7 @@ import { ArcMark } from "@/components/Arc";
 import { Button, IconButton } from "@/components/Button";
 import { Icon } from "@/components/Icon";
 import { PhotoGrid } from "@/components/PhotoGrid";
+import { InterestPicker } from "@/components/InterestTile";
 import { PoleSlider } from "@/components/PoleSlider";
 import { T } from "@/components/Text";
 import { Banner, Chip, Field, ProgressBar, Screen } from "@/components/ui";
@@ -183,10 +184,7 @@ export default function Onboarding() {
         <T v="display">What are you into?</T>
         <T tone="muted">Pick at least three. Shared interests become conversation starters.</T>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ flexDirection: "row", flexWrap: "wrap", gap: 8, paddingBottom: 12 }}>
-          {Object.entries(INTERESTS).map(([k, l]) => (
-            <Chip key={k} label={l} emoji={INTEREST_EMOJI[k]} selected={interests.includes(k)}
-              onPress={() => setInterests(interests.includes(k) ? interests.filter((x) => x !== k) : interests.length >= 10 ? interests : [...interests, k])} />
-          ))}
+          <InterestPicker value={interests} onChange={setInterests} />
         </ScrollView>
       </>
     );

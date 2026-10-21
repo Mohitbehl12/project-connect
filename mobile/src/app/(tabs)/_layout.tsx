@@ -24,9 +24,9 @@ export default function TabsLayout() {
   return (
     <Tabs tabBar={(props) => <TabBar {...props} />} screenOptions={{ headerShown: false, animation: "fade" }}>
       <Tabs.Screen name="discover" />
+      <Tabs.Screen name="explore" />
       <Tabs.Screen name="matches" />
       <Tabs.Screen name="messages" />
-      <Tabs.Screen name="explore" />
       <Tabs.Screen name="profile" />
     </Tabs>
   );

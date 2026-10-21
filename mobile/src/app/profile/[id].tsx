@@ -90,7 +90,7 @@ export default function ProfileSheet() {
         <Pressable accessibilityRole="button" accessibilityLabel="See full compatibility breakdown" onPress={() => router.push({ pathname: "/compatibility/[id]", params: { id: card.id } })}
           style={{ marginHorizontal: 20, backgroundColor: c.surface, borderRadius: 26, padding: 18, gap: 16, shadowColor: c.brand, shadowOpacity: 0.1, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 3, borderWidth: 1, borderColor: c.line }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
-            <CompatArc score={compat.data?.overall ?? card.score ?? 0} size={76} />
+            <CompatArc score={compat.data?.overall ?? card.score ?? 0} size={76} caption="Chemistry" />
             <View style={{ flex: 1, gap: 4 }}>
               <T v="headline">Why you might click</T>
               {(card.reasons ?? []).slice(0, 2).map((r) => <T key={r} v="callout" tone="muted">✓ {r}</T>)}
@@ -127,6 +127,11 @@ export default function ProfileSheet() {
         {(compat.data?.connect.length ?? 0) > 0 && (
           <Section title="How you two connect">
             {compat.data!.connect.map((t) => <T key={t} tone="muted">• {t}</T>)}
+          </Section>
+        )}
+        {!!card.languages?.length && (
+          <Section title="Speaks">
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{card.languages.map((l) => <Chip key={l} label={l} />)}</View>
           </Section>
         )}
         {card.lifestyle.length > 0 && (

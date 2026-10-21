@@ -34,6 +34,7 @@ type Seed = {
   bg: string; text: string; // light-mode page and body text
   grad: readonly [string, string]; // vivid pair for gradients
   night: string; // dark-mode page
+  tint?: string; // optional colour for raised surfaces and lines in light mode (default: brand)
 };
 
 // ---- colour maths -----------------------------------------------------------------------------
@@ -48,7 +49,7 @@ export const contrast = (a: string, b: string) => { const [x, y] = [lum(a), lum(
 function build(s: Seed): Theme {
   const W = "#FFFFFF";
   const light: Palette = {
-    bg: s.bg, surface: W, raised: mix(s.bg, s.brand, 0.07), line: mix(s.bg, s.brand, 0.15),
+    bg: s.bg, surface: s.tint ? mix(W, s.bg, 0.35) : W, raised: mix(s.bg, s.tint ?? s.brand, s.tint ? 0.12 : 0.07), line: mix(s.bg, s.tint ?? s.brand, s.tint ? 0.3 : 0.15),
     text: s.text, muted: mix(s.text, s.bg, 0.3), faint: mix(s.text, s.bg, 0.5),
     brand: s.brand, brandText: W, brandWash: mix(W, s.brand, 0.12),
     accent: s.accent, accentText: s.accentInk, accentWash: mix(W, s.accent, 0.3),
@@ -80,7 +81,8 @@ function build(s: Seed): Theme {
 
 const SEEDS: Seed[] = [
   // Kinara Night (default): deep black-wine, rose, burgundy, dark purple and warm gold.
-  { id: "kinara-night", name: "Kinara Night", brand: "#9B1B4A", brandDark: "#F48FB8", accent: "#E9C37A", accentInk: "#3B2608", bg: "#FFF5F7", text: "#2B0C1A", grad: ["#E8467C", "#7B2FB0"], night: "#0F0709" },
+  // Light mode is ivory and pearl with champagne lines and charcoal type — rose and gold as accents only.
+  { id: "kinara-night", name: "Kinara Night", brand: "#9B1B4A", brandDark: "#F48FB8", accent: "#E9C37A", accentInk: "#3B2608", bg: "#FAF6EF", text: "#231B1F", grad: ["#E8467C", "#7B2FB0"], night: "#0F0709", tint: "#C9A86A" },
   { id: "lilac-mint", name: "Lilac + mint", brand: "#7B48CC", brandDark: "#C3A6FF", accent: "#7FD8BE", accentInk: "#173B33", bg: "#F7F4FF", text: "#2B1F45", grad: ["#8E5BD8", "#7FD8BE"], night: "#16112A" },
   { id: "lavender-peach", name: "Lavender + peach", brand: "#7446D4", brandDark: "#C9B3FF", accent: "#FFC4A3", accentInk: "#4A2A14", bg: "#FAF6FF", text: "#2E2142", grad: ["#9B7BEA", "#FFB38A"], night: "#18122B" },
   { id: "pink-lavender", name: "Baby pink + lavender", brand: "#7E4FD0", brandDark: "#D5B8FF", accent: "#F9C9DC", accentInk: "#5A2440", bg: "#FFF8FB", text: "#3A2340", grad: ["#F4A9CC", "#A98BEA"], night: "#1C1222" },

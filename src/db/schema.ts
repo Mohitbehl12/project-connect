@@ -65,6 +65,7 @@ export const profiles = sqliteTable("profiles", {
   pets: text("pets"),
   intent: text("intent").notNull(),
   interests: text("interests").notNull().default(""), // comma-separated keys
+  languages: text("languages").notNull().default(""), // comma-separated LANGUAGES keys (optional)
   photos: text("photos").notNull().default("[]"), // JSON array of storage keys
   prompts: text("prompts").notNull().default("[]"), // JSON [{q,a}]
   completeness: integer("completeness").notNull().default(0),

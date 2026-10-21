@@ -67,7 +67,7 @@ export default function MatchesTab() {
       {q.isLoading && <Skeleton h={w * 1.3} r={22} />}
       {q.error && <ErrorState message={(q.error as Error).message} onRetry={() => q.refetch()} />}
       {q.data && !q.data.matches.length && (
-        <EmptyState art="cups" title="No matches yet" body="Your next great conversation could be one discovery away." action={{ label: "Start discovering", onPress: () => router.push("/discover") }} />
+        <EmptyState art="cups" title="No new matches yet ❤️" body="Let's discover someone new." action={{ label: "Explore People", onPress: () => router.push("/explore") }} />
       )}
       {q.data && q.data.matches.length > 0 && (
         <FlatList

@@ -41,7 +41,7 @@ export function ArcLoader({ size = 36, label = "Loading" }: { size?: number; lab
 /**
  * Compatibility meter. The arc draws in when shown; `live` lets a gesture drive it (swipe feedback).
  */
-export function CompatArc({ score, size = 56, live, onDark, label = true }: { score: number; size?: number; live?: SharedValue<number>; onDark?: boolean; label?: boolean }) {
+export function CompatArc({ score, size = 56, live, onDark, label = true, caption }: { score: number; size?: number; live?: SharedValue<number>; onDark?: boolean; label?: boolean; caption?: string }) {
   const { c, g: glow } = useTheme();
   const stroke = Math.max(4, size * 0.09);
   const r = (size - stroke) / 2;
@@ -57,7 +57,7 @@ export function CompatArc({ score, size = 56, live, onDark, label = true }: { sc
   });
   const tone = score >= 80 ? (onDark ? "#7FD1B0" : c.trust) : score >= 65 ? c.accent : onDark ? glow.onNight : c.faint;
   return (
-    <View style={{ width: size, height: size }} accessible accessibilityLabel={`${score} percent compatible`}>
+    <View style={{ width: size, height: size }} accessible accessibilityLabel={caption ? `${score} percent ${caption.toLowerCase()}, an estimate` : `${score} percent compatible`}>
       <Svg width={size} height={size} style={{ transform: [{ rotate: "-90deg" }] }}>
         <Circle cx={size / 2} cy={size / 2} r={r} stroke={onDark ? "rgba(255,255,255,0.22)" : c.raised} strokeWidth={stroke} fill="none" />
         <AnimatedCircle cx={size / 2} cy={size / 2} r={r} stroke={tone} strokeWidth={stroke} strokeLinecap="round" fill="none"
@@ -68,6 +68,7 @@ export function CompatArc({ score, size = 56, live, onDark, label = true }: { sc
           <T v={size >= 80 ? "title" : "callout"} tone={onDark ? "white" : "text"} style={{ fontFamily: "BricolageGrotesque_800ExtraBold", fontSize: size * 0.3, lineHeight: size * 0.34 }}>
             {score}<T tone={onDark ? "white" : "muted"} style={{ fontSize: size * 0.15 }}>%</T>
           </T>
+          {!!caption && <T tone={onDark ? "white" : "muted"} style={{ fontSize: Math.max(8, size * 0.13), lineHeight: Math.max(10, size * 0.16), opacity: 0.85, letterSpacing: 0.4 }}>{caption}</T>}
         </View>
       )}
     </View>

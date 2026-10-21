@@ -3,7 +3,7 @@ import { and, eq, inArray, or } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { MatchPerson } from "./matching";
 import { ageFromDob, distanceLabel, haversineKm } from "./matching";
-import { CITIES, COUNTRIES, GENDERS, INTENTS, INTEREST_EMOJI, INTERESTS, LIFESTYLE, type LifestyleKey } from "./constants";
+import { CITIES, COUNTRIES, GENDERS, INTENTS, INTEREST_EMOJI, INTERESTS, LANGUAGES, LIFESTYLE, type LifestyleKey } from "./constants";
 
 type Row = { user: typeof schema.users.$inferSelect; profile: typeof schema.profiles.$inferSelect; prefs: typeof schema.preferences.$inferSelect | null };
 
@@ -130,6 +130,8 @@ export function publicCard(viewer: MatchPerson, r: Row, extra: { score?: number;
     heightCm: p.heightCm,
     lifestyle,
     interests: theirInterests.map((k) => INTERESTS[k] ?? k),
+    interestKeys: theirInterests,
+    languages: csv(p.languages).map((k) => LANGUAGES[k] ?? k),
     // Shared interests first; emoji are decorative and come from a fixed list.
     shared: theirInterests.filter((k) => viewerInterests.has(k)).map((k) => ({ key: k, label: INTERESTS[k] ?? k, emoji: INTEREST_EMOJI[k] ?? "" })),
     prompts,

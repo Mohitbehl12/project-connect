@@ -25,6 +25,9 @@ export type Card = {
   score?: number;
   reasons?: string[];
   trait?: string | null;
+  chemistry?: string | null; // "✨ Strong Chemistry" — an estimate, never a certainty
+  languages?: string[];
+  interestKeys?: string[];
   likeKind?: string;
   likeNote?: string | null;
 };
@@ -39,7 +42,7 @@ export type Me = {
     paused?: boolean; restricted?: boolean;
   };
   profile: null | {
-    firstName: string; gender: string; city: string; country: string; bio: string; intent: string; interests: string;
+    firstName: string; gender: string; city: string; country: string; bio: string; intent: string; interests: string; languages?: string;
     prompts: string; education: string | null; profession: string | null; heightCm: number | null; completeness: number;
     drinking: string | null; smoking: string | null; food: string | null; exercise: string | null; pets: string | null;
   };

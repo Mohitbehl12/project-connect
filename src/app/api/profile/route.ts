@@ -7,7 +7,7 @@ import { addRiskSignal } from "@/lib/risk";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ApiError, ok, parseBody, route } from "@/lib/http";
-import { CITIES, GENDERS, INTENTS, INTERESTS, LIFESTYLE } from "@/lib/constants";
+import { CITIES, GENDERS, INTENTS, INTERESTS, LANGUAGES, LIFESTYLE } from "@/lib/constants";
 import { refreshCompleteness } from "@/lib/photos";
 import type { User } from "@/db/schema";
 import { screenMessage } from "@/lib/moderation";
@@ -31,6 +31,7 @@ const Body = z.object({
   exercise: opt(LIFESTYLE.exercise),
   pets: opt(LIFESTYLE.pets),
   interests: z.array(z.enum(keysOf(INTERESTS))).max(10).default([]),
+  languages: z.array(z.enum(keysOf(LANGUAGES))).max(6).optional(), // omitted = unchanged
   prompts: z.array(z.object({ q: z.string().trim().min(1).max(80), a: z.string().trim().min(1).max(200) })).max(3).default([]),
 });
 
@@ -70,6 +71,7 @@ async function saveProfile(user: User, b: ProfileInput) {
     education: b.education ?? null, profession: b.profession ?? null, industry: b.industry ?? null, heightCm: b.heightCm ?? null,
     drinking: b.drinking ?? null, smoking: b.smoking ?? null, food: b.food ?? null, exercise: b.exercise ?? null, pets: b.pets ?? null,
     intent: b.intent, interests: b.interests.join(","), prompts: JSON.stringify(b.prompts), updatedAt: new Date(),
+    ...(b.languages ? { languages: b.languages.join(",") } : {}),
   };
   await db.insert(schema.profiles).values({ userId: user.id, ...values })
     .onConflictDoUpdate({ target: schema.profiles.userId, set: values });
@@ -90,7 +92,9 @@ export const PUT = route(async ({ req, user }) => {
  * (firstName, gender, city, intent); later calls send only the fields that changed.
  */
 export const PATCH = route(async ({ req, user }) => {
-  const partial = await parseBody(req, Body.partial());
+  // No defaults here: a field that isn't sent must stay as it is (Zod 4 applies defaults inside .partial(),
+  // which used to reset interests and prompts whenever only, say, the bio was saved).
+  const partial = await parseBody(req, Body.extend({ interests: Body.shape.interests.unwrap().optional(), prompts: Body.shape.prompts.unwrap().optional() }).partial());
   const existing = await db.query.profiles.findFirst({ where: eq(schema.profiles.userId, user.id) });
   let prompts: { q: string; a: string }[] = [];
   try { prompts = existing ? JSON.parse(existing.prompts) : []; } catch { /* ignore */ }
@@ -100,6 +104,7 @@ export const PATCH = route(async ({ req, user }) => {
     heightCm: existing?.heightCm, drinking: existing?.drinking, smoking: existing?.smoking, food: existing?.food,
     exercise: existing?.exercise, pets: existing?.pets,
     interests: existing?.interests ? existing.interests.split(",").filter(Boolean) : [], prompts,
+    languages: existing?.languages ? existing.languages.split(",").filter(Boolean) : undefined,
     ...Object.fromEntries(Object.entries(partial).filter(([, v]) => v !== undefined)),
   });
   const completeness = await saveProfile(user, merged);

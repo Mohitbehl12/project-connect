@@ -40,6 +40,7 @@ function Shell() {
         <Stack.Screen name="report" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
         <Stack.Screen name="date/[matchId]" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
         <Stack.Screen name="premium" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
+        <Stack.Screen name="search" options={{ presentation: "fullScreenModal", animation: "fade_from_bottom" }} />
         <Stack.Screen name="notifications" />
         <Stack.Screen name="call/[id]" options={{ animation: "fade", gestureEnabled: false }} />
       </Stack>

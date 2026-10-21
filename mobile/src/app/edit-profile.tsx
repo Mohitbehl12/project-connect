@@ -2,9 +2,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
-import { INTENTS, INTEREST_EMOJI, INTERESTS, LIFESTYLE } from "@shared/constants";
+import { INTENTS, LANGUAGES, LIFESTYLE } from "@shared/constants";
 import { Button } from "@/components/Button";
 import { Header } from "@/components/Header";
+import { InterestPicker } from "@/components/InterestTile";
 import { T } from "@/components/Text";
 import { Banner, Chip, Field, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -39,6 +40,7 @@ export default function EditProfile() {
   const [prompts, setPrompts] = useState<{ q: string; a: string }[]>(() => { try { return JSON.parse(p?.prompts ?? "[]"); } catch { return []; } });
   const [interests, setInterests] = useState<string[]>(p?.interests ? p.interests.split(",").filter(Boolean) : []);
   const [intent, setIntent] = useState(p?.intent ?? "");
+  const [languages, setLanguages] = useState<string[]>(p?.languages ? String(p.languages).split(",").filter(Boolean) : []);
   const [profession, setProfession] = useState(p?.profession ?? "");
   const [education, setEducation] = useState(p?.education ?? "");
   const [height, setHeight] = useState(p?.heightCm ? String(p.heightCm) : "");
@@ -51,7 +53,7 @@ export default function EditProfile() {
     try {
       await api("/api/profile", {
         method: "PATCH",
-        body: { bio: bio.trim(), prompts: prompts.filter((x) => x.q && x.a.trim()), interests, intent, profession: profession.trim() || null, education: education.trim() || null, heightCm: height ? Number(height) : null, ...life },
+        body: { bio: bio.trim(), prompts: prompts.filter((x) => x.q && x.a.trim()), interests, languages, intent, profession: profession.trim() || null, education: education.trim() || null, heightCm: height ? Number(height) : null, ...life },
       });
       haptic.success();
       await refetchMe();
@@ -98,8 +100,13 @@ export default function EditProfile() {
           </Section>
           <Section title="Interests" hint={`${interests.length}/10 chosen`}>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-              {Object.entries(INTERESTS).map(([k, l]) => <Chip key={k} label={l} emoji={INTEREST_EMOJI[k]} selected={interests.includes(k)}
-                onPress={() => setInterests(interests.includes(k) ? interests.filter((x) => x !== k) : interests.length >= 10 ? interests : [...interests, k])} />)}
+              <InterestPicker value={interests} onChange={setInterests} />
+            </View>
+          </Section>
+          <Section title="Languages I speak" hint="Optional · up to 6 · helps people who'd rather chat in their own language">
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {Object.entries(LANGUAGES).map(([k, l]) => <Chip key={k} small label={l} selected={languages.includes(k)}
+                onPress={() => setLanguages(languages.includes(k) ? languages.filter((x) => x !== k) : languages.length >= 6 ? languages : [...languages, k])} />)}
             </View>
           </Section>
           <Section title="The basics">

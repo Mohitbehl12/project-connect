@@ -45,6 +45,7 @@ export const INTERESTS: Record<string, string> = {
   startups: "Startups", tech: "Tech", writing: "Writing", poetry: "Poetry", volunteering: "Volunteering",
   dogs: "Dogs", cats: "Cats", gardening: "Gardening", cycling: "Cycling", swimming: "Swimming",
   podcasts: "Podcasts", fashion: "Fashion", spirituality: "Spirituality", anime: "Anime",
+  beach: "Beaches", nightlife: "Nightlife", wine: "Wine & dining",
 };
 
 export const INTEREST_EMOJI: Record<string, string> = {
@@ -53,7 +54,35 @@ export const INTEREST_EMOJI: Record<string, string> = {
   photography: "📸", art: "🖼️", theatre: "🎭", standup: "🎤", gaming: "🎮", board_games: "🎲", coffee: "☕",
   food_trails: "🍜", startups: "🚀", tech: "💻", writing: "✍️", poetry: "📝", volunteering: "🤝", dogs: "🐶",
   cats: "🐱", gardening: "🌱", cycling: "🚴", swimming: "🏊", podcasts: "🎙️", fashion: "👗", spirituality: "🕉️", anime: "🌸",
+  beach: "🏖️", nightlife: "🌙", wine: "🍷",
 };
+
+/** Languages people can list on their profile (optional) and filter by. */
+export const LANGUAGES: Record<string, string> = {
+  en: "English", hi: "Hindi", bn: "Bengali", mr: "Marathi", te: "Telugu", ta: "Tamil", gu: "Gujarati", ur: "Urdu",
+  kn: "Kannada", ml: "Malayalam", pa: "Punjabi", or: "Odia", as: "Assamese", fr: "French", es: "Spanish", de: "German",
+  ar: "Arabic", ja: "Japanese", zh: "Mandarin", pt: "Portuguese",
+};
+
+/**
+ * Explore collections. `interests` = anyone with at least one of these; `rule` = a ranking or filter in the
+ * discovery engine. Popularity collections never show anyone's like counts — only the order.
+ */
+export const EXPLORE_CATEGORIES = [
+  { key: "your-interests", title: "Your Interests", sub: "People who share your interests.", emoji: "💕", rule: "interests" },
+  { key: "trending", title: "Trending Now", sub: "Discover what's getting attention.", emoji: "🔥", rule: "trending" },
+  { key: "new", title: "New Connections", sub: "Meet people who recently joined.", emoji: "✨", rule: "new" },
+  { key: "around", title: "Around Your Interests", sub: "Discover people with similar passions.", emoji: "👀", rule: "around" },
+  { key: "recommended", title: "Recommended For You", sub: "Profiles selected based on your preferences.", emoji: "❤️", rule: "recommended" },
+  { key: "popular", title: "Popular Profiles", sub: "Meet profiles getting noticed.", emoji: "⭐", rule: "popular" },
+  { key: "lifestyle", title: "Romance & Lifestyle", sub: "Discover shared lifestyle interests.", emoji: "🌹", rule: "lifestyle" },
+  { key: "music", title: "Music Lovers", sub: "Find someone who shares your playlist.", emoji: "🎵", interests: ["music_live", "indie_music", "classical", "dance", "podcasts"] },
+  { key: "travel", title: "Travel Lovers", sub: "People who love exploring the world.", emoji: "✈️", interests: ["travel", "trekking", "beach"] },
+  { key: "food", title: "Food & Dining", sub: "Discover people who enjoy great food.", emoji: "🍷", interests: ["food_trails", "cooking", "coffee", "wine"] },
+  { key: "fitness", title: "Fitness", sub: "Find your fitness vibe.", emoji: "🏋️", interests: ["gym", "running", "yoga", "cycling", "swimming", "football", "cricket", "trekking"] },
+  { key: "art", title: "Art & Creativity", sub: "Connect through creativity.", emoji: "🎨", interests: ["art", "photography", "theatre", "writing", "poetry", "dance", "fashion"] },
+] as const;
+export type ExploreKey = (typeof EXPLORE_CATEGORIES)[number]["key"];
 
 // Original personality bank. Each question is a 1–5 scale between two poles.
 export const PERSONALITY_QUESTIONS = [

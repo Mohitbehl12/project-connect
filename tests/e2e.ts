@@ -1368,6 +1368,41 @@ async function main() {
     check("ad actions are in the audit log and the chain is intact", (await admin.get("/api/admin/compliance")).data?.auditChain?.ok === true);
   }
 
+  section("Explore: collections, interests, search and filters");
+  {
+    const X = new Client("ExploreViewerClient1"), Y = new Client("ExploreTargetClient12");
+    await onboard(X, `explx-${run}@test.local`, "WOMAN", "MAN", "Mira", answersA);
+    const yId = await onboard(Y, `exply-${run}@test.local`, "MAN", "WOMAN", "Arjun", answersB);
+    const prof = await Y.patch("/api/profile", { profession: "Landscape Architect", languages: ["hi", "ta"], interests: ["travel", "photography", "wine", "beach"] });
+    check("languages and the new interests (beaches, wine) can be saved", prof.status === 200, prof.data);
+    check("…and invalid languages are refused", (await Y.patch("/api/profile", { languages: ["xx"] })).status === 422);
+    await Y.patch("/api/profile", { bio: "Weekends are for long drives and good food." });
+    const yp = (await Y.get("/api/me")).data?.profile;
+    check("saving other fields keeps the languages", yp?.languages === "hi,ta");
+    check("…and keeps interests and prompts (a bio-only save used to clear them)", yp?.interests === "travel,photography,wine,beach" && JSON.parse(yp?.prompts ?? "[]").length >= 1, yp);
+    const home = await X.get("/api/explore");
+    check("Explore lists the 12 collections with real counts", home.status === 200 && home.data?.categories?.length === 12 && home.data.categories.every((c: any) => typeof c.count === "number" && typeof c.label === "string"), home.data?.categories);
+    check("collection labels are honest ('Be among the first' when empty)", home.data?.categories?.every((c: any) => c.count > 0 ? /\d/.test(c.label) : c.label === "Be among the first"));
+    check("'Made For You' cards carry a chemistry label and score", (home.data?.forYou ?? []).every((c: any) => typeof c.score === "number" && "chemistry" in c));
+    check("your interests come with how many people share them", (home.data?.interests ?? []).length > 0 && home.data.interests.every((i: any) => typeof i.count === "number"));
+    const travel = await X.get("/api/discovery?cat=travel&profession=architect");
+    check("the Travel Lovers collection finds him", (travel.data?.cards ?? []).some((c: any) => c.id === yId), travel.data?.totalAvailable);
+    const card = (travel.data?.cards ?? []).find((c: any) => c.id === yId);
+    check("cards show the languages he chose", JSON.stringify(card?.languages) === JSON.stringify(["Hindi", "Tamil"]), card?.languages);
+    check("search by profession works", (await X.get("/api/discovery?q=architect")).data?.cards?.some((c: any) => c.id === yId));
+    check("search never matches names", !((await X.get("/api/discovery?q=Arjun")).data?.cards ?? []).some((c: any) => c.id === yId));
+    check("filters combine: language + interest + city", (await X.get("/api/discovery?languages=ta&interests=wine&city=Delhi")).data?.cards?.some((c: any) => c.id === yId));
+    check("…and narrow correctly", !((await X.get("/api/discovery?languages=fr")).data?.cards ?? []).some((c: any) => c.id === yId));
+    check("an age filter can't widen your own preferences", ((await X.get("/api/discovery?ageMin=18&ageMax=99")).data?.cards ?? []).every((c: any) => c.age >= 18));
+    check("unknown filter values are ignored, not errors", (await X.get("/api/discovery?interests=<script>&city=Atlantis&ageMin=abc")).status === 200);
+    await Y.put("/api/preferences", { showCity: false });
+    check("people who hide their city can't be found by city", !((await X.get("/api/discovery?city=Delhi")).data?.cards ?? []).some((c: any) => c.id === yId));
+    await Y.put("/api/preferences", { showCity: true });
+    await X.post("/api/blocks", { userId: yId });
+    check("blocked people never appear in Explore or search", !((await X.get("/api/discovery?q=architect")).data?.cards ?? []).some((c: any) => c.id === yId) && !JSON.stringify((await X.get("/api/explore")).data).includes(yId));
+    check("trending and popular collections never expose like counts", !/likes?Count|attention/i.test(JSON.stringify((await X.get("/api/discovery?cat=trending")).data)));
+  }
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) {
     console.log("Failed:\n - " + failures.join("\n - "));
