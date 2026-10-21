@@ -58,7 +58,6 @@ export default function Register() {
             <input type="checkbox" className="mt-1 h-4 w-4 accent-ink" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} />
             <span>Optional: send me news and offers. <span className="text-ink-soft">You can change this any time.</span></span>
           </label>
-          <p className="rounded-xl bg-sage-wash p-3 text-sm"><strong>Pricing in India:</strong> women get everything free, for life. Men get 15 days of Premium free, then ₹100/month if they choose to continue — no card needed for the trial, nothing charged automatically. <Link href="/legal/payments" className="underline">Subscription terms</Link></p>
           {err && <Alert tone="error">{err}</Alert>}
           <button className="btn-primary w-full py-3" disabled={busy}>{busy ? "Creating…" : "Create account"}</button>
         </form>

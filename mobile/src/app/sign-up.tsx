@@ -123,10 +123,6 @@ export default function SignUp() {
                   <T>Optional: send me news and offers. <T tone="muted">You can change this any time in Privacy Center.</T></T>
                 </Check>
               </View>
-              <View style={{ backgroundColor: c.trustWash, borderRadius: 16, padding: 12, gap: 4 }}>
-                <T v="callout" strong>Pricing in India</T>
-                <T v="caption" tone="muted">Women: everything free, for life. Men: 15 days of Premium free, then ₹100/month if you choose to continue — no card needed for the trial and nothing is charged automatically. Prices elsewhere are shown in the app.</T>
-              </View>
             </>
           )}
           {err ? <Banner tone="alert">{err}</Banner> : null}
