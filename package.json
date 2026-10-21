@@ -23,7 +23,8 @@
     "build:app-web": "npm --prefix mobile run export:server",
     "backup:restore": "tsx scripts/restore-backup.ts",
     "reviewer:create": "tsx scripts/create-reviewer.ts",
-    "brand:rename": "tsx scripts/rename-brand.ts"
+    "brand:rename": "tsx scripts/rename-brand.ts",
+    "test:security": "tsx tests/security.ts"
   },
   "keywords": [],
   "author": "",
@@ -60,7 +61,7 @@
     "@types/web-push": "^3.6.4",
     "autoprefixer": "^10.6.1",
     "drizzle-kit": "^0.31.11",
-    "postcss": "^8.5.29",
+    "postcss": "^8.5.31",
     "tailwindcss": "^3.4.19",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",
@@ -69,5 +70,9 @@
   "private": true,
   "engines": {
     "node": ">=22 <23"
+  },
+  "overrides": {
+    "postcss": "$postcss",
+    "sprintf-js": "^1.1.3"
   }
 }

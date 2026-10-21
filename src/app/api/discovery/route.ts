@@ -1,4 +1,5 @@
-import { and, eq, gte, inArray, isNull, lte, ne, notInArray } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, lte, ne, notInArray, or } from "drizzle-orm";
+import { CITIES } from "@/lib/constants";
 import { db, schema } from "@/db";
 import { ApiError, ok, route } from "@/lib/http";
 import { getConfig } from "@/lib/config";
@@ -51,7 +52,11 @@ export const GET = route(async ({ req, user }) => {
     ...(verifiedOnly ? [eq(schema.users.selfieStatus, "VERIFIED")] : []),
     ...(mode === "new" ? [gte(schema.users.createdAt, new Date(Date.now() - 14 * 86_400_000))] : []),
   ];
-  if (!viewer.prefs.longDistance) where.push(eq(schema.profiles.country, viewer.country));
+  // Same country — or visiting a city in it with travel mode.
+  if (!viewer.prefs.longDistance) {
+    const cities = Object.entries(CITIES).filter(([, c]) => c.country === viewer.country).map(([k]) => k);
+    where.push(or(eq(schema.profiles.country, viewer.country), and(inArray(schema.preferences.travelCity, cities.length ? cities : ["__none__"]), gte(schema.preferences.travelUntil, new Date())))!);
+  }
 
   const rows = await db
     .select({ user: schema.users, profile: schema.profiles, prefs: schema.preferences })

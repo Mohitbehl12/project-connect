@@ -26,6 +26,13 @@ function Launch() {
     catch (e: any) { setMsg({ tone: "error", text: e.message }); }
   }
   const groups = [...new Set(q.data.items.map((i) => i.group))];
+  async function removeSamples() {
+    const phrase = prompt("This permanently deletes every sample person (emails ending @test.local or @demo.local), with their photos, matches and messages — including the demo logins. Type REMOVE SAMPLE PEOPLE to confirm.");
+    if (!phrase) return;
+    setMsg(null);
+    try { const r = await api<{ removed: number; failed: number; envNote: string | null }>("/api/admin/samples", { body: { confirm: phrase } }); setMsg({ tone: "success", text: `Removed ${r.removed} sample people.${r.failed ? ` ${r.failed} couldn't be removed (they have payment records).` : ""} ${r.envNote ?? ""}` }); q.reload(); }
+    catch (e: any) { setMsg({ tone: "error", text: e.message }); }
+  }
   const passed = q.data.checks.filter((c) => c.ok).length;
   return (
     <>
@@ -39,6 +46,7 @@ function Launch() {
             <li key={c.id} className="flex items-start gap-3 py-2 text-sm">
               <span aria-hidden className={c.ok ? "text-sage" : "text-rose"}>{c.ok ? "✓" : "✗"}</span>
               <span className="flex-1"><strong>{c.label}</strong><br /><span className="text-ink-soft">{c.detail}</span></span>
+              {c.id === "samples" && !c.ok && staff.permissions.includes("roles.assign") && <button className="btn-outline px-3 py-1.5 text-sm" onClick={removeSamples}>Remove sample people…</button>}
             </li>
           ))}
         </ul>

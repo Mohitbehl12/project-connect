@@ -18,14 +18,15 @@ import { buyStoreProduct, loadStoreProducts, ownedStorePurchases, storeSupported
 import type { Catalogue, Quote } from "@/lib/types";
 import { useTheme } from "@/theme/ThemeProvider";
 
-// Only benefits that exist today. Boosts and travel mode are marked as coming soon.
+// Only benefits that exist today.
 const BENEFITS: [IconName, string, string, boolean?][] = [
   ["likes", "See who likes you", "Match the moment you like them back."],
   ["sparkle", "More likes every day", "100 a day on Premium, unlimited on Premium Plus."],
   ["star", "More Super Likes ⭐", "Lead with a note that lands at the top."],
   ["sliders", "Advanced filters", "Fine-tune who you see."],
   ["eye", "Incognito (Premium Plus)", "Only people you like can see you."],
-  ["pin", "Profile boost & travel mode", "Coming soon.", true],
+  ["sparkle", "Profile boosts 🚀", "Be seen first in Discover for 30 minutes. 1 a month on Premium, more on Premium Plus."],
+  ["pin", "Travel mode ✈️ (Premium Plus)", "Meet people in another city before you arrive."],
 ];
 
 const TRUST: [string, string][] = [
@@ -129,7 +130,7 @@ export default function Premium() {
         <T tone="white" style={{ opacity: 0.9 }}>Every feature is included — no subscription, no payment details, nothing that renews.</T>
       </LinearGradient>
       <View style={{ padding: 20, gap: 10 }}>
-        {["See who likes you", "Unlimited likes and Priority Likes", "Boosts and advanced filters", "Photos, voice messages and calls"].map((f) => (
+        {["See who likes you ❤️", "Unlimited likes, plus Super Likes ⭐ and Sparks ✨", "Profile boosts 🚀 and travel mode ✈️", "Incognito and advanced filters", "Photos, voice messages and calls"].map((f) => (
           <View key={f} style={{ flexDirection: "row", gap: 10, alignItems: "center" }}><Icon name="check" color={c.trust} /><T>{f}</T></View>
         ))}
       </View>

@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ScrollView, Switch, View } from "react-native";
-import { GENDERS, INTENTS } from "@shared/constants";
+import { CITIES, GENDERS, INTENTS } from "@shared/constants";
 import { Button, IconButton } from "@/components/Button";
 import { Header } from "@/components/Header";
 import { T } from "@/components/Text";
@@ -26,6 +26,19 @@ export default function Preferences() {
   const [longDistance, setLongDistance] = useState(!!p?.longDistance);
   const [intents, setIntents] = useState<string[]>(p?.intents ? p.intents.split(",").filter(Boolean) : []);
   const [err, setErr] = useState("");
+  const travelOn = !!p?.travelCity && !!p.travelUntil && new Date(p.travelUntil) > new Date();
+  const [travelMsg, setTravelMsg] = useState("");
+  async function travel(city: string | null) {
+    setTravelMsg("");
+    try {
+      await api("/api/travel", { method: "PUT", body: { city, days: 7 } });
+      haptic.success(); await refetchMe(); qc.invalidateQueries({ queryKey: ["discovery"] });
+      setTravelMsg(city ? `You're visiting ${city} for 7 days ✈️ People there can see you as "Visiting ${city}".` : "Travel mode is off. You're back home.");
+    } catch (e: any) {
+      setTravelMsg(e.code === "upgrade_required" ? "Travel mode is part of Premium Plus." : e.message);
+      if (e.code === "upgrade_required") router.push("/premium");
+    }
+  }
   const [busy, setBusy] = useState(false);
 
   async function save() {
@@ -79,6 +92,15 @@ export default function Preferences() {
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {Object.entries(INTENTS).map(([k, l]) => <Chip key={k} label={l} selected={intents.includes(k)} onPress={() => setIntents(intents.includes(k) ? intents.filter((x) => x !== k) : [...intents, k])} />)}
           </View>
+        </View>
+        <View style={{ gap: 8 }}>
+          <T v="callout" tone="muted">Travel mode ✈️</T>
+          <T v="caption" tone="muted">{travelOn ? `Visiting ${p?.travelCity} until ${new Date(p!.travelUntil!).toLocaleDateString()}. Your home city stays on your profile.` : "Going somewhere? Meet people there before you arrive — for up to 7 days."}</T>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {travelOn && <Chip label="Back home" selected={false} onPress={() => travel(null)} />}
+            {Object.keys(CITIES).filter((k) => k !== me?.profile?.city).map((k) => <Chip key={k} small label={k} selected={p?.travelCity === k && travelOn} onPress={() => travel(k)} />)}
+          </View>
+          {travelMsg ? <Banner tone="info">{travelMsg}</Banner> : null}
         </View>
         {err ? <Banner tone="alert">{err}</Banner> : null}
       </ScrollView>

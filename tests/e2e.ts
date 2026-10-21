@@ -1203,6 +1203,20 @@ async function main() {
     check("Cupid suggests date ideas in public places", ((await F2.post("/api/cupid", { task: "date", matchId: mid })).data?.ideas ?? []).every((i: any) => /public/.test(i.why)));
     check("Cupid helps with a bio", ((await F1.post("/api/cupid", { task: "bio" })).data?.ideas ?? []).length === 3);
     check("Cupid only works inside your own matches", (await new Client("FlirtyStrangerClient9").post("/api/cupid", { task: "reply", matchId: mid })).status === 401);
+    const bs = (await F1.get("/api/boosts")).data;
+    check("boosts come with the plan (women: free forever, VIP)", bs?.perMonth >= 1 && bs.left === bs.perMonth, bs);
+    const bst = await F1.post("/api/boosts");
+    check("a boost starts for 30 minutes", bst.status === 201 && !!bst.data?.activeUntil && bst.data.left === bs.perMonth - 1, bst.data);
+    check("…only one at a time", (await F1.post("/api/boosts")).data?.code === "boost_active");
+    const tr = await F1.put("/api/travel", { city: "Mumbai", days: 7 });
+    check("travel mode can be switched on (included for her)", tr.status === 200 && tr.data?.city === "Mumbai", tr.data);
+    const asSeen = (await F2.get(`/api/people/${f1}`)).data?.card;
+    check("…her match sees 'Visiting Mumbai'", asSeen?.city === "Visiting Mumbai", asSeen?.city);
+    check("travel mode needs Premium Plus on a men's trial", (await F2.put("/api/travel", { city: "Pune", days: 3 })).data?.code === "upgrade_required");
+    check("unknown cities are refused", (await F1.put("/api/travel", { city: "Atlantis" })).status === 422);
+    await F1.put("/api/travel", { city: null });
+    check("a profile can be opened by id after the app restarts (matches)", (await F2.get(`/api/people/${f1}`)).data?.matchId === mid);
+    check("…but not by someone who couldn't see them in Discover anyway", (await P4.get(`/api/people/${f1}`)).status === 404);
     const sup = await F2.post("/api/likes", { toId: p1Id, kind: "PRIORITY", note: "Love your taste in films" });
     check("a Super Like arrives as “You received a Super Like ⭐”", sup.status === 200 && (((await P1.get("/api/notifications")).data?.notifications ?? []).some((n: any) => n.title === "You received a Super Like ⭐")), sup.data);
   }

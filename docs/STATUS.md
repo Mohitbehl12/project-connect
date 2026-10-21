@@ -274,3 +274,16 @@ Built to the 30-section "Privacy by Design / Safety by Design" brief. The full m
 - **Sounds:** synthesised in-house (heartbeat, chime, wink, sparkle, soft).
 - **Kept honest on purpose:** no "someone viewed you" tracking (it's about likes instead), no invented admirers, no autoplaying ambient effects when animations are off.
 - **Tests:** 80 unit, 730 end-to-end.
+
+## Release 1.0.0 readiness (21 October 2026)
+- **New features:**
+  - Profile boosts 🚀: 30 minutes, monthly allowance per plan
+  - Travel mode ✈️: "Visiting <city>", up to 14 days, Premium Plus/VIP
+  - Profiles open by id from links, notifications or after a restart (`/api/people/:id`, same privacy rules as Discover)
+- **Security:**
+  - New `npm run test:security` suite (56 attack-style checks); all pass with staff 2-step on
+  - Uploads now check membership and size before reading the body
+  - Dependency advisories fixed where a fix exists
+- **Design check:** all 26 app screens checked in dark and light. Fixed: profile view after a reload, free-forever wording on Premium and Subscription.
+- **Store pack:** version 1.0.0; listing, App Privacy, Play Data safety and review notes (docs/STORE_LISTING.md); real-phone test plan (docs/PHONE_TEST_PLAN.md); one-click "Remove sample people" in Admin › Launch readiness.
+- **Tests:** 80 unit, 739 end-to-end, 56 security.

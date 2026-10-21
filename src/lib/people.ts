@@ -3,7 +3,7 @@ import { and, eq, inArray, or } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { MatchPerson } from "./matching";
 import { ageFromDob, distanceLabel, haversineKm } from "./matching";
-import { COUNTRIES, GENDERS, INTENTS, INTEREST_EMOJI, INTERESTS, LIFESTYLE, type LifestyleKey } from "./constants";
+import { CITIES, COUNTRIES, GENDERS, INTENTS, INTEREST_EMOJI, INTERESTS, LIFESTYLE, type LifestyleKey } from "./constants";
 
 type Row = { user: typeof schema.users.$inferSelect; profile: typeof schema.profiles.$inferSelect; prefs: typeof schema.preferences.$inferSelect | null };
 
@@ -24,8 +24,16 @@ export async function loadAnswers(userIds: string[]): Promise<Map<string, Record
   return map;
 }
 
+/** Where someone is for matching: their own city, or the city they're visiting with travel mode. */
+export function effectiveLocation(r: Row) {
+  const t = r.prefs?.travelCity;
+  if (t && CITIES[t] && r.prefs?.travelUntil && r.prefs.travelUntil.getTime() > Date.now())
+    return { city: t, country: CITIES[t].country, lat: CITIES[t].lat, lng: CITIES[t].lng, visiting: true };
+  return { city: r.profile.city, country: r.profile.country, lat: r.profile.lat, lng: r.profile.lng, visiting: false };
+}
+
 export function toMatchPerson(r: Row, answers: Record<string, number>): MatchPerson {
-  const p = r.profile;
+  const p = { ...r.profile, ...effectiveLocation(r) };
   return {
     id: r.user.id,
     gender: p.gender,
@@ -97,7 +105,8 @@ export async function isBlockedBetween(a: string, b: string) {
 type CardPhoto = { id: string; url: string; blurhash: string; width: number; height: number };
 
 export function publicCard(viewer: MatchPerson, r: Row, extra: { score?: number; reasons?: string[]; photos?: CardPhoto[]; matched?: boolean } = {}) {
-  const p = r.profile;
+  const loc = effectiveLocation(r);
+  const p = { ...r.profile, ...loc };
   const km = haversineKm(viewer.lat, viewer.lng, p.lat, p.lng);
   const lifestyle = (Object.keys(LIFESTYLE) as LifestyleKey[])
     .map((k) => (p[k] ? (LIFESTYLE[k] as Record<string, string>)[p[k] as string] : null))
@@ -112,7 +121,7 @@ export function publicCard(viewer: MatchPerson, r: Row, extra: { score?: number;
     age: ageFromDob(p.dob),
     gender: GENDERS[p.gender as keyof typeof GENDERS] ?? p.gender,
     // People can hide their city (then only the country shows) and their distance. Never coordinates.
-    city: r.prefs?.showCity === false ? (COUNTRIES[p.country]?.name ?? p.country) : p.city,
+    city: r.prefs?.showCity === false ? (COUNTRIES[p.country]?.name ?? p.country) : loc.visiting ? `Visiting ${p.city}` : p.city,
     distance: r.prefs?.showDistance === false ? "Distance hidden" : distanceLabel(km, viewer.city === p.city && r.prefs?.showCity !== false),
     bio: p.bio,
     intent: INTENTS[p.intent as keyof typeof INTENTS] ?? p.intent,

@@ -25,7 +25,8 @@ const STATUS: Record<string, [string, "trust" | "warn" | "alert" | "info"]> = {
 export default function Subscription() {
   const { c } = useTheme();
   const qc = useQueryClient();
-  const { refetchMe } = useAuth();
+  const { me, refetchMe } = useAuth();
+  const forever = me?.membership?.state === "FREE_FOREVER";
   const q = useQuery({ queryKey: ["subscription"], queryFn: () => api<{ subscription: SubSummary; payments: PaymentRow[] }>("/api/billing/subscription") });
   const cat = useQuery({ queryKey: ["catalogue"], queryFn: () => api<Catalogue>("/api/billing/catalogue") });
   const [sheet, setSheet] = useState<"cancel" | "change" | null>(null);
@@ -61,7 +62,7 @@ export default function Subscription() {
           <View style={{ backgroundColor: c.surface, borderRadius: 26, padding: 20, gap: 12, borderWidth: 1, borderColor: c.line }}>
             <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
               <View><T v="caption" tone="muted">Plan</T><T v="title">{s.planName}</T></View>
-              {st && <View style={{ borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5, backgroundColor: st[1] === "trust" ? c.trustWash : st[1] === "alert" ? c.alertWash : c.accentWash }}><T v="caption" strong style={{ color: st[1] === "trust" ? c.trust : st[1] === "alert" ? c.alert : c.text }}>{st[0]}</T></View>}
+              {forever ? <View style={{ borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5, backgroundColor: c.trustWash }}><T v="caption" strong style={{ color: c.trust }}>Free forever</T></View> : st && <View style={{ borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5, backgroundColor: st[1] === "trust" ? c.trustWash : st[1] === "alert" ? c.alertWash : c.accentWash }}><T v="caption" strong style={{ color: st[1] === "trust" ? c.trust : st[1] === "alert" ? c.alert : c.text }}>{st[0]}</T></View>}
             </View>
             {s.renews && s.nextChargeAt ? (
               <View style={{ backgroundColor: c.raised, borderRadius: 18, padding: 14, gap: 2 }}>
@@ -71,7 +72,7 @@ export default function Subscription() {
                 {s.pendingPlanName && <T v="caption" tone="muted">Switching to {s.pendingPlanName} from that date.</T>}
               </View>
             ) : (
-              <T tone="muted">{s.status === "REWARD" ? "Free reward days — nothing renews." : `Premium stays on until ${niceDate(s.endsAt)}. You won't be charged again.`}</T>
+              <T tone="muted">{forever ? "Every feature is free for you, for life — nothing to pay, nothing renews." : s.status === "REWARD" ? "Free reward days — nothing renews." : `Premium stays on until ${niceDate(s.endsAt)}. You won't be charged again.`}</T>
             )}
             {s.status === "PAST_DUE" && <Banner tone="alert">{store ? `${store} couldn't take your last payment. Premium stays on for a few days — check the payment method in your ${store} account.` : "We couldn't take your last payment. Premium stays on for a few days while we retry — check your UPI Autopay or card."}</Banner>}
             {s.bankedDays > 0 && <T v="caption" tone="muted">🎁 {s.bankedDays} reward days saved — they start when this plan ends.</T>}

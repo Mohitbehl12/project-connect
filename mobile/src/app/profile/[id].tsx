@@ -12,7 +12,7 @@ import { Chip, ErrorState, PhotoView, Skeleton } from "@/components/ui";
 import { api } from "@/lib/api";
 import { Bars } from "@/components/CompatBars";
 import { cardCache } from "@/lib/cardCache";
-import type { Compatibility } from "@/lib/types";
+import type { Card, Compatibility } from "@/lib/types";
 import { useTheme } from "@/theme/ThemeProvider";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -31,10 +31,14 @@ export default function ProfileSheet() {
   const { c, g } = useTheme();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const card = cardCache.get(id);
+  const cached = cardCache.get(id);
+  // Opened from a link, a notification or after a restart: load the card from the server.
+  const remote = useQuery({ queryKey: ["person", id], enabled: !cached, retry: false, queryFn: () => api<{ card: Card }>(`/api/people/${id}`) });
+  const card = cached ?? remote.data?.card;
   const compat = useQuery({ queryKey: ["compat", id], queryFn: () => api<Compatibility>(`/api/compatibility/${id}`) });
   const [page, setPage] = useState(0);
 
+  if (!card && remote.isLoading) return <View style={{ flex: 1, backgroundColor: c.bg, padding: 20, paddingTop: insets.top + 20 }}><Skeleton h={480} r={28} /></View>;
   if (!card) return <ErrorState message="This profile isn't available any more." onRetry={() => router.back()} />;
   const h = width * 1.3;
 

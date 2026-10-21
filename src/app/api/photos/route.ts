@@ -32,6 +32,8 @@ export const POST = route(async ({ req, user }) => {
   const [{ n }] = await db.select({ n: count() }).from(schema.photos).where(eq(schema.photos.userId, user.id));
   if (n >= MAX_PHOTOS) throw new ApiError(409, `You can have up to ${MAX_PHOTOS} photos. Remove one to add another.`, "photo_limit");
 
+  if (Number(req.headers.get("content-length") ?? 0) > 11 * 1024 * 1024) throw new ApiError(413, "That file is too large (10 MB at most).", "too_large");
+
   let form: FormData;
   try { form = await req.formData(); } catch { throw new ApiError(400, "Send the photo as form data in a field called \"file\".", "bad_form"); }
   const file = form.get("file");

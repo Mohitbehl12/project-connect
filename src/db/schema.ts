@@ -92,6 +92,8 @@ export const preferences = sqliteTable("preferences", {
   photosVisibility: text("photos_visibility").notNull().default("EVERYONE"), // EVERYONE | MATCHES: extra photos (the first is always shown)
   showCity: bool("show_city").notNull().default(true), // off → others see only the country
   marketing: bool("marketing").notNull().default(false), // optional; never pre-ticked; consent history in `consents`
+  travelCity: text("travel_city"), // travel mode (plan feature): appear in and discover this city until travelUntil
+  travelUntil: ts("travel_until"),
   notifyLikes: bool("notify_likes").notNull().default(true),
   notifyEmail: bool("notify_email").notNull().default(false),
   theme: text("theme").notNull().default("SYSTEM"), // SYSTEM | LIGHT | DARK
@@ -690,3 +692,11 @@ export const legalHolds = sqliteTable("legal_holds", {
   releasedAt: ts("released_at"),
   createdAt: now("created_at"),
 }, (t) => [index("legal_holds_user").on(t.userId)]);
+
+/** Profile boosts: shown higher in Discover for 30 minutes. Plans include a monthly number. */
+export const boosts = sqliteTable("boosts", {
+  id: id(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  startedAt: now("started_at"),
+  endsAt: ts("ends_at").notNull(),
+}, (t) => [index("boosts_user").on(t.userId, t.startedAt)]);

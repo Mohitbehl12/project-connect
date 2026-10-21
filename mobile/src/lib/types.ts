@@ -48,7 +48,7 @@ export type Me = {
     discoverable: boolean; showOnline: boolean; readReceipts: boolean; incognito: boolean;
     notifyMatches: boolean; notifyMessages: boolean; notifyLikes: boolean; theme: "SYSTEM" | "LIGHT" | "DARK";
     showDistance: boolean; likesFrom: "EVERYONE" | "VERIFIED";
-    profileVisibility?: "EVERYONE" | "VERIFIED"; photosVisibility?: "EVERYONE" | "MATCHES"; showCity?: boolean; marketing?: boolean;
+    profileVisibility?: "EVERYONE" | "VERIFIED"; photosVisibility?: "EVERYONE" | "MATCHES"; showCity?: boolean; marketing?: boolean; travelCity?: string | null; travelUntil?: string | null;
   };
   answers: Record<string, number>;
   features: { dailyLikes: number; dailyPriorityLikes: number; seeWhoLiked: boolean; advancedFilters: boolean; incognito: boolean; travelMode: boolean; monthlyBoosts: number };

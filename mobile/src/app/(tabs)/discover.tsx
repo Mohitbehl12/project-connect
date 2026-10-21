@@ -108,6 +108,13 @@ export default function Discover() {
     setNotice({ tone: "trust", text: `${card.firstName} is blocked. You won't see each other again.` });
   }
 
+  const boost = useQuery({ queryKey: ["boost"], queryFn: () => api<{ perMonth: number; left: number; activeUntil: string | null }>("/api/boosts") });
+  const boostOn = !!boost.data?.activeUntil && new Date(boost.data.activeUntil) > new Date();
+  async function startBoost() {
+    if (boostOn) { setNotice({ tone: "trust", text: `You're boosted until ${new Date(boost.data!.activeUntil!).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} 🚀` }); return; }
+    try { await api("/api/boosts", { method: "POST" }); haptic.success(); celebrate({ seq: ["🚀", "✨"], burst: ["✨", "💫", "✨", "🔥"], sound: "sparkle", caption: "Boosted for 30 minutes 🚀" }); boost.refetch(); }
+    catch (e: any) { setNotice({ tone: "warn", text: e.message, premium: e.code === "upgrade_required" }); }
+  }
   const remaining = cards.length;
   const verifyNudge = me?.user.selfieStatus === "NONE";
 
@@ -123,6 +130,10 @@ export default function Discover() {
           <IconButton icon="bell" label={me?.unreadNotifications ? `Notifications, ${me.unreadNotifications} new` : "Notifications"} size={42} onPress={() => router.push("/notifications")} />
           {!!me?.unreadNotifications && <View style={{ position: "absolute", right: 8, top: 8, width: 10, height: 10, borderRadius: 5, backgroundColor: c.alert, borderWidth: 2, borderColor: c.surface }} />}
         </View>
+        <Pressable accessibilityRole="button" accessibilityLabel={boostOn ? "Boost running" : `Boost my profile${boost.data ? `, ${boost.data.left} left this month` : ""}`} onPress={startBoost}
+          style={{ height: 42, paddingHorizontal: 12, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: boostOn ? g.sunset[0] : c.surface, borderWidth: 1, borderColor: boostOn ? g.sunset[0] : c.line }}>
+          <T v="callout" strong style={{ color: boostOn ? "#FFFFFF" : c.text }}>🚀{boostOn ? " On" : boost.data?.left ? ` ${boost.data.left}` : ""}</T>
+        </Pressable>
         <IconButton icon="sliders" label="Preferences" size={42} onPress={() => router.push("/preferences")} />
       </View>
 
