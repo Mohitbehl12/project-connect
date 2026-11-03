@@ -76,7 +76,8 @@ async function seedBase(now: Date) {
 
   console.log("Seeding offers and coupons…");
   await db.insert(s.offers).values([
-    { name: "Welcome ₹1 — men", kind: "INTRO", headline: "Try Premium for ₹1", badge: "Welcome offer", planCode: "PREMIUM", country: "IN", genders: "MAN", audience: "NEW", priceMinor: 100, days: 15, priority: 10 },
+    // Off since membership v3 (men get a free trial instead) — migration 0009 turns it off on older databases.
+    { name: "Welcome ₹1 — men", kind: "INTRO", headline: "Try Premium for ₹1", badge: "Welcome offer", planCode: "PREMIUM", country: "IN", genders: "MAN", audience: "NEW", priceMinor: 100, days: 15, priority: 10, active: false },
     // Women and everyone else get 3 free months on sign-up instead (rewards.womenFreeDays); kept off for reference.
     { name: "Welcome ₹1 — everyone else", kind: "INTRO", headline: "Try Premium for ₹1", badge: "Welcome offer", planCode: "PREMIUM", country: "IN", genders: "", audience: "NEW", priceMinor: 100, days: 30, priority: 10, active: false },
     { name: "Welcome back", kind: "DISCOUNT", headline: "Welcome back — 40% off your first month", badge: "Welcome back", planCode: "PREMIUM", country: "IN", audience: "RETURNING", discountPct: 40, priority: 5 },

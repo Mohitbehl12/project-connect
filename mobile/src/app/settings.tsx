@@ -6,6 +6,7 @@ import { Alert, Linking, Platform, Pressable, ScrollView, View } from "react-nat
 import { Button } from "@/components/Button";
 import { Header } from "@/components/Header";
 import { Icon } from "@/components/Icon";
+import { FeedbackAsk } from "@/components/FeedbackAsk";
 import { T } from "@/components/Text";
 import { Banner, Chip, Screen } from "@/components/ui";
 import { api, API_URL } from "@/lib/api";
@@ -25,11 +26,14 @@ export default function Settings() {
   const p = me?.preferences;
   const [err, setErr] = useState("");
 
-  async function set(key: string, value: boolean | string) {
+  async function set(key: string, value: boolean | string) { await setMany({ [key]: value }); }
+  async function setMany(body: Record<string, unknown>) {
     setErr("");
-    try { await api("/api/preferences", { method: "PUT", body: { [key]: value } }); await refetchMe(); }
+    try { await api("/api/preferences", { method: "PUT", body }); await refetchMe(); }
     catch (e: any) { setErr(e.message); }
   }
+  const QUIET: [string, number | null, number | null][] = [["Off", null, null], ["10 pm – 7 am", 22, 7], ["11 pm – 8 am", 23, 8], ["Midnight – 9 am", 0, 9]];
+  const CAPS: [string, number][] = [["No limit", 0], ["5 a day", 5], ["10 a day", 10], ["20 a day", 20]];
   function theme(t: ThemePref) { setPref(t); set("theme", t); }
 
   const confirmSignOut = () => {
@@ -94,6 +98,23 @@ export default function Settings() {
           <Toggle label="New matches" value={p?.notifyMatches !== false} onChange={(v) => set("notifyMatches", v)} />
           <Toggle label="New messages" value={p?.notifyMessages !== false} onChange={(v) => set("notifyMessages", v)} />
           <Toggle label="New likes" value={p?.notifyLikes !== false} onChange={(v) => set("notifyLikes", v)} />
+          <View style={{ paddingVertical: 12, gap: 8 }}>
+            <T>Quiet hours</T>
+            <T v="caption" tone="muted">No buzzing at night. Notifications still wait in the app; calls and safety alerts always come through.</T>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {QUIET.map(([l, a, b]) => <Chip key={l} small label={l} selected={(p?.quietStart ?? null) === a && (p?.quietEnd ?? null) === b} onPress={() => setMany({ quietStart: a, quietEnd: b })} />)}
+            </View>
+          </View>
+          <View style={{ paddingVertical: 12, gap: 8 }}>
+            <T>Like and match alerts</T>
+            <T v="caption" tone="muted">Limit how many like and match notifications buzz your phone each day. Messages are never limited.</T>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {CAPS.map(([l, n]) => <Chip key={l} small label={l} selected={(p?.activityPushCap ?? 0) === n} onPress={() => setMany({ activityPushCap: n })} />)}
+            </View>
+          </View>
+        </Group>
+        <Group title="Tell us what you think">
+          <FeedbackAsk context="APP" always question="How is Kinara working for you?" />
         </Group>
         <Group title="Account">
           <View style={{ paddingVertical: 12, gap: 2 }}>

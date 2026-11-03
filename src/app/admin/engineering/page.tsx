@@ -21,7 +21,7 @@ type Overview = {
 };
 type Incident = { code: string; kind: string; title: string; service: string; severity: string; risk: number; status: string; count: number; usersAffected: number; firstSeen: string; lastSeen: string; prUrl: string | null; githubIssue: number | null };
 
-const TABS = { overview: "Overview", incidents: "Incidents", releases: "Releases", proposals: "Improvements", trail: "Activity trail", settings: "Settings" } as const;
+const TABS = { overview: "Overview", health: "Product health", feedback: "Feedback", incidents: "Incidents", releases: "Releases", proposals: "Improvements", trail: "Activity trail", settings: "Settings" } as const;
 type Tab = keyof typeof TABS;
 const SEV_TONE: Record<string, string> = { CRITICAL: "bg-rose text-white", HIGH: "bg-rose/15 text-rose", MEDIUM: "bg-marigold/25 text-ink", LOW: "bg-paper-sunk text-ink-soft" };
 const STATUS_LABEL: Record<string, string> = { NEW: "New", TRIAGED: "Looked at", PR_OPEN: "Fix proposed (PR)", FIXED: "Fixed", REGRESSED: "Came back", WONT_FIX: "Won't fix", IGNORED: "Ignored" };
@@ -51,6 +51,8 @@ function Engineering() {
         ))}
       </div>
       {tab === "overview" && <OverviewTab manage={manage} onIncidents={() => go("incidents")} />}
+      {tab === "health" && <HealthTab />}
+      {tab === "feedback" && <FeedbackTab />}
       {tab === "incidents" && <IncidentsTab manage={manage} open={open} setOpen={setOpen} />}
       {tab === "releases" && <ReleasesTab manage={manage} />}
       {tab === "proposals" && <ProposalsTab manage={manage} />}
@@ -402,6 +404,74 @@ function TrailTab() {
       )}
       <div className="mt-3 flex gap-2">{page > 1 && <button className="btn-outline px-3 py-1.5 text-sm" onClick={() => setPage(page - 1)}>Newer</button>}{(q.data?.actions.length ?? 0) === 50 && <button className="btn-outline px-3 py-1.5 text-sm" onClick={() => setPage(page + 1)}>Older</button>}</div>
     </>
+  );
+}
+
+type Change = { key: string; label: string; value: number | null; previous: number | null; changePct: number | null; better: boolean | null };
+type Report = { week: string; generatedAt: string; changes: Change[]; improved: string[]; worse: string[]; newBugs: { code: string; title: string; severity: string; count: number }[]; complaints: { category: string; n: number }[]; feedback: { context: string; responses: number; score: number | null; unhappyPct: number }[]; nextUp: { code: string; title: string; risk: string }[] };
+function HealthTab() {
+  const [preview, setPreview] = useState(false);
+  const q = useApi<{ report: Report | null; weeks?: string[] }>(`/api/admin/ops/reports${preview ? "?preview=1" : ""}`);
+  if (q.error) return <Alert tone="error">{q.error.message}</Alert>;
+  if (!q.data) return <Spinner />;
+  const r = q.data.report;
+  if (!r) return (
+    <div className="panel p-6 text-center">
+      <p className="text-ink-soft">The first weekly report is written on Monday after a full week of data.</p>
+      <button className="btn-outline mt-3 px-3 py-1.5 text-sm" onClick={() => setPreview(true)}>Preview last week now</button>
+    </div>
+  );
+  const fmt = (v: number | null) => (v === null ? "–" : v.toLocaleString());
+  return (
+    <div className="space-y-5">
+      <Alert tone="info">Week of {r.week}{preview ? " (preview, not saved)" : ""}. Counts only — no member can be identified here. The north-star metric is the meaningful connection rate: matches where both people wrote at least 3 messages and 10 or more in all.</Alert>
+      <section className="panel overflow-x-auto p-5">
+        <h2 className="text-lg font-bold">Week of {r.week} vs the week before</h2>
+        <table className="mt-2 w-full text-sm">
+          <thead><tr className="text-left text-ink-soft"><th className="py-1 font-semibold">Measure</th><th className="py-1 text-right font-semibold">Week before</th><th className="py-1 text-right font-semibold">Week of {r.week}</th><th className="py-1 text-right font-semibold">Change</th></tr></thead>
+          <tbody>{r.changes.map((c) => (
+            <tr key={c.key} className="border-t border-mist"><td className={`py-1.5 ${c.key === "meaningfulConnectionRate" ? "font-bold" : ""}`}>{c.label}</td><td className="py-1.5 text-right text-ink-soft">{fmt(c.previous)}</td><td className="py-1.5 text-right">{fmt(c.value)}</td>
+              <td className={`py-1.5 text-right ${c.better === true ? "text-sage" : c.better === false ? "text-rose" : "text-ink-soft"}`}>{c.changePct === null ? "–" : `${c.changePct > 0 ? "▲ +" : c.changePct < 0 ? "▼ " : ""}${c.changePct}%`}</td></tr>
+          ))}</tbody>
+        </table>
+      </section>
+      <div className="grid gap-5 md:grid-cols-2">
+        <section className="panel p-5"><h2 className="text-lg font-bold">What improved</h2>{r.improved.length ? <ul className="mt-2 list-disc pl-5 text-sm">{r.improved.map((x) => <li key={x}>{x}</li>)}</ul> : <p className="mt-2 text-sm text-ink-soft">Nothing moved up by 10% or more.</p>}</section>
+        <section className="panel p-5"><h2 className="text-lg font-bold">What got worse</h2>{r.worse.length ? <ul className="mt-2 list-disc pl-5 text-sm">{r.worse.map((x) => <li key={x}>{x}</li>)}</ul> : <p className="mt-2 text-sm text-ink-soft">Nothing moved down by 10% or more.</p>}</section>
+        <section className="panel p-5"><h2 className="text-lg font-bold">New bugs</h2>{r.newBugs.length ? <ul className="mt-2 space-y-1 text-sm">{r.newBugs.map((b) => <li key={b.code}><Sev s={b.severity} /> <span className="font-mono text-xs">{b.code}</span> {b.title} <span className="text-ink-soft">· {b.count}×</span></li>)}</ul> : <p className="mt-2 text-sm text-ink-soft">None.</p>}</section>
+        <section className="panel p-5"><h2 className="text-lg font-bold">What members complain about</h2>
+          {r.complaints.length ? <ul className="mt-2 text-sm">{r.complaints.map((c) => <li key={c.category} className="flex justify-between"><span>{c.category.replace(/_/g, " ").toLowerCase()}</span><span className="text-ink-soft">{c.n} reports</span></li>)}</ul> : <p className="mt-2 text-sm text-ink-soft">No reports.</p>}
+          {r.feedback.filter((f) => f.unhappyPct >= 30).map((f) => <p key={f.context} className="mt-2 text-sm">Feedback on {f.context.toLowerCase()}: {f.unhappyPct}% unhappy of {f.responses}</p>)}
+        </section>
+      </div>
+      <section className="panel p-5"><h2 className="text-lg font-bold">Next up (waiting for your decision)</h2>{r.nextUp.length ? <ul className="mt-2 text-sm">{r.nextUp.map((p) => <li key={p.code}><span className="font-mono text-xs">{p.code}</span> {p.title} <span className="text-ink-soft">· risk {p.risk.toLowerCase()}</span></li>)}</ul> : <p className="mt-2 text-sm text-ink-soft">No open ideas.</p>}</section>
+      {!preview && <button className="btn-ghost px-3 py-1.5 text-sm" onClick={() => setPreview(true)}>Recompute last week now (preview)</button>}
+    </div>
+  );
+}
+
+function FeedbackTab() {
+  const [days, setDays] = useState(30);
+  const q = useApi<{ contexts: { context: string; counts: Record<string, number>; responses: number; score: number | null; unhappyPct: number }[]; comments: { context: string; rating: string; comment: string; at: string; platform: string | null }[] }>(`/api/admin/ops/feedback?days=${days}`);
+  const RL: Record<string, string> = { LOVE: "❤️ Love it", GOOD: "🙂 Good", OKAY: "😐 Okay", NEEDS_WORK: "🙁 Needs work", PROBLEM: "🚨 Problem" };
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <select className="input w-auto" aria-label="Period" value={days} onChange={(e) => setDays(Number(e.target.value))}><option value={7}>Last 7 days</option><option value={30}>Last 30 days</option><option value={90}>Last 90 days</option></select>
+        <span className="text-xs text-ink-soft">Comments are scrubbed of emails and numbers; who wrote them is never shown.</span>
+      </div>
+      {!q.data ? <Spinner /> : q.data.contexts.length === 0 ? <p className="panel p-6 text-center text-ink-soft">No feedback yet.</p> : (
+        <section className="panel overflow-x-auto p-5">
+          <table className="w-full text-sm">
+            <thead><tr className="text-left text-ink-soft"><th className="py-1">Moment</th><th className="py-1 text-right">Responses</th><th className="py-1 text-right">Average (of 4)</th><th className="py-1 text-right">Unhappy</th></tr></thead>
+            <tbody>{q.data.contexts.map((c) => <tr key={c.context} className="border-t border-mist"><td className="py-1.5 capitalize">{c.context.toLowerCase()}</td><td className="py-1.5 text-right">{c.responses}</td><td className="py-1.5 text-right">{c.score ?? "–"}</td><td className={`py-1.5 text-right ${c.unhappyPct >= 30 ? "text-rose" : ""}`}>{c.unhappyPct}%</td></tr>)}</tbody>
+          </table>
+        </section>
+      )}
+      {q.data && q.data.comments.length > 0 && (
+        <ul className="panel divide-y divide-mist text-sm">{q.data.comments.map((c, i) => <li key={i} className="px-4 py-2"><span className="text-ink-soft">{new Date(c.at).toLocaleDateString()} · {c.context.toLowerCase()} · {RL[c.rating] ?? c.rating}</span><br />{c.comment}</li>)}</ul>
+      )}
+    </div>
   );
 }
 

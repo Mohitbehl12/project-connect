@@ -42,6 +42,7 @@ export default function Safety() {
       setAppealMsg({ tone: "trust", text: r.message }); setAppeal({ ...appeal, details: "" }); setAppealOpen(false); appeals.refetch(); haptic.success();
     } catch (e: any) { setAppealMsg({ tone: "alert", text: e.message }); }
   }
+  const checkins = useQuery({ queryKey: ["checkins"], queryFn: () => api<{ checkins: { id: string; place: string; checkInAt: string; contactName: string; status: string }[] }>("/api/safety/checkins") });
   const blocks = useQuery({ queryKey: ["blocks"], queryFn: () => api<{ blocked: { id: string; firstName: string }[] }>("/api/blocks") });
   const status = me?.user.selfieStatus;
 
@@ -108,6 +109,19 @@ export default function Safety() {
           ) : null}
           {msg ? <T v="callout">{msg}</T> : null}
           <T v="caption" tone="muted">What “verified” means: the person's selfie matched their profile photos when we checked. It doesn't prove their name or age, or that they're safe — keep following the tips below.</T>
+        </View>
+
+        <View style={{ gap: 10 }}>
+          <T v="headline">Date check-in</T>
+          <T tone="muted">Going on a date? Tell someone you trust. We'll ask if you're OK afterwards, and email them if you don't answer.</T>
+          {(checkins.data?.checkins ?? []).filter((x) => ["SCHEDULED", "ASKED", "ALERTED"].includes(x.status)).map((x) => (
+            <Pressable key={x.id} accessibilityRole="button" onPress={() => router.push({ pathname: "/checkin/[id]", params: { id: x.id } })}
+              style={{ padding: 12, borderRadius: 14, backgroundColor: x.status === "ALERTED" ? c.alertWash : x.status === "ASKED" ? c.accentWash : c.surface, borderWidth: 1, borderColor: c.line }}>
+              <T v="callout" strong>{x.place}</T>
+              <T v="caption" tone="muted">{x.status === "ASKED" ? "Waiting for you to check in" : x.status === "ALERTED" ? `${x.contactName} has been told — tap to say you're safe` : `Check-in ${new Date(x.checkInAt).toLocaleString([], { weekday: "short", hour: "numeric", minute: "2-digit" })} · ${x.contactName}`}</T>
+            </Pressable>
+          ))}
+          <Button title="Set up a check-in" v="outline" icon="shield" onPress={() => router.push("/checkin/new")} />
         </View>
 
         <View style={{ gap: 10 }}>

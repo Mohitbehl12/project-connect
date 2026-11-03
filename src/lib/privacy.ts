@@ -55,6 +55,9 @@ export async function exportMyData(user: User) {
     devices: sessions,
     signIns: logins,
     referrals: refs,
+    dateCheckins: (await db.select().from(schema.dateCheckins).where(eq(schema.dateCheckins.userId, user.id))).map((c) => ({
+      place: c.place, startsAt: c.startsAt, checkInAt: c.checkInAt, contactName: c.contactName, contactEmail: c.contactEmail ? openSafe(c.contactEmail, `checkin:${user.id}`) : "(deleted a week after the date)", status: c.status })),
+    feedback: (await db.select().from(schema.feedback).where(eq(schema.feedback.userId, user.id))).map((f) => ({ at: f.createdAt, about: f.context, rating: f.rating, comment: f.comment })),
   };
 }
 

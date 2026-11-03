@@ -34,6 +34,9 @@ const Body = z.object({
   profileVisibility: z.enum(["EVERYONE", "VERIFIED"]).optional(),
   photosVisibility: z.enum(["EVERYONE", "MATCHES"]).optional(),
   showCity: z.boolean().optional(),
+  quietStart: z.number().int().min(0).max(23).nullable().optional(), // null = quiet hours off
+  quietEnd: z.number().int().min(0).max(23).nullable().optional(),
+  activityPushCap: z.number().int().min(0).max(50).optional(), // 0 = no limit
 });
 
 const PRIVACY_FIELDS = ["discoverable", "showOnline", "readReceipts", "incognito", "showDistance", "likesFrom", "callRequests", "profileVisibility", "photosVisibility", "showCity"] as const;
@@ -45,6 +48,8 @@ export const PUT = route(async ({ req, user }) => {
 
   const ageMin = b.ageMin ?? current?.ageMin ?? 21;
   const ageMax = b.ageMax ?? current?.ageMax ?? 35;
+  if ((b.quietStart === undefined) !== (b.quietEnd === undefined) || (b.quietStart === null) !== (b.quietEnd === null))
+    throw new ApiError(422, "quietStart: Set both the start and end of quiet hours, or turn them both off.", "validation");
   if (ageMin > ageMax) throw new ApiError(422, "ageMin: Minimum age can't be higher than maximum age.", "validation");
   if (b.incognito) {
     const f = await planFeatures(user.planCode, user.planEndsAt);

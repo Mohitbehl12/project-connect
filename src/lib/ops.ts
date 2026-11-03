@@ -10,7 +10,7 @@ import { db, schema } from "@/db";
 // numbers; user ids are stored only as a keyed hash; messages are scrubbed before they are stored or sent on.
 
 export type Severity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
-export type IncidentKind = "SERVER_ERROR" | "CLIENT_ERROR" | "ANOMALY" | "PERFORMANCE" | "SECURITY" | "DATA_QUALITY" | "UPTIME" | "DEPLOY" | "PAYMENT";
+export type IncidentKind = "SERVER_ERROR" | "CLIENT_ERROR" | "ANOMALY" | "PERFORMANCE" | "SECURITY" | "DATA_QUALITY" | "UPTIME" | "DEPLOY" | "PAYMENT" | "USER_REPORT";
 export const RELEASE = (process.env.RENDER_GIT_COMMIT ?? process.env.GIT_COMMIT ?? "dev").slice(0, 12);
 
 // ---- scrubbing ------------------------------------------------------------------------------------------------

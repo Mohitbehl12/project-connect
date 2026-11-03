@@ -33,7 +33,7 @@ All ~200 other seeded members are `user1@test.local` … `user200@test.local` wi
 |---|---|
 | `npm run dev` | Dev server |
 | `npm run build && npm start` | Production build and server |
-| `npm run db:push` | Apply schema changes to the database |
+| `npm run db:push` | Apply schema changes to an **empty** dev database only — on SQLite it can rebuild tables and lose rows. Use `npm run db:migrate` with a generated migration otherwise |
 | `npm run db:seed` | Seed an empty database |
 | `npm run db:reset` | Wipe the **local** DB file, recreate, seed (refuses remote DBs) |
 | `npm test` | Unit tests (matching engine, moderation, starters) |

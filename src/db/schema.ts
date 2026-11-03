@@ -99,6 +99,9 @@ export const preferences = sqliteTable("preferences", {
   notifyLikes: bool("notify_likes").notNull().default(true),
   notifyEmail: bool("notify_email").notNull().default(false),
   theme: text("theme").notNull().default("SYSTEM"), // SYSTEM | LIGHT | DARK
+  quietStart: integer("quiet_start"), // local hour 0–23 when pushes stop (null = no quiet hours); in-app notifications still arrive
+  quietEnd: integer("quiet_end"), // local hour 0–23 when pushes resume
+  activityPushCap: integer("activity_push_cap").notNull().default(0), // max like/match pushes a day (0 = no limit)
 });
 
 export const personalityAnswers = sqliteTable("personality_answers", {
@@ -905,3 +908,42 @@ export const opsProposals = sqliteTable("ops_proposals", {
   decidedAt: ts("decided_at"),
   createdAt: now("created_at"),
 }, (t) => [uniqueIndex("opsp_code").on(t.code), uniqueIndex("opsp_signal").on(t.signal)]);
+
+/** Date safety: a member tells a trusted contact about a date and checks in afterwards. If they don't, the contact is told. */
+export const dateCheckins = sqliteTable("date_checkins", {
+  id: id(),
+  userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  matchId: text("match_id").references(() => matches.id, { onDelete: "set null" }),
+  datePlanId: text("date_plan_id").references(() => datePlans.id, { onDelete: "set null" }),
+  place: text("place").notNull(), // public venue the member typed
+  startsAt: ts("starts_at").notNull(),
+  checkInAt: ts("check_in_at").notNull(), // when we ask "are you OK?"
+  graceMinutes: integer("grace_minutes").notNull().default(30), // after checkInAt, then the contact is alerted
+  contactName: text("contact_name").notNull(),
+  contactEmail: text("contact_email").notNull(), // sealed (field encryption); removed 7 days after the date
+  status: text("status").notNull().default("SCHEDULED"), // SCHEDULED | ASKED | SAFE | ALERTED | CANCELLED | EXPIRED
+  askedAt: ts("asked_at"),
+  safeAt: ts("safe_at"),
+  alertedAt: ts("alerted_at"),
+  createdAt: now("created_at"),
+}, (t) => [index("checkins_due").on(t.status, t.checkInAt), index("checkins_user").on(t.userId)]);
+
+/** In-app feedback ("Love this … Needs improvement"). Comments are scrubbed; staff see totals and comments, not who. */
+export const feedback = sqliteTable("feedback", {
+  id: id(),
+  userId: text("user_id").references(() => users.id, { onDelete: "cascade" }),
+  context: text("context").notNull(), // APP | MATCH | CHAT | DATE | CHECKIN | PREMIUM | ONBOARDING
+  rating: text("rating").notNull(), // LOVE | GOOD | OKAY | NEEDS_WORK | PROBLEM
+  comment: text("comment"),
+  platform: text("platform"),
+  appVersion: text("app_version"),
+  createdAt: now("created_at"),
+}, (t) => [index("feedback_ctx").on(t.context, t.createdAt), index("feedback_user").on(t.userId, t.createdAt)]);
+
+/** Weekly product health reports (aggregates only). */
+export const opsReports = sqliteTable("ops_reports", {
+  id: id(),
+  week: text("week").notNull(), // ISO week start date, e.g. 2026-11-02
+  data: text("data").notNull(), // JSON
+  createdAt: now("created_at"),
+}, (t) => [uniqueIndex("opsr_week").on(t.week)]);

@@ -2,6 +2,7 @@ import "server-only";
 import { and, count, eq, gte, like, lt } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { getConfig } from "./config";
+import { feedbackSummary } from "./feedback";
 import { metricsSince, opsAction } from "./ops";
 
 // The feature scout reads how Kinara is used (aggregates only — never one person's activity) and writes
@@ -92,6 +93,14 @@ export async function scoutFeatures(now = new Date()): Promise<string[]> {
       changes: `Check where ${name} is reachable from; test a clearer entry point; if it still isn't used after a month, propose removing it.`, risk: "LOW", complexity: "S",
     });
   }
+
+  // 7) What members tell us directly (in-app feedback).
+  for (const c of (await feedbackSummary(30, now)).contexts.filter((x) => x.responses >= 20 && x.unhappyPct >= 30)) drafts.push({
+    signal: `feedback:${c.context}`, title: `Improve the ${c.context.toLowerCase()} experience members rate poorly`,
+    problem: `${c.unhappyPct}% of ${c.responses} ratings of "${c.context.toLowerCase()}" in the last 30 days were "needs improvement" or a reported problem (average ${c.score ?? "–"} of 4).`,
+    benefit: "Fixes what members say is wrong, in their words.", evidence: { context: c.context, responses: c.responses, unhappyPct: c.unhappyPct, score: c.score, window: "30 days" },
+    changes: "Read the comments for this moment in Admin → Engineering → Feedback; group them; fix the most common one first.", risk: "LOW", complexity: "M",
+  });
 
   const made: string[] = [];
   const year = now.getUTCFullYear();

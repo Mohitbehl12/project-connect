@@ -16,6 +16,7 @@ export default function TabsLayout() {
       const m = link?.match(/^\/matches\/([\w-]+)/);
       if (m) router.push({ pathname: "/chat/[id]", params: { id: m[1] } });
       else if (link?.startsWith("/likes")) router.push("/likes");
+      else if (link?.startsWith("/checkin/")) router.push({ pathname: "/checkin/[id]", params: { id: link.slice(9) } });
     });
     return () => sub.remove();
   }, []);

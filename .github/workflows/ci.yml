@@ -55,8 +55,11 @@ jobs:
         run: |
           sh scripts/ci-env.sh
           npx tsx scripts/migrate.ts
-          npx tsx scripts/bootstrap.ts
           npm run db:seed
+          npx tsx scripts/sample-data.ts
+          npx tsx scripts/seed-photos.ts
+          npx tsx scripts/rotate-keys.ts
+          npx tsx scripts/bootstrap.ts
       - name: Build
         run: npx next build
       - name: Security suite (staff two-step sign-in enforced)

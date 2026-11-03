@@ -37,6 +37,7 @@ Issues labelled `needs-human` follow the High/Critical rules whatever the score.
 
 - Merge a PR, push to `main`/`master`, force-push, or approve its own PR.
 - Delete or rewrite production data; drop tables or columns; write migrations that are not purely additive.
+- Use `drizzle-kit push` (`npm run db:push`) on any database that holds data. For SQLite it can rebuild a table and lose its rows. Schema changes go through `npx drizzle-kit generate` → a reviewed SQL file in `drizzle/` → `scripts/migrate.ts`.
 - Read the production database, production logs containing personal data, or `.env` files. Work only from the scrubbed samples in the issue.
 - Add, print, or commit secrets; change `AUTH_SECRET`, `FIELD_KEYS`, the HKDF salt `"project-connect"`, the Render service name or app bundle IDs.
 - Change sign-in, permissions (`rbac.ts`, `staff.ts`), payments, moderation rules, privacy/retention or the audit log without the issue being explicitly approved by a person for that change — and then only as a draft PR.

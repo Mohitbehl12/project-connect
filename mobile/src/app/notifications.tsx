@@ -40,6 +40,8 @@ function open(link: string | null) {
   else if (link.startsWith("/likes")) router.push("/likes");
   else if (link.startsWith("/settings")) router.push("/settings");
   else if (link.startsWith("/plans")) router.push("/premium");
+  else if (link.startsWith("/checkin/")) router.push({ pathname: "/checkin/[id]", params: { id: link.slice(9) } });
+  else if (link === "/matches") router.push("/(tabs)/matches");
 }
 
 export default function Notifications() {

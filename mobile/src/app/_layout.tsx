@@ -58,6 +58,8 @@ function Shell() {
         <Stack.Screen name="match" options={{ presentation: "transparentModal", animation: "fade" }} />
         <Stack.Screen name="report" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
         <Stack.Screen name="date/[matchId]" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
+        <Stack.Screen name="checkin/new" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
+        <Stack.Screen name="checkin/[id]" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
         <Stack.Screen name="premium" options={{ presentation: "modal", animation: "slide_from_bottom" }} />
         <Stack.Screen name="search" options={{ presentation: "fullScreenModal", animation: "fade_from_bottom" }} />
         <Stack.Screen name="notifications" />

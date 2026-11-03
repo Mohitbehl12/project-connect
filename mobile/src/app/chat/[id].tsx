@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DATE_KINDS } from "@shared/constants";
 import * as ImagePicker from "expo-image-picker";
 import { BottomSheet, SheetAction } from "@/components/BottomSheet";
+import { CLOSING_NOTES, type ClosingNote } from "@shared/closeKindly";
 import { PhotoBubble, VoiceBubble, VoiceRecorder, appendVoice } from "@/components/ChatMedia";
 import { appendPhoto } from "@/lib/photoFile";
 import { IconButton } from "@/components/Button";
@@ -41,6 +42,8 @@ export default function Chat() {
   const qc = useQueryClient();
   const [text, setText] = useState(draft ?? "");
   const [err, setErr] = useState("");
+  const [closing, setClosing] = useState(false);
+  const [staleHidden, setStaleHidden] = useState(false);
   const [callNote, setCallNote] = useState("");
   const [menu, setMenu] = useState(false);
   const [plus, setPlus] = useState(false);
@@ -197,6 +200,13 @@ export default function Chat() {
     msgs.refetch();
   }
 
+  async function closeKindly(note: ClosingNote) {
+    setClosing(false);
+    try { await api(`/api/matches/${id}/close`, { body: { note } }); haptic.success(); } catch (e: any) { setErr(e.message); return; }
+    qc.invalidateQueries({ queryKey: ["matches"] });
+    router.back();
+  }
+
   async function unmatch() {
     setMenu(false);
     await api(`/api/matches/${id}/unmatch`, { method: "POST" }).catch(() => {});
@@ -233,6 +243,9 @@ export default function Chat() {
   const o = detail.data?.other;
   const nextDate = detail.data?.dates.find((d) => d.status !== "CANCELLED" && new Date(d.startsAt) > new Date());
   const ended = msgs.data?.ended;
+  // A conversation that has gone quiet for 5 days: offer a way forward or a kind way out — never a guilt trip.
+  const lastAt = items.length ? new Date(items[0].createdAt).getTime() : 0;
+  const stale = !ended && !staleHidden && lastAt > 0 && Date.now() - lastAt > 5 * 86400_000;
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: c.bg }}>
@@ -264,6 +277,13 @@ export default function Chat() {
               <T v="callout">{nextDate.status === "CONFIRMED" ? "Date confirmed" : nextDate.mine ? "Waiting for a reply" : "Date suggestion"} · {DATE_KINDS[nextDate.kind as keyof typeof DATE_KINDS]}</T>
               <T v="caption" tone="muted">{nextDate.place} · {new Date(nextDate.startsAt).toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</T>
             </View>
+            {nextDate.status === "CONFIRMED" && (
+              <Pressable accessibilityRole="button" accessibilityLabel="Set up a safety check-in for this date"
+                onPress={() => router.push({ pathname: "/checkin/new", params: { matchId: id, datePlanId: nextDate.id, place: nextDate.place, startsAt: nextDate.startsAt } })}
+                style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: c.surface, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 }}>
+                <Icon name="shield" size={16} color={c.trust} /><T v="caption" strong>Check-in</T>
+              </Pressable>
+            )}
             {nextDate.status === "PROPOSED" && !nextDate.mine && (
               <Pressable accessibilityRole="button" onPress={() => confirmDate(nextDate.id, "confirm")} style={{ backgroundColor: c.brand, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 }}>
                 <T v="callout" style={{ color: c.brandText }}>Confirm</T>
@@ -302,6 +322,16 @@ export default function Chat() {
         </View>, "trust");
         return null;
       })()}
+
+      {stale && (
+        <View accessibilityLiveRegion="polite" style={{ marginHorizontal: 12, marginTop: 10, padding: 12, borderRadius: 18, gap: 8, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line }}>
+          <T v="callout">Looks like this conversation has slowed down. Want to send a message, or leave it here?</T>
+          <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+            <Pressable accessibilityRole="button" onPress={() => setStaleHidden(true)} style={{ backgroundColor: c.brand, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 }}><T v="callout" strong style={{ color: c.brandText }}>Send a message</T></Pressable>
+            <Pressable accessibilityRole="button" onPress={() => setClosing(true)} style={{ backgroundColor: c.bg, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 8 }}><T v="callout" strong>Close it kindly</T></Pressable>
+          </View>
+        </View>
+      )}
 
       {chemNote && (
         <Animated.View entering={FadeIn} style={{ alignSelf: "center", marginTop: 8, backgroundColor: "rgba(232,70,124,0.18)", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, zIndex: 1 }}>
@@ -463,8 +493,18 @@ export default function Chat() {
         <SheetAction label="Chat theme & animations" icon={<Icon name="sparkle" />} onPress={() => { setMenu(false); setThemeSheet(true); }} />
         <SheetAction label={msgs.data?.muted ? "Unmute notifications" : "Mute notifications"} icon={<Icon name="bell" />} onPress={async () => { setMenu(false); await api(`/api/matches/${id}/mute`, { body: { muted: !msgs.data?.muted } }).catch(() => {}); msgs.refetch(); }} />
         <SheetAction label="Delete my messages here" icon={<Icon name="trash" />} onPress={async () => { setMenu(false); await api("/api/privacy/messages", { body: { matchId: id } }).catch(() => {}); msgs.refetch(); }} />
+        <SheetAction label="Date safety check-in" icon={<Icon name="shield" color={c.trust} />} onPress={() => { setMenu(false); router.push({ pathname: "/checkin/new", params: { matchId: id } }); }} />
+        <SheetAction label="Close the conversation kindly" icon={<Icon name="send" />} onPress={() => { setMenu(false); setClosing(true); }} />
         <SheetAction label="Unmatch" icon={<Icon name="close" />} onPress={unmatch} />
         <SheetAction label="Safety tips" icon={<Icon name="shield" color={c.trust} />} onPress={() => { setMenu(false); router.push("/safety"); }} />
+      </BottomSheet>
+      <BottomSheet open={closing} onClose={() => setClosing(false)} title="Close it kindly">
+        <T v="caption" tone="muted" style={{ marginBottom: 8 }}>{o?.firstName ?? "They"} will get this note instead of silence, and the match ends. You won't see a reply.</T>
+        {(Object.keys(CLOSING_NOTES) as ClosingNote[]).map((k) => (
+          <Pressable key={k} accessibilityRole="button" onPress={() => closeKindly(k)} style={{ padding: 12, borderRadius: 14, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, marginBottom: 8 }}>
+            <T v="callout">“{CLOSING_NOTES[k]}”</T>
+          </Pressable>
+        ))}
       </BottomSheet>
       <BottomSheet open={cupid} onClose={() => setCupid(false)} title="Cupid ❤️">
         <CupidPanel matchId={id} firstName={o?.firstName ?? "them"} onPick={(t) => { setCupid(false); setText(t); }} />

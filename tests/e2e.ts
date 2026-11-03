@@ -1459,6 +1459,85 @@ async function main() {
     check("Engineering page loads", (await fetch(`${BASE}/admin/engineering`)).status === 200);
   }
 
+  section("Roadmap round 1: date check-in, kind endings, quiet hours, feedback, weekly report");
+  {
+    const G1 = new Client("Gauri11"), G2 = new Client("Gautam22"), G3 = new Client("Gita333");
+    const g1Id = await onboard(G1, `gauri-${run}@test.local`, "WOMAN", "MAN", "Gauri", answersA);
+    const g2Id = await onboard(G2, `gautam-${run}@test.local`, "MAN", "WOMAN", "Gautam", answersB);
+    await onboard(G3, `gita-${run}@test.local`, "WOMAN", "MAN", "Gita", answersA);
+    await G1.post("/api/likes", { toId: g2Id, kind: "LIKE" });
+    const gm = (await G2.post("/api/likes", { toId: g1Id, kind: "LIKE" })).data?.matchId;
+    check("a match for the new features", !!gm);
+    const secret = envVal("CRON_SECRET");
+    const tick = () => fetch(`${BASE}/api/cron/monitor`, { method: "POST", headers: { "x-cron-secret": secret } }).then((r) => r.json());
+
+    // Date check-in
+    const start = new Date(Date.now() + 3600_000), later = new Date(Date.now() + 3 * 3600_000);
+    const base = { matchId: gm, place: "Blue Tokai, Khan Market", startsAt: start.toISOString(), checkInAt: later.toISOString(), graceMinutes: 15, contactName: "Priya", contactEmail: `priya-${run}@example.com`, contactAgreed: true, tellContactNow: true };
+    check("check-in: the contact must have agreed", (await G1.post("/api/safety/checkins", { ...base, contactAgreed: false })).status === 422);
+    check("check-in: check-in time must be after the start", (await G1.post("/api/safety/checkins", { ...base, checkInAt: new Date(Date.now() + 20 * 60_000).toISOString() })).status === 422);
+    check("check-in: you can't be your own contact", (await G1.post("/api/safety/checkins", { ...base, contactEmail: `gauri-${run}@test.local` })).status === 422);
+    check("check-in: links aren't accepted as a place", (await G1.post("/api/safety/checkins", { ...base, place: "http://evil.example/x" })).status === 422);
+    check("check-in: only for your own matches", (await G3.post("/api/safety/checkins", base)).status === 404);
+    const ci = await G1.post("/api/safety/checkins", base);
+    check("check-in is created and works without paying", ci.status === 201 && ci.data?.checkin?.status === "SCHEDULED", ci.data);
+    check("…with a message to share yourself that never names your date", typeof ci.data?.share === "string" && ci.data.share.includes("Blue Tokai") && !ci.data.share.includes("Gautam"), ci.data?.share);
+    check("…and the contact's email is never sent back", !JSON.stringify(ci.data).includes(`priya-${run}`));
+    const cid = ci.data?.checkin?.id;
+    const raw = (await dbc.execute({ sql: "select contact_email from date_checkins where id = ?", args: [cid] })).rows[0]?.contact_email as string;
+    check("the contact's email is stored encrypted", raw?.startsWith("enc:") && !raw.includes("priya"), raw?.slice(0, 12));
+    check("nobody else can see or act on it", !JSON.stringify((await G2.get("/api/safety/checkins")).data).includes(cid) && (await G2.post(`/api/safety/checkins/${cid}`, { action: "safe" })).status === 404);
+    check("adding time works", (await G1.post(`/api/safety/checkins/${cid}`, { action: "extend", minutes: 30 })).data?.checkin?.status === "SCHEDULED");
+    await dbc.execute({ sql: "update date_checkins set check_in_at = ? where id = ?", args: [Date.now() - 60_000, cid] });
+    const t1 = await tick();
+    check("at check-in time we ask \"Are you OK?\"", t1.dateSafety?.asked >= 1 && (await G1.get("/api/safety/checkins")).data?.checkins?.find((x: any) => x.id === cid)?.status === "ASKED", t1.dateSafety);
+    check("…as a notification on the member's phone", ((await G1.get("/api/notifications")).data?.notifications ?? []).some((n: any) => n.title === "Are you OK?" && n.link === `/checkin/${cid}`));
+    await dbc.execute({ sql: "update date_checkins set asked_at = ? where id = ?", args: [Date.now() - 16 * 60_000, cid] });
+    const t2 = await tick();
+    check("no answer within the grace time → the contact is alerted", t2.dateSafety?.alerted >= 1 && (await G1.get("/api/safety/checkins")).data?.checkins?.find((x: any) => x.id === cid)?.status === "ALERTED", t2.dateSafety);
+    check("…and the member is told", ((await G1.get("/api/notifications")).data?.notifications ?? []).some((n: any) => n.title === "We've told your safety contact"));
+    check("after an alert you can't quietly add time", (await G1.post(`/api/safety/checkins/${cid}`, { action: "extend", minutes: 30 })).status === 409);
+    check("\"I'm safe\" closes it", (await G1.post(`/api/safety/checkins/${cid}`, { action: "safe" })).data?.checkin?.status === "SAFE");
+    check("a finished check-in can't be reopened", (await G1.post(`/api/safety/checkins/${cid}`, { action: "cancel" })).status === 409);
+    check("the alert is in the audit log", ((await admin.get("/api/admin/audit?action=safety.checkin")).data?.logs ?? []).some((l: any) => l.action === "safety.checkin.alert" && l.entityId === cid));
+
+    // Quiet hours and the like/match cap
+    check("quiet hours need both a start and an end", (await G2.put("/api/preferences", { quietStart: 22 })).status === 422);
+    check("quiet hours and a daily alert cap save", (await G2.put("/api/preferences", { quietStart: 22, quietEnd: 7, activityPushCap: 5 })).status === 200);
+    const gp = (await G2.get("/api/me")).data?.preferences;
+    check("…and read back", gp?.quietStart === 22 && gp?.quietEnd === 7 && gp?.activityPushCap === 5, gp);
+    check("quiet hours turn off", (await G2.put("/api/preferences", { quietStart: null, quietEnd: null })).status === 200 && (await G2.get("/api/me")).data?.preferences?.quietStart === null);
+    check("out-of-range hours are refused", (await G2.put("/api/preferences", { quietStart: 25, quietEnd: 7 })).status === 422);
+
+    // Feedback
+    check("feedback: asked the first time", (await G1.get("/api/feedback?context=CHECKIN")).data?.ask === true);
+    const fb = await G1.post("/api/feedback", { context: "CHECKIN", rating: "LOVE", comment: `Felt much safer. Call me on 98765 43210 or gauri-${run}@test.local`, platform: "web" });
+    check("feedback is saved", fb.status === 201, fb.data);
+    check("…and then not asked again for a while (anywhere)", (await G1.get("/api/feedback?context=CHECKIN")).data?.ask === false && (await G1.get("/api/feedback?context=APP")).data?.ask === false);
+    check("unknown feedback values are refused", (await G1.post("/api/feedback", { context: "NOPE", rating: "LOVE" })).status === 422);
+    const pb = await G2.post("/api/feedback", { context: "CHAT", rating: "PROBLEM", comment: `Voice notes won't play on my phone ${run}` });
+    check("\"Report a problem\" becomes an engineering incident", pb.status === 201 && /^BUG-\d{4}-\d{6}$/.test(pb.data?.code ?? ""), pb.data);
+    check("members can't read the feedback summary", (await G1.get("/api/admin/ops/feedback")).status === 403);
+    const fs = await security.get("/api/admin/ops/feedback?days=7");
+    const fsJson = JSON.stringify(fs.data);
+    check("staff see totals and comments", fs.status === 200 && fs.data.contexts.some((c: any) => c.context === "CHECKIN") && fsJson.includes("Felt much safer"), fs.data?.contexts);
+    check("…with phone numbers, emails and identities removed", !fsJson.includes("98765") && !fsJson.includes(`gauri-${run}`) && !fsJson.includes(g1Id));
+
+    // Weekly product report
+    const rep = await security.get("/api/admin/ops/reports?preview=1");
+    check("weekly product report computes, with the north-star metric", rep.status === 200 && "meaningfulConnectionRate" in (rep.data?.report?.metrics ?? {}) && Array.isArray(rep.data?.report?.changes), rep.data?.report?.metrics);
+    check("…counts only: no emails or ids", !/@test\.local|@example\.com/.test(JSON.stringify(rep.data)) && !JSON.stringify(rep.data).includes(g1Id));
+    check("members can't read it", (await G1.get("/api/admin/ops/reports")).status === 403);
+
+    // Closing kindly
+    check("an unknown closing note is refused", (await G1.post(`/api/matches/${gm}/close`, { note: "YOU_ARE_BORING" })).status === 422);
+    check("a stranger can't close someone else's chat", (await G3.post(`/api/matches/${gm}/close`, { note: "BUSY" })).status === 404);
+    check("closing kindly ends the match", (await G1.post(`/api/matches/${gm}/close`, { note: "NOT_A_MATCH" })).data?.closed === true && (await G1.get(`/api/matches/${gm}/messages`)).data?.ended === true);
+    const bye = ((await G2.get("/api/notifications")).data?.notifications ?? []).find((n: any) => n.title === "Gauri said goodbye");
+    check("…and the other person gets a kind note instead of silence", !!bye && /rather than just disappear/.test(bye.body), bye);
+    check("…once: it can't be closed twice", (await G1.post(`/api/matches/${gm}/close`, { note: "BUSY" })).status === 410);
+  }
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) {
     console.log("Failed:\n - " + failures.join("\n - "));

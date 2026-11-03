@@ -10,6 +10,7 @@ import { aiDiagnosis, aiPulls, closeIssue, commentIssue, createIssue, githubConf
 import { notify } from "./notify";
 import { RELEASE, flushMetrics, metricsSince, opsAction, recordIncident, riskBand, type Severity } from "./ops";
 import { can } from "./rbac";
+import { maybeWeeklyReport } from "./productReport";
 import { scoutFeatures } from "./scout";
 import { storage } from "./storage";
 
@@ -217,6 +218,8 @@ async function hourly(now: Date) {
 // ---- daily: feature scout and retention -----------------------------------------------------------------------
 async function daily(now: Date) {
   const proposals = await scoutFeatures(now).catch((e) => { console.error("[monitor] scout failed", e); return []; });
+  const report = await maybeWeeklyReport(now).catch((e) => { console.error("[monitor] weekly report failed", e); return null; });
+  if (report) await sendWeeklyReport(report);
   const old = new Date(now.getTime() - 30 * 86400_000).toISOString().slice(0, 16);
   await db.delete(schema.opsMetrics).where(lt(schema.opsMetrics.bucket, old));
   await db.delete(schema.opsHealth).where(lt(schema.opsHealth.at, new Date(now.getTime() - 14 * 86400_000)));
@@ -247,6 +250,17 @@ async function sendAlerts() {
     await opsAction("MONITOR", "alert_sent", { incidentId: r.id, risk: r.risk, detail: { code: r.code, staff: staff.length, emails: emails.length } });
   }
   return due.length;
+}
+async function sendWeeklyReport(r: Awaited<ReturnType<typeof maybeWeeklyReport>> & object) {
+  const m = r.metrics, app = process.env.APP_URL ?? "";
+  const lines = [
+    `Week of ${r.week}: ${m.signups} sign-ups, ${m.matches} matches, meaningful connection rate ${m.meaningfulConnectionRate ?? "–"}%.`,
+    r.improved.length ? `Better: ${r.improved.join("; ")}` : "Nothing improved by 10% or more.",
+    r.worse.length ? `Worse: ${r.worse.join("; ")}` : "Nothing got worse by 10% or more.",
+    `New incidents: ${r.newBugs.length}. Ideas waiting for a decision: ${r.nextUp.length}.`,
+  ];
+  for (const to of (process.env.OPS_ALERT_EMAIL ?? "").split(",").map((x) => x.trim()).filter(Boolean))
+    await sendEmail(to, `[Kinara] Product health, week of ${r.week}`, `${lines.join("\n\n")}\n\n${app}/admin/engineering?tab=health`, lines.map((l) => `<p>${esc(l)}</p>`).join("") + `<p><a href="${esc(app)}/admin/engineering?tab=health">Open the full report</a></p>`);
 }
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
