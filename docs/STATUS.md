@@ -325,3 +325,11 @@ Self-service ads for businesses, built as a separate module (`src/lib/ads.ts`, `
 Bugs found and fixed: Matches tab crashed for anyone with no pending likes; new members were sent back to an empty first onboarding step after "Start discovering"; web Plans page crashed; threats like "I'll find where you live and hurt you" and spacing tricks slipped past message screening; two ad payments at the same moment could share a receipt number (now atomic, yearly numbering, unique index — migration 0017); the session-refresh limit was per network address, which would sign out many people sharing one mobile-network address; match screen sound error and overflow on the web; faint text below 3:1 contrast in four light themes; phone overflow on the web profile and admin legal/settings pages; long names overflowing the web profile; a silently disabled Continue in onboarding; a see-through "no results" button in search; a network error on a profile looked like "profile gone". The Premium catalogue now loads prices once per request (p95 805 → 359 ms under load).
 
 After the fixes: 3,423 QA cases, 890 end-to-end, 66 security and 89 unit tests all pass; iPhone and Android bundles build.
+
+## 24×7 monitoring and audit round 1 (3 November 2026)
+
+- **Monitoring and AI engineer:** Admin → Engineering (overview, product health, feedback, incidents, releases, improvements, activity trail, settings). Runbook: `docs/AI_ENGINEER.md`; known fixes: `docs/AI_KNOWLEDGE.md`. A scheduled AI engineer runs every 6 hours and opens pull requests; a person merges.
+- **Audit:** product audit and P0–P3 roadmap kept as a shared doc (Kinara — Product Audit & Roadmap).
+- **Round 1 (live):** Next.js 15.5.28 / Zod 4.6.7 security patch; date check-in with a trusted contact; close a chat kindly; quiet hours and a like/match alert cap; in-app feedback; weekly product health report (north star: meaningful connection rate).
+- **Tests:** 966 unit, 1,002 end-to-end, 66 security, 1,176 QA API cases, on a database built from migrations.
+- **Dev database:** never `db:push` a database with data. Reset: delete `data/dev.db`, then `npx tsx scripts/migrate.ts && npm run db:seed && npx tsx scripts/sample-data.ts && npx tsx scripts/seed-photos.ts && npx tsx scripts/rotate-keys.ts && npx tsx scripts/bootstrap.ts`.
