@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { applyEvent } from "@/lib/billing";
+import { recordIncident, recordSignal } from "@/lib/ops";
 import { captureAdTopup } from "@/lib/adsManage";
 import { parseRazorpayEvent, verifyWebhookSignature } from "@/lib/payments/razorpay";
 
@@ -46,9 +47,12 @@ export async function POST(req: Request) {
     }
     await db.update(schema.webhookEvents).set({ status: events.length ? "PROCESSED" : "IGNORED", processedAt: new Date(), error: null })
       .where(and(eq(schema.webhookEvents.provider, "RAZORPAY"), eq(schema.webhookEvents.eventId, eventId)));
+    recordSignal("payment_webhook", true);
     return NextResponse.json({ ok: true, results });
   } catch (e) {
     console.error("[webhook] razorpay processing failed", e);
+    recordSignal("payment_webhook", false);
+    await recordIncident({ kind: "PAYMENT", service: "POST /api/webhooks/razorpay", title: `Payment webhook failed: ${type}`, message: (e as Error).message, stack: (e as Error).stack, context: { kind: type } });
     await db.update(schema.webhookEvents).set({ status: "FAILED", error: String((e as Error).message).slice(0, 300) })
       .where(and(eq(schema.webhookEvents.provider, "RAZORPAY"), eq(schema.webhookEvents.eventId, eventId)));
     return NextResponse.json({ error: "processing failed" }, { status: 500 }); // Razorpay retries

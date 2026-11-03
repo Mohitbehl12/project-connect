@@ -4,6 +4,7 @@ import webpush from "web-push";
 import { db, schema } from "@/db";
 import { open, seal } from "./crypto";
 import { ApiError } from "./http";
+import { recordSignal } from "./ops";
 
 // Browser push (Web Push with VAPID): notifications for the home-screen web app on iPhone (iOS 16.4+)
 // and for Android browsers, without Apple or Google developer accounts.
@@ -78,8 +79,10 @@ export async function sendWebPush(userId: string, msg: PushMessage) {
           TTL: msg.urgent ? 45 : 60 * 60 * 24, urgency: msg.urgent ? "high" : "normal", timeout: 5000,
         });
         await db.update(schema.webPushSubscriptions).set({ lastOkAt: new Date() }).where(eq(schema.webPushSubscriptions.id, s.id));
+        recordSignal("push_web", true);
       } catch (e: any) {
         if (e?.statusCode === 404 || e?.statusCode === 410) dead.push(s.id); // the browser unsubscribed or the app was removed
+        else recordSignal("push_web", false);
       }
     }));
     if (dead.length) await db.delete(schema.webPushSubscriptions).where(inArray(schema.webPushSubscriptions.id, dead));

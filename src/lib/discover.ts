@@ -3,6 +3,7 @@ import { and, count, eq, gte, inArray, isNull, lte, ne, notInArray, or } from "d
 import { db, schema } from "@/db";
 import type { User } from "@/db/schema";
 import { getConfig } from "./config";
+import { recordUsage } from "./ops";
 import { CITIES, EXPLORE_CATEGORIES, INTENTS, INTERESTS, LANGUAGES, LIFESTYLE } from "./constants";
 import { ApiError } from "./http";
 import { alignedTraits, ageFromDob, eligibility, scorePair } from "./matching";
@@ -200,6 +201,8 @@ export async function discover(user: User, opts: { mode?: Mode; cat?: string; fi
   const { viewer, scored } = await candidates(user, f);
   const sorted = await applyMode(mode, scored, viewer);
   const limit = opts.limit ?? (await getConfig("discovery.batchSize"));
+  const searched = !!(f.q || f.interests?.length || f.city || f.languages?.length || f.intents?.length || f.education || f.profession || Object.keys(f.lifestyle ?? {}).length);
+  if (searched && !cat) { recordUsage("search"); if (!sorted.length) recordUsage("search_zero"); }
   return { mode, cards: await toCards(viewer, sorted.slice(0, limit)), totalAvailable: sorted.length };
 }
 

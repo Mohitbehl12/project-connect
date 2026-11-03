@@ -68,6 +68,7 @@ The database (SQLite) and photos live on the disk, and Render snapshots the disk
 - **Deploys:** every push to the repo's main branch redeploys automatically. Start-up applies new database migrations first.
 - **Changing the database schema:** edit `src/db/schema.ts`, run `npx drizzle-kit generate` locally (it asks about renames), commit the new file in `drizzle/`, then push.
 - **Logs:** Render → `project-connect` → Logs.
+- **Monitoring:** Admin → Engineering. The monitor runs every 5 minutes (started by `scripts/start.sh`); each release is watched for an hour and rolled back if it made things worse (needs `RENDER_API_KEY`). Problems become numbered incidents and GitHub issues for the AI engineer, which opens pull requests; you merge. Full description: `docs/AI_ENGINEER.md`.
 - **Backups:**
   - Render snapshots the disk daily.
   - For an extra copy, download `/var/data/prod.db` from the Render Shell now and then.
@@ -119,6 +120,11 @@ When you need more than one server:
 | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | you, later | See `docs/PAYMENTS.md` |
 | `DEV_SHOW_OTP` | blueprint | `false`; never `true` in production |
 | `PUSH_ENABLED` | later | `true` after the native app has an Expo project id |
+| `GITHUB_TOKEN`, `GITHUB_REPO` | you | 24×7 monitoring → AI engineer queue. Fine-grained token for this repo only (Issues read/write, Pull requests read, Actions read). `GITHUB_REPO=Mohitbehl12/project-connect`. See `docs/AI_ENGINEER.md` |
+| `RENDER_API_KEY` | you | Lets the release watchdog (and Admin → Engineering) roll back a broken release |
+| `OPS_ALERT_EMAIL` | you | Where monitoring alerts are emailed (comma-separated; needs Resend) |
+| `OPS_SLACK_WEBHOOK_URL`, `OPS_TEAMS_WEBHOOK_URL` | optional | Chat alerts |
+| `MEMORY_LIMIT_MB` | optional | Your plan's memory (default 512) for the memory alarm |
 
 ## Password-reset emails (Resend)
 

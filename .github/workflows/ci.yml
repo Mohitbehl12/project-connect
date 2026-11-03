@@ -1,0 +1,102 @@
+# Tests every pull request (including the AI engineer's ai/* branches) and every push to main.
+# A PR can only be merged by a person; these checks tell them whether it is safe to.
+# Nightly it also runs the full QA suite (browser journeys and screen checks) against a fresh copy of the app.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 21 * * *" # nightly, 02:47 IST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Types, unit tests, audit, secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Secret scan
+        run: node scripts/secret-scan.mjs
+      - name: Type check
+        run: npx tsc --noEmit -p .
+      - name: Unit tests
+        run: npx vitest run
+      - name: Dependency audit (fails on critical)
+        run: npm audit --omit=dev --audit-level=critical
+      - name: Migrations apply cleanly to an empty database
+        run: |
+          sh scripts/ci-env.sh
+          npx tsx scripts/migrate.ts
+
+  e2e:
+    name: Build, end-to-end, security and QA
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: checks
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Test environment and fresh database
+        run: |
+          sh scripts/ci-env.sh
+          npx tsx scripts/migrate.ts
+          npx tsx scripts/bootstrap.ts
+          npm run db:seed
+      - name: Build
+        run: npx next build
+      - name: Security suite (staff two-step sign-in enforced)
+        run: |
+          nohup npx next start -p 3000 > .ci/server-sec.log 2>&1 &
+          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/api/health >/dev/null && break; sleep 2; done
+          npx tsx tests/security.ts
+          kill $(lsof -t -i:3000) || true
+          sleep 2
+      - name: End-to-end suite
+        env:
+          ADMIN_MFA_OPTIONAL: "true"
+          WEB_PUSH_ALLOWED_HOSTS: 127.0.0.1:8443
+        run: |
+          NODE_EXTRA_CA_CERTS=$PWD/.ci/cert.pem nohup npx next start -p 3000 > .ci/server.log 2>&1 &
+          for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/api/health >/dev/null && break; sleep 2; done
+          PUSH_TEST_CERT=.ci/cert.pem PUSH_TEST_KEY=.ci/key.pem PUSH_TEST_PORT=8443 npx tsx tests/e2e.ts
+      - name: QA — API cases
+        env: { ADMIN_MFA_OPTIONAL: "true" }
+        run: npx tsx tests/qa/api.ts
+      - name: QA — generated logic cases
+        run: npx vitest run tests/unit/qa-properties.test.ts
+      - name: QA — browser journeys and screens (nightly / manual)
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          npm i --no-save playwright@1.49.1
+          npx playwright install --with-deps chromium
+          export PW_MODULE=$PWD/node_modules/playwright
+          export PW_CHROMIUM=$(node -e "console.log(require('playwright').chromium.executablePath())")
+          mkdir -p qa-results/shots
+          npx tsx tests/qa/screens.ts
+          npx tsx tests/qa/signup.ts
+      - name: Server log on failure
+        if: failure()
+        run: tail -n 200 .ci/server.log .ci/server-sec.log 2>/dev/null || true
+      - name: Keep QA results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: qa-results
+          path: qa-results/
+          if-no-files-found: ignore
+          retention-days: 14

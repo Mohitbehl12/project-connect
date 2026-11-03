@@ -1,6 +1,7 @@
 import "server-only";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
+import { captureServerError, recordRequest, routeKey } from "./ops";
 import { ZodError, type ZodType } from "zod";
 import { currentUser } from "./auth";
 import { can, type Permission } from "./rbac";
@@ -36,8 +37,12 @@ export function route<P = Record<string, string>>(
   opts: { permission?: Permission; allowSuspended?: boolean; allowOnboarding?: boolean } = {},
 ) {
   return async (req: Request, ctx: Ctx<P>) => {
+    const t0 = Date.now();
+    let uid: string | null = null;
+    let res: Response;
     try {
       const user = await currentUser();
+      uid = user?.id ?? null;
       if (!user) throw new ApiError(401, "Please log in to continue.", "unauthenticated");
       if (user.status === "SUSPENDED" && !opts.allowSuspended)
         throw new ApiError(403, "Your account is suspended. Check your notifications for details.", "suspended");
@@ -47,21 +52,34 @@ export function route<P = Record<string, string>>(
       if (opts.permission && !can(user.role, opts.permission))
         throw new ApiError(403, "You don't have permission to do that.", "forbidden");
       if (opts.permission && user.role !== "USER") await (await import("./staff")).staffGate(user);
-      return await handler({ req, user, params: (await ctx?.params) as P });
+      res = await handler({ req, user, params: (await ctx?.params) as P });
     } catch (e) {
-      return errorResponse(e);
+      res = errorResponse(e);
+      if (res.status >= 500) await captureServerError(e, req, uid, Date.now() - t0);
     }
+    observe(req, res, t0);
+    return res;
   };
+}
+
+/** Per-route request count, errors and latency for the 24×7 monitor (no identities). */
+function observe(req: Request, res: Response, t0: number) {
+  try { recordRequest(`${req.method} ${routeKey(new URL(req.url).pathname)}`, res.status, Date.now() - t0); } catch { /* never affects the response */ }
 }
 
 /** Same as route() but without requiring a session (public endpoints). */
 export function publicRoute<P = Record<string, string>>(handler: (args: { req: Request; params: P }) => Promise<Response>) {
   return async (req: Request, ctx: Ctx<P>) => {
+    const t0 = Date.now();
+    let res: Response;
     try {
-      return await handler({ req, params: (await ctx?.params) as P });
+      res = await handler({ req, params: (await ctx?.params) as P });
     } catch (e) {
-      return errorResponse(e);
+      res = errorResponse(e);
+      if (res.status >= 500) await captureServerError(e, req, null, Date.now() - t0);
     }
+    observe(req, res, t0);
+    return res;
   };
 }
 

@@ -1,7 +1,7 @@
 #!/bin/sh
 # Production start (Render or any single server with a persistent disk).
 # 1) make sure the data folder exists  2) apply database migrations  3) seed once on an empty database
-# 4) run the scheduled jobs every 30 minutes in the background  5) start the server.
+# 4) run the scheduled jobs every 30 minutes and the monitor every 5 minutes in the background  5) start the server.
 set -e
 DATA_DIR="${DATA_DIR:-/var/data}"
 mkdir -p "$DATA_DIR" "${UPLOAD_DIR:-$DATA_DIR/uploads}"
@@ -19,6 +19,11 @@ if [ -n "$CRON_SECRET" ]; then
   ( sleep 90; while true; do
       curl -fsS -X POST -H "x-cron-secret: $CRON_SECRET" "http://127.0.0.1:$PORT/api/cron/billing" >/dev/null 2>&1 || true
       sleep 1800
+    done ) &
+  # 24×7 monitor: health probes, error/latency thresholds, release watchdog, alerts, GitHub sync (docs/AI_ENGINEER.md).
+  ( sleep 120; while true; do
+      curl -fsS -m 120 -X POST -H "x-cron-secret: $CRON_SECRET" "http://127.0.0.1:$PORT/api/cron/monitor" >/dev/null 2>&1 || true
+      sleep 300
     done ) &
 fi
 exec npx next start -p "$PORT"

@@ -24,6 +24,10 @@ export const SIGNOFF_ITEMS: { id: string; group: string; label: string }[] = [
   ...[
     "Security check", "Privacy check", "Safety check", "Legal review", "Abuse and edge-case testing",
   ].map((label, i) => ({ id: `gate.${i + 1}`, group: "Release gate for each major feature (sign off the current release)", label })),
+  ...[
+    "GitHub main branch protected: pull request and passing CI required, no bypass", "AI engineer scheduled task reviewed (runbook docs/AI_ENGINEER.md)",
+    "Someone on call receives monitoring alerts", "Rollback tested once (Admin → Engineering → Releases)",
+  ].map((label, i) => ({ id: `eng.${i + 1}`, group: "Engineering operations", label })),
 ];
 
 type Check = { id: string; label: string; ok: boolean; detail: string };
@@ -44,6 +48,8 @@ export async function autoChecks(): Promise<Check[]> {
   const backupFresh = !!backup.at && Date.now() - new Date(backup.at).getTime() < 2 * 86400_000;
   const chain = await verifyAuditChain();
   const shot = await getConfig("moderation.photoScreening");
+  const runs = await getConfig("ops.lastRuns");
+  const monitorFresh = !!runs.monitor && Date.now() - new Date(runs.monitor).getTime() < 15 * 60_000;
   return [
     { id: "otp", label: "Real sign-up codes (no test codes shown)", ok: env("DEV_SHOW_OTP") !== "true", detail: env("DEV_SHOW_OTP") === "true" ? "DEV_SHOW_OTP=true shows codes on screen" : "OK" },
     { id: "sms", label: "Email or SMS provider for codes", ok: !!(env("RESEND_API_KEY") || env("MSG91_AUTH_KEY")), detail: env("RESEND_API_KEY") || env("MSG91_AUTH_KEY") ? "Configured" : "Neither RESEND_API_KEY nor MSG91_AUTH_KEY is set" },
@@ -58,6 +64,8 @@ export async function autoChecks(): Promise<Check[]> {
     { id: "photos", label: "Automatic photo screening on", ok: shot !== "off", detail: `Mode: ${shot}` },
     { id: "turn", label: "Call relay (TURN) configured", ok: !!(env("CLOUDFLARE_TURN_KEY_ID") || env("TURN_URLS")), detail: env("CLOUDFLARE_TURN_KEY_ID") || env("TURN_URLS") ? "Configured" : "Calls can't connect without it" },
     { id: "cron", label: "Scheduled jobs (retention, renewals) running", ok: !!env("CRON_SECRET"), detail: env("CRON_SECRET") ? "CRON_SECRET set" : "CRON_SECRET not set — retention purges won't run" },
+    { id: "monitor", label: "24×7 monitor running", ok: monitorFresh, detail: runs.monitor ? `Last run: ${runs.monitor}` : "Not run yet — needs CRON_SECRET" },
+    { id: "alerts", label: "Monitoring alerts go to a person outside the app", ok: !!((env("OPS_ALERT_EMAIL") && env("RESEND_API_KEY")) || env("OPS_SLACK_WEBHOOK_URL") || env("OPS_TEAMS_WEBHOOK_URL")), detail: env("OPS_ALERT_EMAIL") || env("OPS_SLACK_WEBHOOK_URL") || env("OPS_TEAMS_WEBHOOK_URL") ? "Configured" : "Set OPS_ALERT_EMAIL (or a Slack/Teams webhook)" },
     { id: "backup", label: "Recent database backup", ok: backupFresh, detail: backup.at ? `Last: ${backup.at}` : "No backup recorded" },
     { id: "audit", label: "Audit log chain intact", ok: chain.ok, detail: chain.ok ? `${chain.checked} entries verified` : `Broken at entry ${"brokenAt" in chain ? chain.brokenAt : "?"}` },
   ];

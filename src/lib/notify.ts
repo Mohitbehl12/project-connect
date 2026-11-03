@@ -2,6 +2,7 @@ import "server-only";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { sendWebPush, type PushMessage } from "./webpush";
+import { recordSignal } from "./ops";
 
 type NotifType = "MATCH" | "MESSAGE" | "LIKE" | "VERIFICATION" | "DATE" | "SUBSCRIPTION" | "SECURITY" | "REPORT" | "MODERATION" | "CALL";
 
@@ -47,11 +48,13 @@ async function sendPush(userId: string, title: string, body: string, link?: stri
       signal: AbortSignal.timeout(5000),
     });
     const json = (await res.json().catch(() => null)) as { data?: { status: string; details?: { error?: string } }[] } | null;
+    recordSignal("push_app", res.ok && !(json?.data ?? []).some((r) => r.status === "error" && r.details?.error !== "DeviceNotRegistered"));
     // Drop tokens Expo reports as no longer registered.
     for (const [i, r] of (json?.data ?? []).entries())
       if (r.status === "error" && r.details?.error === "DeviceNotRegistered")
         await db.delete(schema.devices).where(eq(schema.devices.pushToken, targets[i].pushToken));
   } catch (e) {
     console.warn("[push] send failed", (e as Error).message);
+    recordSignal("push_app", false);
   }
 }

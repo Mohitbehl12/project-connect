@@ -21,6 +21,8 @@ export const PERMISSIONS = [
   "grievances.handle", // formal complaints to the Grievance Officer
   "ads.review", // approve/reject ads, handle ad reports, verify advertisers
   "ads.finance", // advertiser refunds and ad revenue
+  "ops.view", // Admin → Engineering: system health, incidents, AI engineering activity
+  "ops.manage", // approve or reject feature proposals, change incident status, roll back a release
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -32,11 +34,11 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   ADVERTISER: [], // a business login: only the advertiser pages, nothing in admin or dating
   SUPPORT: ["admin.access", "users.view", "reports.view", "payments.refund_request", "grievances.handle"],
   FINANCE: ["admin.access", "ads.finance", "plans.edit", "payments.view", "payments.refund_request", "payments.refund_approve", "offers.edit", "coupons.edit", "referrals.manage", "analytics.view"],
-  SECURITY: ["admin.access", "users.view", "security.view", "risk.resolve", "referrals.manage", "audit.view"],
+  SECURITY: ["admin.access", "users.view", "security.view", "risk.resolve", "referrals.manage", "audit.view", "ops.view"],
   MODERATOR: ["admin.access", "users.view", "users.moderate", "users.verify", "reports.view", "reports.resolve", "messages.view_reported", "grievances.handle", "ads.review"],
   ADMIN: ["admin.access", "users.view", "users.moderate", "users.ban", "users.verify", "reports.view", "reports.resolve",
     "messages.view_reported", "analytics.view", "config.edit", "plans.edit", "legal.edit", "audit.view",
-    "payments.view", "payments.refund_request", "offers.edit", "coupons.edit", "referrals.manage", "security.view", "risk.resolve", "grievances.handle", "ads.review", "ads.finance"],
+    "payments.view", "payments.refund_request", "offers.edit", "coupons.edit", "referrals.manage", "security.view", "risk.resolve", "grievances.handle", "ads.review", "ads.finance", "ops.view", "ops.manage"],
   SUPER_ADMIN: [...PERMISSIONS],
 };
 

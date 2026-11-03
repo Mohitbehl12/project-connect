@@ -1403,6 +1403,62 @@ async function main() {
     check("trending and popular collections never expose like counts", !/likes?Count|attention/i.test(JSON.stringify((await X.get("/api/discovery?cat=trending")).data)));
   }
 
+  section("24×7 monitoring: incidents, monitor, Engineering dashboard");
+  {
+    const year = new Date().getUTCFullYear();
+    const crash = { message: `TypeError: e2e-${run} cannot read properties of undefined (reading 'photos') for asha.k@example.com`, stack: "TypeError: x\n    at Card (/app/src/app/discover/page.tsx:42:7)", platform: "web", screen: "/discover", kind: "crash" };
+    const r1 = await anon.post("/api/ops/client-error", crash);
+    check("a crash report becomes a numbered incident", r1.status === 201 && new RegExp(`^BUG-${year}-\\d{6}$`).test(r1.data?.code ?? ""), r1.data);
+    const r2 = await A.post("/api/ops/client-error", { ...crash, message: crash.message.replace("asha.k", "ravi.m") });
+    check("the same problem is grouped into the same incident", r2.data?.code === r1.data?.code, [r1.data, r2.data]);
+    check("browser-extension noise is ignored", (await anon.post("/api/ops/client-error", { message: "ResizeObserver loop limit exceeded", platform: "website" })).data?.ignored === true);
+    check("malformed reports are refused", (await anon.post("/api/ops/client-error", { message: 5, platform: "toaster" })).status === 422);
+    const big = await fetch(`${BASE}/api/ops/client-error`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: "x".repeat(20_000), platform: "web" }) });
+    check("oversized reports are refused", big.status === 413 || big.status === 422, big.status);
+
+    const secret = envVal("CRON_SECRET");
+    check("the monitor needs the cron secret", (await fetch(`${BASE}/api/cron/monitor`, { method: "POST" })).status === 403 && (await fetch(`${BASE}/api/cron/monitor`, { method: "POST", headers: { "x-cron-secret": "x".repeat(secret.length || 20) } })).status === 403);
+    const mon = await fetch(`${BASE}/api/cron/monitor`, { method: "POST", headers: { "x-cron-secret": secret } }).then((r) => r.json());
+    check("the monitor runs: health probes, database and storage checks", mon.ok === true && mon.health?.checks?.database?.ok === true && mon.health?.checks?.storage?.ok === true, mon.health?.checks);
+    check("…and flushes request metrics", typeof mon.metricsFlushed === "number" || mon.metricsFlushed === undefined, mon.metricsFlushed);
+
+    check("members can't open Engineering", (await A.get("/api/admin/ops")).status === 403 && (await A.get("/api/admin/ops/incidents")).status === 403);
+    check("finance staff can't open Engineering", (await finance.get("/api/admin/ops")).status === 403);
+    const ov = await security.get("/api/admin/ops");
+    check("security staff can view the overview", ov.status === 200 && ov.data?.totals?.requests > 0 && Array.isArray(ov.data?.setup), ov.data?.totals);
+    check("the overview has no member emails or ids", !/@test\.local|@demo\.local|@example\.com/.test(JSON.stringify(ov.data)) && !JSON.stringify(ov.data).includes(aId));
+    const code = r1.data?.code;
+    const list = await admin.get(`/api/admin/ops/incidents?q=${code}`);
+    const row = (list.data?.incidents ?? []).find((i: any) => i.code === code);
+    check("admin sees the incident: crash = high severity, 2 occurrences, 1 signed-in person", row?.severity === "HIGH" && row?.count === 2 && row?.usersAffected === 1, row);
+    const det = await admin.get(`/api/admin/ops/incidents/${code}`);
+    check("the stored sample is scrubbed (no email address)", det.status === 200 && !JSON.stringify(det.data).includes("example.com") && JSON.stringify(det.data.incident.sample).includes("<email>"), det.data?.incident?.sample);
+    check("…and keeps the code location", JSON.stringify(det.data?.incident?.sample).includes("discover/page.tsx:42"), det.data?.incident?.sample);
+    check("security staff can't change incidents", (await security.patch(`/api/admin/ops/incidents/${code}`, { status: "IGNORED" })).status === 403);
+    check("admin marks it looked at", (await admin.patch(`/api/admin/ops/incidents/${code}`, { status: "TRIAGED", note: "e2e" })).status === 200);
+    const det2 = await admin.get(`/api/admin/ops/incidents/${code}`);
+    check("…and it shows in the incident's history", det2.data?.incident?.status === "TRIAGED" && det2.data?.actions?.some((a: any) => a.action === "status_triaged"), det2.data?.actions?.slice(0, 2));
+    check("unknown incident → 404", (await admin.get("/api/admin/ops/incidents/BUG-1999-000000")).status === 404);
+
+    const idea = await admin.post("/api/admin/ops/proposals", { title: `Shorter photo step (e2e ${run})`, problem: "Many people stop at the photo step of sign-up.", benefit: "More finished profiles.", risk: "HIGH", complexity: "S" });
+    check("staff can add an improvement idea", idea.status === 201 && /^FEAT-\d{4}-\d{4}$/.test(idea.data?.code ?? ""), idea.data);
+    check("a high-risk idea needs a reason to approve", (await admin.patch(`/api/admin/ops/proposals/${idea.data?.code}`, { decision: "APPROVED" })).status === 422);
+    check("…approved with a reason", (await admin.patch(`/api/admin/ops/proposals/${idea.data?.code}`, { decision: "APPROVED", note: "Agreed in product review (e2e)" })).status === 200);
+    check("security staff can't approve ideas", (await security.patch(`/api/admin/ops/proposals/${idea.data?.code}`, { decision: "REJECTED" })).status === 403);
+    check("approved ideas are listed", ((await admin.get("/api/admin/ops/proposals?status=APPROVED")).data?.proposals ?? []).some((p: any) => p.code === idea.data?.code));
+    check("rollback needs the typed confirmation", (await admin.post("/api/admin/ops/rollback", { confirm: "yes", reason: "testing" })).status === 422);
+    const rb = await admin.post("/api/admin/ops/rollback", { confirm: "ROLL BACK", reason: "e2e: no Render key here" });
+    check("without a Render key, rollback says so instead of pretending", rb.status === 502 && /RENDER_API_KEY/.test(rb.data?.error ?? ""), rb.data);
+    check("security staff can't roll back", (await security.post("/api/admin/ops/rollback", { confirm: "ROLL BACK", reason: "nope nope" })).status === 403);
+    const trail = await security.get("/api/admin/ops/actions?agent=ADMIN");
+    check("everything is in the activity trail", ["status_triaged", "proposal_added", "proposal_approved", "manual_rollback_failed"].every((a) => trail.data?.actions?.some((x: any) => x.action === a)), trail.data?.actions?.map((x: any) => x.action));
+    check("…and in the audit log", ((await admin.get("/api/admin/audit?action=ops.")).data?.logs ?? []).length >= 3);
+    const thr = await admin.put("/api/admin/config", { config: { "ops.thresholds": { errorRatePct: 0, minRequests: 1, p95Ms: 1, p95SlowMs: 1, memoryPct: 1, dbMs: 1, diskFreePct: 1, failedLogins15m: 1, failedLoginsPerIp15m: 1, signalFailPct: 1 } } });
+    check("thresholds are validated (no zero error rate)", thr.status === 422, thr.data);
+    check("monitor settings save", (await admin.put("/api/admin/config", { config: { "ops.alertMinSeverity": "HIGH", "ops.autoRollback": true } })).status === 200);
+    check("Engineering page loads", (await fetch(`${BASE}/admin/engineering`)).status === 200);
+  }
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) {
     console.log("Failed:\n - " + failures.join("\n - "));

@@ -14,3 +14,4 @@ mobile/dist/
 mobile/.expo/
 mobile/.env
 qa-results/
+.ci/

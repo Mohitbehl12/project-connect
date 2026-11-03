@@ -1,0 +1,52 @@
+# Checks from outside that the live site answers, every 15 minutes. If it doesn't (twice in a row a minute
+# apart), it opens one "uptime" issue labelled for the AI engineer; when the site is back it closes it.
+# Set the repository variable APP_URL to override the address.
+name: Uptime
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check the site
+        id: ping
+        env:
+          URL: ${{ vars.APP_URL || 'https://project-connect-yok2.onrender.com' }}
+        run: |
+          ok=0
+          for i in 1 2; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "$URL/api/health" || echo 000)
+            echo "attempt $i: $code"
+            if [ "$code" = "200" ]; then ok=1; break; fi
+            sleep 60
+          done
+          echo "ok=$ok" >> "$GITHUB_OUTPUT"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+      - name: Open or close the uptime issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OK: ${{ steps.ping.outputs.ok }}
+          CODE: ${{ steps.ping.outputs.code }}
+          URL: ${{ vars.APP_URL || 'https://project-connect-yok2.onrender.com' }}
+        run: |
+          open=$(gh issue list -R "$GITHUB_REPOSITORY" --label uptime --state open --json number -q '.[0].number' || true)
+          if [ "$OK" = "1" ]; then
+            if [ -n "$open" ]; then gh issue close "$open" -R "$GITHUB_REPOSITORY" -c "Site is answering again ($(date -u +%FT%TZ))."; fi
+          elif [ -z "$open" ]; then
+            gh label create uptime -R "$GITHUB_REPOSITORY" -c B60205 2>/dev/null || true
+            gh label create ai-engineer -R "$GITHUB_REPOSITORY" -c 5319E7 2>/dev/null || true
+            gh label create needs-human -R "$GITHUB_REPOSITORY" -c D93F0B 2>/dev/null || true
+            gh issue create -R "$GITHUB_REPOSITORY" --label uptime --label ai-engineer --label needs-human \
+              --title "UPTIME: site not answering ($CODE)" \
+              --body "The health check at \`$URL/api/health\` failed twice, a minute apart (last status: $CODE) at $(date -u +%FT%TZ). Check Render's events and logs. This issue closes itself when the site answers again."
+          else
+            gh issue comment "$open" -R "$GITHUB_REPOSITORY" -b "Still failing ($CODE) at $(date -u +%FT%TZ)." >/dev/null
+          fi

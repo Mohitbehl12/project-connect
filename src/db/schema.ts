@@ -799,3 +799,109 @@ export const adHidden = sqliteTable("ad_hidden", {
   campaignId: text("campaign_id").notNull().references(() => adCampaigns.id, { onDelete: "cascade" }),
   createdAt: now("created_at"),
 }, (t) => [uniqueIndex("ad_hidden_pair").on(t.userId, t.campaignId)]);
+
+// ---- Operations: 24×7 monitoring, incidents, AI engineering audit trail ----------------------------------------
+
+/** One problem, however often it happens (grouped by fingerprint). Code like BUG-2026-000127. */
+export const opsIncidents = sqliteTable("ops_incidents", {
+  id: id(),
+  code: text("code").notNull(),
+  kind: text("kind").notNull(), // SERVER_ERROR | CLIENT_ERROR | ANOMALY | PERFORMANCE | SECURITY | DATA_QUALITY | UPTIME | DEPLOY | PAYMENT
+  fingerprint: text("fingerprint").notNull(),
+  title: text("title").notNull(),
+  service: text("service").notNull(), // route template, screen or component
+  severity: text("severity").notNull(), // LOW | MEDIUM | HIGH | CRITICAL
+  risk: integer("risk").notNull(), // 0–100
+  status: text("status").notNull().default("NEW"), // NEW | TRIAGED | PR_OPEN | FIXED | REGRESSED | WONT_FIX | IGNORED
+  count: integer("count").notNull().default(1),
+  usersAffected: integer("users_affected").notNull().default(0),
+  firstSeen: now("first_seen"),
+  lastSeen: now("last_seen"),
+  sample: text("sample").notNull().default("{}"), // sanitised context of the latest occurrence (JSON)
+  diagnosis: text("diagnosis"), // root-cause notes (from the AI engineer or staff)
+  githubIssue: integer("github_issue"),
+  prUrl: text("pr_url"),
+  prState: text("pr_state"), // OPEN | MERGED | CLOSED
+  fixedAt: ts("fixed_at"),
+  notifiedAt: ts("notified_at"),
+  notifiedCount: integer("notified_count").notNull().default(0),
+}, (t) => [uniqueIndex("opsi_code").on(t.code), uniqueIndex("opsi_fp").on(t.fingerprint), index("opsi_status").on(t.status, t.lastSeen)]);
+
+/** Recent occurrences of an incident (the newest 50 are kept). No message bodies, tokens or contact details. */
+export const opsIncidentEvents = sqliteTable("ops_incident_events", {
+  id: id(),
+  incidentId: text("incident_id").notNull().references(() => opsIncidents.id, { onDelete: "cascade" }),
+  at: now("at"),
+  user: text("user"), // keyed hash of the user id, never the id itself
+  release: text("release"),
+  context: text("context").notNull().default("{}"),
+}, (t) => [index("opse_inc").on(t.incidentId, t.at)]);
+
+/** Requests per route per 5 minutes: count, server errors and a latency histogram. */
+export const opsMetrics = sqliteTable("ops_metrics", {
+  bucket: text("bucket").notNull(), // 2026-11-03T08:05 (UTC, 5-minute buckets)
+  route: text("route").notNull(),
+  count: integer("count").notNull().default(0),
+  errors: integer("errors").notNull().default(0), // 5xx
+  rejected: integer("rejected").notNull().default(0), // 4xx
+  totalMs: integer("total_ms").notNull().default(0),
+  maxMs: integer("max_ms").notNull().default(0),
+  hist: text("hist").notNull().default("[]"), // counts per latency band (see OPS_BANDS)
+}, (t) => [uniqueIndex("opsm_pk").on(t.bucket, t.route)]);
+
+/** Server vital signs, one row per monitor run. */
+export const opsHealth = sqliteTable("ops_health", {
+  id: id(),
+  at: now("at"),
+  rssMb: integer("rss_mb").notNull(),
+  heapMb: integer("heap_mb").notNull(),
+  load1: real("load1").notNull(),
+  cpus: integer("cpus").notNull(),
+  diskFreePct: real("disk_free_pct"),
+  dbMs: integer("db_ms").notNull(),
+  checks: text("checks").notNull().default("{}"), // per-service status
+}, (t) => [index("opsh_at").on(t.at)]);
+
+/** Each release the server started with, and what the watchdog decided about it. */
+export const opsDeploys = sqliteTable("ops_deploys", {
+  id: id(),
+  commit: text("commit").notNull(),
+  startedAt: now("started_at"),
+  status: text("status").notNull().default("WATCHING"), // WATCHING | HEALTHY | DEGRADED | ROLLED_BACK | ROLLBACK_FAILED
+  verdict: text("verdict"), // JSON: baseline vs after numbers
+  decidedAt: ts("decided_at"),
+}, (t) => [uniqueIndex("opsd_commit").on(t.commit)]);
+
+/** Append-only trail of everything the monitoring and AI engineering system did. Never edited or deleted by the app. */
+export const opsActions = sqliteTable("ops_actions", {
+  id: id(),
+  at: now("at"),
+  agent: text("agent").notNull(), // MONITOR | WATCHDOG | GITHUB_SYNC | AI_ENGINEER | ADMIN | FEATURE_SCOUT
+  action: text("action").notNull(),
+  incidentId: text("incident_id"),
+  proposalId: text("proposal_id"),
+  risk: integer("risk"),
+  result: text("result").notNull().default("OK"),
+  detail: text("detail").notNull().default("{}"),
+}, (t) => [index("opsa_at").on(t.at)]);
+
+/** Improvement ideas found in usage data (or added by staff); approved ones are built by the AI engineer as PRs. */
+export const opsProposals = sqliteTable("ops_proposals", {
+  id: id(),
+  code: text("code").notNull(), // FEAT-2026-0001
+  signal: text("signal").notNull(), // what triggered it (dedupe key)
+  title: text("title").notNull(),
+  problem: text("problem").notNull(),
+  benefit: text("benefit").notNull(),
+  evidence: text("evidence").notNull().default("{}"),
+  changes: text("changes").notNull().default(""), // technical outline
+  risk: text("risk").notNull().default("LOW"),
+  complexity: text("complexity").notNull().default("M"), // S | M | L
+  status: text("status").notNull().default("PROPOSED"), // PROPOSED | APPROVED | REJECTED | IN_PROGRESS | SHIPPED
+  source: text("source").notNull().default("AUTO"),
+  githubIssue: integer("github_issue"),
+  prUrl: text("pr_url"),
+  decidedById: text("decided_by_id"),
+  decidedAt: ts("decided_at"),
+  createdAt: now("created_at"),
+}, (t) => [uniqueIndex("opsp_code").on(t.code), uniqueIndex("opsp_signal").on(t.signal)]);

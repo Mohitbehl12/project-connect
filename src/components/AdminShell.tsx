@@ -26,6 +26,7 @@ const NAV: [string, string, string][] = [
   ["/admin/legal", "Legal", "legal.edit"],
   ["/admin/settings", "Settings & prices", "plans.edit"],
   ["/admin/compliance", "Privacy & compliance", "audit.view"],
+  ["/admin/engineering", "Engineering", "ops.view"],
   ["/admin/launch", "Launch readiness", "audit.view"],
   ["/admin/audit", "Audit log", "audit.view"],
 ];

@@ -64,6 +64,13 @@ export const CONFIG_DEFAULTS = {
   // Photo checks before anyone else sees a photo: "auto" (scanner, else staff review) | "review" | "off" (testing).
   "moderation.photoScreening": "auto" as "auto" | "review" | "off",
   // Last database backup (written by the backup job, shown in Admin → Settings).
+  // 24×7 monitoring (Admin → Engineering)
+  "ops.thresholds": { errorRatePct: 2, minRequests: 50, p95Ms: 2000, p95SlowMs: 3500, memoryPct: 85, dbMs: 500, diskFreePct: 15, failedLogins15m: 60, failedLoginsPerIp15m: 25, signalFailPct: 20 } as
+    { errorRatePct: number; minRequests: number; p95Ms: number; p95SlowMs: number; memoryPct: number; dbMs: number; diskFreePct: number; failedLogins15m: number; failedLoginsPerIp15m: number; signalFailPct: number },
+  "ops.autoRollback": true, // roll back a release the watchdog finds broken (needs RENDER_API_KEY); off = alert only
+  "ops.alertMinSeverity": "HIGH" as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL", // who gets woken up
+  "ops.issueMinSeverity": "MEDIUM" as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL", // what becomes a GitHub issue for the AI engineer
+  "ops.lastRuns": { monitor: null, hourly: null, daily: null, github: null } as { monitor: string | null; hourly: string | null; daily: string | null; github: string | null },
   "ops.lastBackup": { at: null, key: null, bytes: 0, error: null } as { at: string | null; key: string | null; bytes: number; error: string | null; failedAt?: string },
   // Country rules (src/lib/compliance.ts has the starting values); only overrides are stored here.
   "compliance.countries": {} as Record<string, Partial<import("./compliance").CountryRules>>,
