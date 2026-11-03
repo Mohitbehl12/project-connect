@@ -21,8 +21,8 @@ function Profile() {
         {p && (
           <div className="panel flex items-center gap-4 p-5">
             <Avatar id={me.user.id} name={p.firstName} size={72} />
-            <div className="flex-1">
-              <p className="flex items-center gap-2 font-display text-2xl font-extrabold">{p.firstName}{age ? `, ${age}` : ""} {me.user.selfieStatus === "VERIFIED" && <Verified />}</p>
+            <div className="min-w-0 flex-1">
+              <p className="flex flex-wrap items-center gap-x-2 break-words font-display text-2xl font-extrabold [overflow-wrap:anywhere]">{p.firstName}{age ? `, ${age}` : ""} {me.user.selfieStatus === "VERIFIED" && <Verified />}</p>
               <p className="text-ink-soft">{p.city} · {INTENTS[p.intent as keyof typeof INTENTS]}</p>
               <div className="mt-2 h-2 w-full max-w-xs overflow-hidden rounded-pill bg-paper-sunk" aria-label={`Profile ${p.completeness}% complete`}>
                 <div className="h-full bg-sage" style={{ width: `${p.completeness}%` }} />

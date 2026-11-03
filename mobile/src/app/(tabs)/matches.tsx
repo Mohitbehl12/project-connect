@@ -25,7 +25,7 @@ function LikesStrip() {
   useEffect(() => { if (q.data) cardCache.put(q.data.cards); }, [q.data]);
   const total = q.data?.total ?? 0;
   if (!q.data) return <Skeleton h={92} r={22} />;
-  const faces = [...q.data.cards.slice(0, 4).map((cd) => ({ key: cd.id, photo: cd.photos[0], blur: null as string | null })), ...q.data.locked.slice(0, Math.max(0, 4 - q.data.cards.length)).map((l, i) => ({ key: `l${i}`, photo: undefined, blur: l.blurhash }))];
+  const faces = [...q.data.cards.slice(0, 4).map((cd) => ({ key: cd.id, photo: cd.photos[0], blur: null as string | null })), ...(q.data.locked ?? []).slice(0, Math.max(0, 4 - q.data.cards.length)).map((l, i) => ({ key: `l${i}`, photo: undefined, blur: l.blurhash }))];
   return (
     <Pressable accessibilityRole="button" accessibilityLabel={total ? `${total} people like you. See all.` : "Likes you. Nobody yet."} onPress={() => router.push("/likes")}
       style={{ borderRadius: 24, overflow: "hidden", marginBottom: 14 }}>

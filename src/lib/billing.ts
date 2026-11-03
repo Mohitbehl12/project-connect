@@ -96,10 +96,17 @@ async function couponByCode(code: string) {
   return (await db.query.coupons.findFirst({ where: eq(schema.coupons.code, code.trim().toUpperCase()) })) ?? null;
 }
 
-export async function quoteFor(user: User, planCode: string, opts: { coupon?: string | null; offerId?: string | null; durationDays?: number | null } = {}): Promise<Quote> {
+type QuoteCtx = { buyer: Awaited<ReturnType<typeof loadBuyer>>; prices: Awaited<ReturnType<typeof priceRows>>; offers: Awaited<ReturnType<typeof offerRows>>; genderCountries: string[]; reminderDays: number };
+async function quoteCtx(user: User): Promise<QuoteCtx> {
   const [buyer, prices, offers, genderCountries, reminderDays] = await Promise.all([
     loadBuyer(user), priceRows(), offerRows(), getConfig("billing.genderPricingCountries"), getConfig("billing.reminderDays"),
   ]);
+  return { buyer, prices, offers, genderCountries, reminderDays };
+}
+
+/** `ctx` lets a caller quoting many plans load the buyer, prices and offers once instead of per quote. */
+export async function quoteFor(user: User, planCode: string, opts: { coupon?: string | null; offerId?: string | null; durationDays?: number | null } = {}, ctx?: QuoteCtx): Promise<Quote> {
+  const { buyer, prices, offers, genderCountries, reminderDays } = ctx ?? (await quoteCtx(user));
   const price = pickPrice(prices, planCode, buyer, genderCountries, opts.durationDays);
   if (!price || planCode === "FREE")
     throw new ApiError(404, opts.durationDays ? "That billing period isn't available for this plan." : "That plan isn't available in your country.", "not_found");
@@ -124,19 +131,20 @@ export async function catalogue(user: User) {
     return { plans: [], passes: [], subscription: await subscriptionSummary(user.id), membership, freeForever: true, provider: checkoutProviderName(), appleIap: { enabled: false }, store: { enabled: false } };
   const plans = await db.select().from(schema.plans).where(and(eq(schema.plans.active, true), ne(schema.plans.code, "FREE"))).orderBy(schema.plans.sortOrder);
   const out = [];
+  const ctx = await quoteCtx(user); // one load for every plan and period below (was ~5 queries per quote)
   for (const p of plans) {
     try {
-      const quote = await quoteFor(user, p.code);
+      const quote = await quoteFor(user, p.code, {}, ctx);
       // Every billing period on offer (e.g. monthly, 3, 6 and 12 months), each with its own quote.
       const options = [];
-      for (const pr of priceOptions(await priceRows(), p.code, await loadBuyer(user), await getConfig("billing.genderPricingCountries"))) {
-        const q = pr.id === quote.priceId ? quote : await quoteFor(user, p.code, { durationDays: pr.durationDays });
+      for (const pr of priceOptions(ctx.prices, p.code, ctx.buyer, ctx.genderCountries)) {
+        const q = pr.id === quote.priceId ? quote : await quoteFor(user, p.code, { durationDays: pr.durationDays }, ctx);
         options.push({ durationDays: pr.durationDays, label: periodLabel(pr.durationDays), perMonthMinor: Math.round((pr.amountMinor * 30) / pr.durationDays), quote: q, store: storeIds(pr) });
       }
       out.push({ code: p.code, name: p.name, features: JSON.parse(p.features) as PlanFeatures, quote, options });
     } catch { /* plan not sold in this country */ }
   }
-  const [buyer, offers, genderCountries, reminderDays, prices] = await Promise.all([loadBuyer(user), offerRows(), getConfig("billing.genderPricingCountries"), getConfig("billing.reminderDays"), priceRows()]);
+  const { buyer, offers, genderCountries, reminderDays, prices } = ctx;
   const passes: Quote[] = [];
   for (const p of plans) {
     const price = pickPrice(prices, p.code, buyer, genderCountries);

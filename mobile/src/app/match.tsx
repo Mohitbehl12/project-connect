@@ -77,7 +77,7 @@ export default function MatchMoment() {
   const starter = match.data?.starters[picked];
 
   return (
-    <Animated.View entering={FadeIn.duration(200)} style={{ flex: 1, backgroundColor: g.night }}>
+    <Animated.View entering={FadeIn.duration(200)} style={{ flex: 1, backgroundColor: g.night, overflow: "hidden" }}>
       <Aurora variant="match" />
       <FloatingHearts count={7} />
       <Pressable style={{ flex: 1 }} onPress={skip} accessibilityLabel={`It's a match with ${name}`}>

@@ -39,7 +39,11 @@ export default function ProfileSheet() {
   const [page, setPage] = useState(0);
 
   if (!card && remote.isLoading) return <View style={{ flex: 1, backgroundColor: c.bg, padding: 20, paddingTop: insets.top + 20 }}><Skeleton h={480} r={28} /></View>;
-  if (!card) return <ErrorState message="This profile isn't available any more." onRetry={() => router.back()} />;
+  // Only a "not found" means the profile is gone; anything else (offline, busy server) can be retried.
+  const gone = !remote.error || (remote.error as { status?: number }).status === 404;
+  if (!card) return gone
+    ? <ErrorState message="This profile isn't available any more." onRetry={() => router.back()} />
+    : <ErrorState message={(remote.error as Error).message} onRetry={() => remote.refetch()} />;
   const h = width * 1.3;
 
   return (

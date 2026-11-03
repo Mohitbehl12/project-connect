@@ -1,6 +1,6 @@
 import "server-only";
 import { z } from "zod";
-import { and, desc, eq, inArray, lte, max, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { db, schema } from "@/db";
 import type { User } from "@/db/schema";
@@ -192,10 +192,14 @@ async function credit(txId: string, providerPaymentId: string | null) {
   const t = await db.query.adTransactions.findFirst({ where: eq(schema.adTransactions.id, txId) });
   if (!t || t.kind !== "TOPUP") return null;
   if (t.status === "PAID") return t; // idempotent (browser callback and webhook can both arrive)
-  const [{ n }] = await db.select({ n: max(schema.adTransactions.receiptNo) }).from(schema.adTransactions);
-  const next = `KN-AD-${new Date().getUTCFullYear()}-${String((Number(String(n ?? "").split("-").pop()) || 0) + 1).padStart(5, "0")}`;
-  const r = await db.update(schema.adTransactions).set({ status: "PAID", paidAt: new Date(), providerPaymentId, receiptNo: next })
-    .where(and(eq(schema.adTransactions.id, txId), eq(schema.adTransactions.status, "PENDING"))).returning();
+  // The receipt number is worked out inside the same UPDATE, so two payments at the same moment can never
+  // get the same number; numbering restarts each year (KN-AD-2026-00001, …).
+  const year = String(new Date().getUTCFullYear()), prefix = `KN-AD-${year}-`;
+  const tx = schema.adTransactions;
+  const nextNo = sql`(select ${prefix} || substr('00000' || (coalesce(max(cast(substr(t2.receipt_no, ${prefix.length + 1}) as integer)), 0) + 1), -5) from ad_transactions t2 where t2.receipt_no like ${prefix + "%"})`;
+  const r = await db.update(tx).set({ status: "PAID", paidAt: new Date(), providerPaymentId, receiptNo: nextNo as unknown as string })
+    .where(and(eq(tx.id, txId), eq(tx.status, "PENDING"))).returning();
+  const next = r[0]?.receiptNo ?? null;
   if (!r.length) return t;
   await db.update(schema.advertisers).set({ balanceMinor: sql`${schema.advertisers.balanceMinor} + ${t.amountMinor}` }).where(eq(schema.advertisers.id, t.advertiserId));
   await logAdAudit(null, "topup", t.advertiserId, { amountMinor: t.amountMinor, receipt: next });

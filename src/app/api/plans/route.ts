@@ -1,5 +1,6 @@
 import { ok, route } from "@/lib/http";
 import { catalogue } from "@/lib/billing";
+import { planFeatures } from "@/lib/config";
 
 /**
  * Plans with the price that applies to this person (country and price group), today's offer and
@@ -11,7 +12,7 @@ export const GET = route(async ({ user }) => {
     current: { code: user.planCode, endsAt: user.planEndsAt },
     subscription: c.subscription,
     plans: [
-      { code: "FREE", name: "Free", features: null, price: null, quote: null },
+      { code: "FREE", name: "Free", features: await planFeatures("FREE", null), price: null, quote: null }, // the web Plans table reads every plan's features
       ...c.plans.map((p) => ({
         code: p.code, name: p.name, features: p.features, quote: p.quote,
         price: { id: p.quote.priceId, currency: p.quote.currency, amountMinor: p.quote.todayMinor, listMinor: p.quote.regularMinor, durationDays: p.quote.periodDays },

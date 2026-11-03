@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `adt_receipt` ON `ad_transactions` (`receipt_no`);

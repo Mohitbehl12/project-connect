@@ -197,16 +197,18 @@ export function PersonalityForm({ initial, submitLabel, onSaved }: { initial?: R
         <fieldset key={q.key} className="panel p-5">
           <legend className="sr-only">{q.prompt}</legend>
           <p className="font-display text-lg font-bold">{q.prompt}</p>
-          <div className="mt-3 flex items-center gap-2">
-            <span className="w-24 text-right text-sm text-ink-soft sm:w-32">{q.left}</span>
+          {/* Phones: the two ends of the scale sit above the circles so the row fits a 320px screen. */}
+          <div className="mt-3 flex justify-between gap-4 text-xs text-ink-soft sm:hidden" aria-hidden><span>{q.left}</span><span className="text-right">{q.right}</span></div>
+          <div className="mt-2 flex items-center gap-2 sm:mt-3">
+            <span className="hidden w-32 shrink-0 text-right text-sm text-ink-soft sm:block">{q.left}</span>
             <div className="flex flex-1 justify-between" role="radiogroup" aria-label={q.prompt}>
               {[1, 2, 3, 4, 5].map((v) => (
-                <button key={v} type="button" role="radio" aria-checked={a[q.key] === v} aria-label={`${v} of 5`}
+                <button key={v} type="button" role="radio" aria-checked={a[q.key] === v} aria-label={v === 1 ? `1 of 5: ${q.left}` : v === 5 ? `5 of 5: ${q.right}` : `${v} of 5`}
                   onClick={() => setA({ ...a, [q.key]: v })}
-                  className={`h-9 w-9 rounded-full border-2 transition-colors ${a[q.key] === v ? "border-ink bg-ink" : "border-mist bg-paper-raised hover:border-ink-faint"}`} />
+                  className={`h-8 w-8 shrink-0 rounded-full border-2 transition-colors sm:h-9 sm:w-9 ${a[q.key] === v ? "border-ink bg-ink" : "border-mist bg-paper-raised hover:border-ink-faint"}`} />
               ))}
             </div>
-            <span className="w-24 text-sm text-ink-soft sm:w-32">{q.right}</span>
+            <span className="hidden w-32 shrink-0 text-sm text-ink-soft sm:block">{q.right}</span>
           </div>
         </fieldset>
       ))}

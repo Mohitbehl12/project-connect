@@ -147,13 +147,13 @@ function Settings() {
 
       <h2 className="mb-3 mt-10 text-2xl font-extrabold">Plans and prices</h2>
       <p className="mb-4 text-ink-soft">Amounts are in minor units (paise, cents): 10000 = ₹100. Use country “*” for the default price. Gender price groups only apply in the countries listed under Billing below; everyone not in a group pays the “Everyone else” price. Changing a price affects new subscriptions; existing subscribers keep theirs until they change plan. Intro offers like “₹1 for 15 days” live in Offers & coupons.</p>
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         {plans.map((p, pi) => {
           const upd = (fn: (x: any) => void) => { const next = structuredClone(plans); fn(next[pi]); setPlans(next); };
           return (
-            <section key={p.id} className="panel p-5">
+            <section key={p.id} className="panel min-w-0 p-5">
               <div className="flex items-center justify-between"><h3 className="text-lg font-bold">{p.name} <span className="text-sm text-ink-faint">{p.code}</span></h3></div>
-              <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+              <div className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
                 <label>Likes per day (-1 = unlimited)<input type="number" className="input mt-1" value={p.features.dailyLikes} onChange={(e) => upd((x) => { x.features.dailyLikes = Number(e.target.value); })} /></label>
                 <label>Priority likes per day<input type="number" className="input mt-1" value={p.features.dailyPriorityLikes} onChange={(e) => upd((x) => { x.features.dailyPriorityLikes = Number(e.target.value); })} /></label>
                 <label>Boosts per month<input type="number" className="input mt-1" value={p.features.monthlyBoosts} onChange={(e) => upd((x) => { x.features.monthlyBoosts = Number(e.target.value); })} /></label>
@@ -164,7 +164,7 @@ function Settings() {
                 ))}
               </div>
               {p.code !== "FREE" && (
-                <table className="mt-3 w-full text-sm">
+                <div className="mt-3 overflow-x-auto"><table className="w-full text-sm">
                   <thead className="text-left text-ink-faint"><tr><th>Country</th><th>Price group</th><th>Currency</th><th>Price</th><th>Promo</th><th>Days</th><th>Store product id</th><th></th></tr></thead>
                   <tbody>
                     {p.prices.map((pr: any, i: number) => (
@@ -185,7 +185,7 @@ function Settings() {
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                </table></div>
               )}
               <div className="mt-4 flex gap-2">
                 {p.code !== "FREE" && <button className="btn-outline px-3 py-1.5 text-sm" onClick={() => upd((x) => { x.prices.push({ country: "", currency: "", amountMinor: 0, durationDays: 30, active: true, segment: "*" }); })}>Add country price</button>}

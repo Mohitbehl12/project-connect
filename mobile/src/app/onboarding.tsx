@@ -86,6 +86,12 @@ export default function Onboarding() {
   const [distance, setDistance] = useState(50);
   const [photoCount, setPhotoCount] = useState(0);
   const [verifyRequested, setVerifyRequested] = useState(false);
+  // Leave only once the app's own copy of "me" says onboarding is done. Navigating straight after the
+  // refetch used the old copy, so the tabs sent new members back to an empty first step.
+  const [leaving, setLeaving] = useState(false);
+  useEffect(() => {
+    if (leaving && me && me.user.onboardingStep >= 3) router.replace("/discover");
+  }, [leaving, me]);
 
   // Resume where the person left off.
   useEffect(() => {
@@ -168,7 +174,7 @@ export default function Onboarding() {
         </View>
         {g && g.intents.length > 1 && (
           <Animated.View entering={FadeIn} style={{ gap: 8 }}>
-            <T v="callout" tone="muted">More specifically</T>
+            <T v="callout" tone={intent ? "muted" : "brand"}>More specifically — pick one</T>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {g.intents.map((i) => <Chip key={i} label={INTENT_LABEL[i]} selected={intent === i} onPress={() => setIntent(i)} />)}
             </View>
@@ -176,7 +182,8 @@ export default function Onboarding() {
         )}
       </>
     );
-    cta = <Button title="Continue" size="lg" full loading={busy} disabled={!intent}
+    // Say what's missing instead of a silently disabled button.
+    cta = <Button title={goal && !intent ? "Pick one option above" : "Continue"} size="lg" full loading={busy} disabled={!intent}
       onPress={() => save(() => api("/api/profile", { method: "PATCH", body: { firstName: name.trim(), gender, city, intent } }), 3)} />;
   } else if (step === 3) {
     body = (
@@ -284,7 +291,7 @@ export default function Onboarding() {
         </View>
       </View>
     );
-    cta = <Button title="Start discovering" v="accent" size="lg" full onPress={async () => { await refetchMe(); router.replace("/discover"); }} />;
+    cta = <Button title="Start discovering" v="accent" size="lg" full loading={leaving} onPress={async () => { setLeaving(true); await refetchMe(); }} />;
   }
 
   return (

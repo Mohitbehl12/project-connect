@@ -24,7 +24,8 @@
     "backup:restore": "tsx scripts/restore-backup.ts",
     "reviewer:create": "tsx scripts/create-reviewer.ts",
     "brand:rename": "tsx scripts/rename-brand.ts",
-    "test:security": "tsx tests/security.ts"
+    "test:security": "tsx tests/security.ts",
+    "test:qa": "tsx tests/qa/api.ts && tsx tests/qa/screens.ts && tsx tests/qa/signup.ts && vitest run tests/unit/qa-properties.test.ts"
   },
   "keywords": [],
   "author": "",

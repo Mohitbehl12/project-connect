@@ -13,3 +13,4 @@ data/
 mobile/dist/
 mobile/.expo/
 mobile/.env
+qa-results/

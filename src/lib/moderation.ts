@@ -30,6 +30,8 @@ const RULES: { flag: Flag; patterns: RegExp[] }[] = [
       /\b(i('| a)?ll|i will|gonna|going to)\b.{0,20}\b(kill|hurt|beat|rape|destroy) (you|u)\b/i,
       /\b(i('| a)?ll|i will|gonna|going to)\b.{0,20}\bfind (you|u)\s*([.!]|and\b|$)/i,
       /\b(i know where you (live|work|stay))\b/i,
+      /\bfind (out )?where (you|u) (live|work|stay)\b/i,
+      /\b(i('| a)?ll|i will|gonna|going to)\b.{0,60}\b(kill|hurt|beat|rape) (you|u)\b/i,
       /\b(leak|post|share|send)\b.{0,25}\b(your|ur) (photos?|pics?|pictures?|videos?|nudes?)\b/i,
       /\b(pay (me|up)|send money)\b.{0,30}\b(or (else|i('| wi)ll))\b/i,
     ],
@@ -56,7 +58,9 @@ const RULES: { flag: Flag; patterns: RegExp[] }[] = [
 
 export function screenMessage(text: string): Flag[] {
   const flags = new Set<Flag>();
-  for (const r of RULES) if (r.patterns.some((p) => p.test(text))) flags.add(r.flag);
+  // Spacing tricks ("send  money", zero-width characters, line breaks) must not slip past the rules.
+  const t = text.normalize("NFKC").replace(/[\u200b-\u200d\u2060\ufeff\u00ad]/g, "").replace(/\s+/g, " ");
+  for (const r of RULES) if (r.patterns.some((p) => p.test(t))) flags.add(r.flag);
   return [...flags];
 }
 

@@ -312,3 +312,16 @@ Self-service ads for businesses, built as a separate module (`src/lib/ads.ts`, `
 - **Themes:** dark stays black-wine with rose, purple and sparing gold; light is now ivory and pearl with champagne lines and charcoal type.
 - **Fix found while testing:** saving a single profile field from the app (for example only the bio) cleared that person's interests and prompts. The partial save now leaves unsent fields alone, with an end-to-end check.
 - **Tests:** 890 end-to-end checks, 66 security checks, 89 unit tests; iPhone and Android bundles build.
+
+## QA campaign: 3,423 new test cases (3 November 2026)
+
+`npm run test:qa` (server running with `ADMIN_MFA_OPTIONAL=true`; Playwright for the browser parts) adds four suites in `tests/qa` and `tests/unit/qa-properties.test.ts`. Results go to `qa-results/*.json`.
+
+- **API and data (1,105):** malformed and hostile input on every write route (never a server error); a role × route access matrix (signed out, member, business account, least-privilege staff); 14 simulated members liking, matching, chatting, blocking and reporting with invariant checks; empty-vs-busy response shapes; race conditions (simultaneous likes, messages, boosts, top-ups, refunds, receipt numbers); response-time budgets.
+- **Real-user journeys (118):** sign-up through every onboarding step to the first like, search, privacy settings and sign-out, tapped in a real browser by three different people (dark/light, 390/320 px).
+- **Screens (1,365):** every app screen (dark, light, 320 px), every website page (desktop and phone), the longest content the app accepts, and a brand-new empty account — checking crashes, console errors, sideways scroll, "undefined/NaN" text, broken images and unlabeled buttons.
+- **Logic (835 generated cases):** matching scores and symmetry, distance and age, message screening, coupons, ad targeting, colour contrast of every theme.
+
+Bugs found and fixed: Matches tab crashed for anyone with no pending likes; new members were sent back to an empty first onboarding step after "Start discovering"; web Plans page crashed; threats like "I'll find where you live and hurt you" and spacing tricks slipped past message screening; two ad payments at the same moment could share a receipt number (now atomic, yearly numbering, unique index — migration 0017); the session-refresh limit was per network address, which would sign out many people sharing one mobile-network address; match screen sound error and overflow on the web; faint text below 3:1 contrast in four light themes; phone overflow on the web profile and admin legal/settings pages; long names overflowing the web profile; a silently disabled Continue in onboarding; a see-through "no results" button in search; a network error on a profile looked like "profile gone". The Premium catalogue now loads prices once per request (p95 805 → 359 ms under load).
+
+After the fixes: 3,423 QA cases, 890 end-to-end, 66 security and 89 unit tests all pass; iPhone and Android bundles build.

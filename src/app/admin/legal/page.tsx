@@ -41,7 +41,7 @@ function Legal() {
                 <Link href={`/legal/${d.slug}`} target="_blank" className="text-sm underline">View public page</Link>
                 <button className="btn-outline ml-auto px-3 py-1.5 text-sm" onClick={() => setEditing({ docId: d.id, title: d.title, body: latestPublished?.body ?? "", changeSummary: "", material: true })}>New version</button>
               </div>
-              <table className="mt-3 w-full text-sm">
+              <div className="mt-3 overflow-x-auto"><table className="w-full text-sm">
                 <thead className="text-left text-ink-faint"><tr><th className="py-1">Version</th><th>Status</th><th>Effective</th><th>Acceptances</th><th>Lawyer review</th><th></th></tr></thead>
                 <tbody className="divide-y divide-mist">
                   {d.versions.map((v: any) => (
@@ -66,7 +66,7 @@ function Legal() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             </section>
           );
         })}

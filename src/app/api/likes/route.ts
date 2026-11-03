@@ -81,14 +81,14 @@ export const POST = route(async ({ req, user }) => {
 /** People who liked me and whom I haven't responded to yet. */
 export const GET = route(async ({ user }) => {
   const me = await loadPerson(user.id);
-  if (!me) return ok({ total: 0, cards: [], hidden: 0, canSeeAll: false });
+  if (!me) return ok({ total: 0, cards: [], hidden: 0, locked: [], canSeeAll: false });
   const f = await planFeatures(user.planCode, user.planEndsAt);
   const acted = (await db.select({ id: schema.likes.toId }).from(schema.likes).where(eq(schema.likes.fromId, user.id))).map((x) => x.id);
   const blocked = [...(await blockedIds(user.id))];
 
   const incoming = await db.select().from(schema.likes)
     .where(and(eq(schema.likes.toId, user.id), inArray(schema.likes.kind, ["LIKE", "PRIORITY", "SPARK"]), notInArray(schema.likes.fromId, [...acted, ...blocked, user.id])));
-  if (!incoming.length) return ok({ total: 0, cards: [], hidden: 0, canSeeAll: f.seeWhoLiked });
+  if (!incoming.length) return ok({ total: 0, cards: [], hidden: 0, locked: [], canSeeAll: f.seeWhoLiked }); // same shape every time — the app reads `locked`
 
   const rows = await db.select({ user: schema.users, profile: schema.profiles, prefs: schema.preferences })
     .from(schema.users)

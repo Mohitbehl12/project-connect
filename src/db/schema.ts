@@ -779,7 +779,7 @@ export const adTransactions = sqliteTable("ad_transactions", {
   decidedById: text("decided_by_id"),
   createdAt: now("created_at"),
   paidAt: ts("paid_at"),
-}, (t) => [index("adt_adv").on(t.advertiserId, t.createdAt), index("adt_order").on(t.providerOrderId)]);
+}, (t) => [index("adt_adv").on(t.advertiserId, t.createdAt), index("adt_order").on(t.providerOrderId), uniqueIndex("adt_receipt").on(t.receiptNo)]);
 
 export const adReports = sqliteTable("ad_reports", {
   id: id(),

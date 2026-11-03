@@ -50,7 +50,7 @@ function build(s: Seed): Theme {
   const W = "#FFFFFF";
   const light: Palette = {
     bg: s.bg, surface: s.tint ? mix(W, s.bg, 0.35) : W, raised: mix(s.bg, s.tint ?? s.brand, s.tint ? 0.12 : 0.07), line: mix(s.bg, s.tint ?? s.brand, s.tint ? 0.3 : 0.15),
-    text: s.text, muted: mix(s.text, s.bg, 0.3), faint: mix(s.text, s.bg, 0.5),
+    text: s.text, muted: mix(s.text, s.bg, 0.3), faint: mix(s.text, s.bg, 0.45),
     brand: s.brand, brandText: W, brandWash: mix(W, s.brand, 0.12),
     accent: s.accent, accentText: s.accentInk, accentWash: mix(W, s.accent, 0.3),
     trust: "#1F7A6B", trustWash: "#DCF0EA", alert: "#B3261E", alertWash: "#FCE4E2",

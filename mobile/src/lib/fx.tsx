@@ -1,4 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 import { createAudioPlayer, type AudioPlayer } from "expo-audio";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useReducedMotion } from "react-native-reanimated";
@@ -50,6 +51,9 @@ const players: Partial<Record<SoundName, AudioPlayer>> = {};
 
 export function playSound(name: SoundName) {
   if (!fxState.sound) return;
+  // On the web, browsers refuse sound before the person has tapped something, and expo-audio's web player
+  // doesn't catch that refusal — so don't try until there has been a tap.
+  if (Platform.OS === "web" && !(globalThis.navigator as any)?.userActivation?.hasBeenActive) return;
   try {
     const p = players[name] ?? (players[name] = createAudioPlayer(SOURCES[name]));
     p.volume = 0.5;

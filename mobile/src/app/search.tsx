@@ -115,9 +115,11 @@ export default function Search() {
         </ScrollView>
         <View style={{ position: "absolute", left: 20, right: 20, bottom: 16 }}>
           <Pressable accessibilityRole="button" disabled={count === 0} onPress={() => { haptic.medium(); router.push({ pathname: "/explore/[key]", params: { key: `s:${qs || "mode=recommended"}` } }); }}
-            style={{ borderRadius: 30, overflow: "hidden", opacity: count === 0 ? 0.6 : 1, shadowColor: g.sunset[0], shadowOpacity: 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 }}>
-            <LinearGradient colors={[g.sunset[0], g.sunset[2]]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 58, alignItems: "center", justifyContent: "center" }}>
-              <T v="headline" tone="white">{count === null ? "Show people" : count === 0 ? "No one yet — try fewer filters" : `Show ${count} ${count === 1 ? "person" : "people"} ✨`}</T>
+            accessibilityState={{ disabled: count === 0 }}
+            style={{ borderRadius: 30, overflow: "hidden", shadowColor: g.sunset[0], shadowOpacity: count === 0 ? 0 : 0.45, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 }}>
+            {/* No results: a solid, quiet pill (a see-through one let the tiles behind show through). */}
+            <LinearGradient colors={count === 0 ? [c.raised, c.raised] : [g.sunset[0], g.sunset[2]]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: 58, alignItems: "center", justifyContent: "center", paddingHorizontal: 16, borderRadius: 30, borderWidth: count === 0 ? 1 : 0, borderColor: c.line }}>
+              <T v="headline" numberOfLines={1} style={{ color: count === 0 ? c.muted : "#FFFFFF" }}>{count === null ? "Show people" : count === 0 ? "No one yet — try fewer filters" : `Show ${count} ${count === 1 ? "person" : "people"} ✨`}</T>
             </LinearGradient>
           </Pressable>
         </View>
