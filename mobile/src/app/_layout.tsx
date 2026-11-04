@@ -15,6 +15,7 @@ import { FxLayer } from "@/components/FxLayer";
 import { FxProvider } from "@/lib/fx";
 import { StoreBridge } from "@/components/StoreBridge";
 import { AuthProvider } from "@/lib/auth";
+import { UpdateGate } from "@/lib/appConfig";
 import { installCrashReporter, reportError, setCrashScreen } from "@/lib/crashReporter";
 import { ThemeProvider, useTheme } from "@/theme/ThemeProvider";
 
@@ -67,6 +68,7 @@ function Shell() {
       </Stack>
       <IncomingCall />
       <FxLayer />
+      <UpdateGate />
     </>
   );
 }

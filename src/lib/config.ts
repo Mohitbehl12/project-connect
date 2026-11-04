@@ -70,6 +70,9 @@ export const CONFIG_DEFAULTS = {
   "ops.autoRollback": true, // roll back a release the watchdog finds broken (needs RENDER_API_KEY); off = alert only
   "ops.alertMinSeverity": "HIGH" as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL", // who gets woken up
   "ops.issueMinSeverity": "MEDIUM" as "LOW" | "MEDIUM" | "HIGH" | "CRITICAL", // what becomes a GitHub issue for the AI engineer
+  // iPhone, Android and the web app are released separately (Admin → Apps): per-platform minimum and latest
+  // versions, store links, and switches that turn a feature off in one app without touching the others.
+  "app.platforms": {} as Partial<Record<"ios" | "android" | "web", import("./appReleases").PlatformRelease>>,
   "ops.lastRuns": { monitor: null, hourly: null, daily: null, github: null } as { monitor: string | null; hourly: string | null; daily: string | null; github: string | null },
   "ops.lastBackup": { at: null, key: null, bytes: 0, error: null } as { at: string | null; key: string | null; bytes: number; error: string | null; failedAt?: string },
   // Country rules (src/lib/compliance.ts has the starting values); only overrides are stored here.

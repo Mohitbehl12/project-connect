@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+import { useFeature } from "@/lib/appConfig";
 import { useEffect, useMemo, useState } from "react";
 import { Linking, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import Animated, { FadeIn, FadeInDown } from "react-native-reanimated";
@@ -41,6 +42,7 @@ export default function Premium() {
   const { c, g } = useTheme();
   const insets = useSafeAreaInsets();
   const q = useQuery({ queryKey: ["catalogue"], queryFn: () => api<Catalogue>("/api/billing/catalogue") });
+  const premiumOn = useFeature("premium");
   const [choice, setChoice] = useState<string | null>(null); // plan code or "pass:<offerId>"
   const [showCode, setShowCode] = useState(false);
   const [code, setCode] = useState("");
@@ -121,6 +123,13 @@ export default function Premium() {
     router.push({ pathname: "/checkout", params: { plan: selected.planCode, offerId: choice.startsWith("pass:") ? choice.slice(5) : "", coupon: coupon?.plan === choice ? coupon.quote.coupon?.code ?? "" : "", duration: choice.startsWith("pass:") ? "" : String(selected.periodDays) } });
   }
 
+  if (!premiumOn) return (
+    <View style={{ flex: 1, backgroundColor: c.bg, paddingTop: insets.top + 24, paddingHorizontal: 24, gap: 14 }}>
+      <T v="title">Premium isn't available in this app yet</T>
+      <T tone="muted">Everything you need to meet people safely stays free. Check back soon.</T>
+      <Pressable accessibilityRole="button" onPress={() => router.back()} style={{ alignSelf: "flex-start", paddingVertical: 10 }}><T strong>Go back</T></Pressable>
+    </View>
+  );
   if (q.data?.freeForever) return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       <LinearGradient colors={[...g.dusk]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ paddingTop: insets.top + 8, paddingHorizontal: 20, paddingBottom: 30, gap: 10, overflow: "hidden" }}>

@@ -1,3 +1,4 @@
+import { useFeature } from "@/lib/appConfig";
 import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
@@ -43,6 +44,7 @@ export default function Chat() {
   const [text, setText] = useState(draft ?? "");
   const [err, setErr] = useState("");
   const [closing, setClosing] = useState(false);
+  const callsOn = useFeature("calls"), cupidOn = useFeature("cupid"), checkinOn = useFeature("checkin");
   const [staleHidden, setStaleHidden] = useState(false);
   const [callNote, setCallNote] = useState("");
   const [menu, setMenu] = useState(false);
@@ -266,8 +268,8 @@ export default function Chat() {
               <T v="caption" tone={chemistry ? undefined : o?.online ? "trust" : "faint"} style={chemistry ? { color: g.sunset[0] } : undefined}>{chemistry ? "You're having great chemistry 💕" : o?.online ? "Active now" : o?.city ?? ""}</T>
             </View>
           </Pressable>
-          <IconButton icon="call" label="Voice call" tone="none" disabled={ended} onPress={() => startCall("AUDIO")} />
-          <IconButton icon="video" label="Video call" tone="none" disabled={ended} onPress={() => startCall("VIDEO")} />
+          {callsOn && <IconButton icon="call" label="Voice call" tone="none" disabled={ended} onPress={() => startCall("AUDIO")} />}
+          {callsOn && <IconButton icon="video" label="Video call" tone="none" disabled={ended} onPress={() => startCall("VIDEO")} />}
           <IconButton icon="shield" label="Safety and options" tone="none" onPress={() => setMenu(true)} />
         </View>
         {nextDate && (
@@ -277,7 +279,7 @@ export default function Chat() {
               <T v="callout">{nextDate.status === "CONFIRMED" ? "Date confirmed" : nextDate.mine ? "Waiting for a reply" : "Date suggestion"} · {DATE_KINDS[nextDate.kind as keyof typeof DATE_KINDS]}</T>
               <T v="caption" tone="muted">{nextDate.place} · {new Date(nextDate.startsAt).toLocaleString([], { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</T>
             </View>
-            {nextDate.status === "CONFIRMED" && (
+            {nextDate.status === "CONFIRMED" && checkinOn && (
               <Pressable accessibilityRole="button" accessibilityLabel="Set up a safety check-in for this date"
                 onPress={() => router.push({ pathname: "/checkin/new", params: { matchId: id, datePlanId: nextDate.id, place: nextDate.place, startsAt: nextDate.startsAt } })}
                 style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: c.surface, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 }}>
@@ -350,9 +352,9 @@ export default function Chat() {
             <PhotoView photo={o?.photos[0]} rounded={44} style={{ width: 88, height: 88 }} />
             <T v="title" center style={onBg ? { color: "#FFFFFF" } : undefined}>You matched with {o?.firstName} 💕</T>
             <T tone="muted" center style={onBg ? { color: onBg } : undefined}>{detail.data.match.score}% compatible. Not sure what to say?</T>
-            <Pressable accessibilityRole="button" onPress={() => setCupid(true)} style={{ marginTop: 4, backgroundColor: g.sunset[0], borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9 }}>
+            {cupidOn && <Pressable accessibilityRole="button" onPress={() => setCupid(true)} style={{ marginTop: 4, backgroundColor: g.sunset[0], borderRadius: 999, paddingHorizontal: 16, paddingVertical: 9 }}>
               <T v="callout" strong style={{ color: "#FFFFFF" }}>Want Cupid's help to start? 😉</T>
-            </Pressable>
+            </Pressable>}
           </Animated.View>
         ) : null}
         renderItem={({ item: m, index }) => {
@@ -448,7 +450,7 @@ export default function Chat() {
       )}
 
       <BottomSheet open={plus} onClose={() => setPlus(false)} title="Share">
-        <SheetAction label="Ask Cupid for ideas ✨" icon={<Icon name="sparkle" />} onPress={() => { setPlus(false); setCupid(true); }} />
+        {cupidOn && <SheetAction label="Ask Cupid for ideas ✨" icon={<Icon name="sparkle" />} onPress={() => { setPlus(false); setCupid(true); }} />}
         <SheetAction label="Send a heart ❤️" icon={<Icon name="likes" />} onPress={() => { setPlus(false); void flirt("HEART"); }} />
         {mediaUnlocked ? (
           <>
@@ -493,7 +495,7 @@ export default function Chat() {
         <SheetAction label="Chat theme & animations" icon={<Icon name="sparkle" />} onPress={() => { setMenu(false); setThemeSheet(true); }} />
         <SheetAction label={msgs.data?.muted ? "Unmute notifications" : "Mute notifications"} icon={<Icon name="bell" />} onPress={async () => { setMenu(false); await api(`/api/matches/${id}/mute`, { body: { muted: !msgs.data?.muted } }).catch(() => {}); msgs.refetch(); }} />
         <SheetAction label="Delete my messages here" icon={<Icon name="trash" />} onPress={async () => { setMenu(false); await api("/api/privacy/messages", { body: { matchId: id } }).catch(() => {}); msgs.refetch(); }} />
-        <SheetAction label="Date safety check-in" icon={<Icon name="shield" color={c.trust} />} onPress={() => { setMenu(false); router.push({ pathname: "/checkin/new", params: { matchId: id } }); }} />
+        {checkinOn && <SheetAction label="Date safety check-in" icon={<Icon name="shield" color={c.trust} />} onPress={() => { setMenu(false); router.push({ pathname: "/checkin/new", params: { matchId: id } }); }} />}
         <SheetAction label="Close the conversation kindly" icon={<Icon name="send" />} onPress={() => { setMenu(false); setClosing(true); }} />
         <SheetAction label="Unmatch" icon={<Icon name="close" />} onPress={unmatch} />
         <SheetAction label="Safety tips" icon={<Icon name="shield" color={c.trust} />} onPress={() => { setMenu(false); router.push("/safety"); }} />

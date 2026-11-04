@@ -1,0 +1,6 @@
+{
+  "_note": "Each app has its own marketing version. Bump only the platform you are releasing, then tag ios-vX.Y.Z or android-vX.Y.Z. Build numbers are managed by EAS per platform.",
+  "ios": "1.0.0",
+  "android": "1.0.0",
+  "web": "1.0.0"
+}

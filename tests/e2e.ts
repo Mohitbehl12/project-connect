@@ -1538,6 +1538,27 @@ async function main() {
     check("…once: it can't be closed twice", (await G1.post(`/api/matches/${gm}/close`, { note: "BUSY" })).status === 410);
   }
 
+  section("Separate iPhone, Android and web releases");
+  {
+    const cfg = (platform: string, version: string) => fetch(`${BASE}/api/public/app-config`, { headers: { "x-platform": platform, "x-app-version": version } }).then((r) => r.json());
+    const iosRel = { minVersion: "1.1.0", latestVersion: "1.2.0", storeUrl: "https://apps.apple.com/app/id123456", message: "Fixes photo uploads", features: { calls: false } };
+    check("staff without settings permission can't change app releases", (await finance.put("/api/admin/apps", { platform: "ios", release: iosRel })).status === 403);
+    check("a minimum newer than the latest is refused", (await admin.put("/api/admin/apps", { platform: "ios", release: { ...iosRel, minVersion: "2.0.0" } })).status === 422);
+    check("only real store links are accepted", (await admin.put("/api/admin/apps", { platform: "ios", release: { ...iosRel, storeUrl: "https://evil.example/app" } })).status === 422);
+    check("iPhone release settings save", (await admin.put("/api/admin/apps", { platform: "ios", release: iosRel })).status === 200);
+    const old = await cfg("ios", "1.0.0"), mid = await cfg("ios", "1.1.5"), cur = await cfg("ios", "1.2.0"), droid = await cfg("android", "1.0.0"), web = await cfg("web", "");
+    check("an old iPhone app must update, with the App Store link and note", old.updateRequired === true && old.storeUrl === iosRel.storeUrl && old.message === "Fixes photo uploads", old);
+    check("a slightly old iPhone app is offered the update", mid.updateRequired === false && mid.updateAvailable === true, mid);
+    check("the current iPhone app is left alone", cur.updateRequired === false && cur.updateAvailable === false, cur);
+    check("calls switched off on iPhone only", cur.features?.calls === false && droid.features?.calls === true && web.features?.calls === true, [cur.features, droid.features]);
+    check("Android is not affected by the iPhone release", droid.updateRequired === false && droid.updateAvailable === false && droid.minVersion === "1.0.0", droid);
+    const apps = await admin.get("/api/admin/apps");
+    check("Admin → Apps shows the three platforms separately", apps.status === 200 && apps.data.platforms.map((p: any) => p.platform).join() === "ios,android,web" && apps.data.platforms[0].release.minVersion === "1.1.0");
+    check("the change is in the audit log", ((await admin.get("/api/admin/audit?action=app.release")).data?.logs ?? []).length >= 1);
+    await admin.put("/api/admin/apps", { platform: "ios", release: { minVersion: "1.0.0", latestVersion: "1.0.0", storeUrl: "", message: "", features: {} } });
+    check("…and it can be put back", (await cfg("ios", "1.0.0")).updateRequired === false && (await cfg("ios", "1.0.0")).features.calls === true);
+  }
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) {
     console.log("Failed:\n - " + failures.join("\n - "));

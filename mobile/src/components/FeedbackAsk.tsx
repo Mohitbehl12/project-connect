@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Platform, Pressable, TextInput, View } from "react-native";
 import { T } from "./Text";
 import { api } from "@/lib/api";
+import { useFeature } from "@/lib/appConfig";
 import { haptic } from "@/lib/haptics";
 import { useTheme } from "@/theme/ThemeProvider";
 
@@ -16,7 +17,8 @@ export function FeedbackAsk({ context, question = "How is Kinara working for you
   const [rating, setRating] = useState<string | null>(null);
   const [comment, setComment] = useState("");
   const [state, setState] = useState<"ask" | "comment" | "done" | "hidden">("ask");
-  if (state === "hidden" || (!always && !q.data?.ask)) return null;
+  const on = useFeature("feedback");
+  if (!on || state === "hidden" || (!always && !q.data?.ask)) return null;
   const send = async (r: string, text?: string) => {
     setState(r === "DISMISSED" ? "hidden" : "done");
     haptic.light();

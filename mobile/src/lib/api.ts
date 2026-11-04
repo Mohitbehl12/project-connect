@@ -1,3 +1,4 @@
+import Constants from "expo-constants";
 import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
@@ -41,7 +42,7 @@ export async function getInstallId() {
   return installId;
 }
 export async function clientHeaders(): Promise<Record<string, string>> {
-  return { "x-install-id": await getInstallId(), "x-platform": Platform.OS };
+  return { "x-install-id": await getInstallId(), "x-platform": Platform.OS, "x-app-version": Constants.expoConfig?.version ?? "" };
 }
 
 let accessToken: string | null = null;

@@ -11,6 +11,7 @@ import { T } from "@/components/Text";
 import { Banner, Chip, Screen } from "@/components/ui";
 import { api, API_URL } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useFeature } from "@/lib/appConfig";
 import { haptic } from "@/lib/haptics";
 import { useTheme, type ThemePref } from "@/theme/ThemeProvider";
 import { Group, LinkRow, Toggle } from "@/components/SettingsKit";
@@ -25,6 +26,7 @@ export default function Settings() {
   const qc = useQueryClient();
   const p = me?.preferences;
   const [err, setErr] = useState("");
+  const referralsOn = useFeature("referrals");
 
   async function set(key: string, value: boolean | string) { await setMany({ [key]: value }); }
   async function setMany(body: Record<string, unknown>) {
@@ -91,7 +93,7 @@ export default function Settings() {
         </Group>
         <Group title="Premium">
           <LinkRow icon="card" label="My subscription" sub="Plan, next payment, invoices, cancel" href="/subscription" />
-          <LinkRow icon="gift" label="Invite & earn" sub="Premium days for every verified friend" href="/referrals" />
+          {referralsOn && <LinkRow icon="gift" label="Invite & earn" sub="Premium days for every verified friend" href="/referrals" />}
         </Group>
         <Group title="Notifications">
           <PushPrompt always />

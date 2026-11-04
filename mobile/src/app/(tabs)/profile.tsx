@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
+import { useFeature } from "@/lib/appConfig";
 import { Pressable, ScrollView, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { INTENTS } from "@shared/constants";
@@ -36,6 +37,7 @@ function nextTip(me: ReturnType<typeof useAuth>["me"], photos: number) {
 
 export default function ProfileTab() {
   const { me } = useAuth();
+  const referralsOn = useFeature("referrals");
   const { c, g } = useTheme();
   const photos = useQuery({ queryKey: ["photos"], queryFn: () => api<{ photos: MyPhoto[] }>("/api/photos") });
   const p = me?.profile;
@@ -87,7 +89,7 @@ export default function ProfileTab() {
 
         <View style={{ marginHorizontal: 20, borderRadius: 22, overflow: "hidden", gap: 1, backgroundColor: c.line }}>
           <RowLink icon="shield" tone="trust" label="Safety Center" sub="Verification, reporting, tips" onPress={() => router.push("/safety")} />
-          <RowLink icon="gift" label="Invite & earn" sub="Premium days for every verified friend" onPress={() => router.push("/referrals")} />
+          {referralsOn && <RowLink icon="gift" label="Invite & earn" sub="Premium days for every verified friend" onPress={() => router.push("/referrals")} />}
           <RowLink icon="eye" label="Privacy Center" sub="Who sees you and your data" onPress={() => router.push("/privacy")} />
           <RowLink icon="sliders" label="Discovery preferences" sub="Who you see and how far" onPress={() => router.push("/preferences")} />
           <RowLink icon="bell" label="Notifications" onPress={() => router.push("/notifications")} />

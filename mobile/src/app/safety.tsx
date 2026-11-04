@@ -11,6 +11,7 @@ import { T } from "@/components/Text";
 import { Banner, Chip, Screen } from "@/components/ui";
 import { recordConsent } from "@/lib/consent";
 import { api } from "@/lib/api";
+import { useFeature } from "@/lib/appConfig";
 import { appendPhoto } from "@/lib/photoFile";
 import { useAuth } from "@/lib/auth";
 import { haptic } from "@/lib/haptics";
@@ -42,6 +43,7 @@ export default function Safety() {
       setAppealMsg({ tone: "trust", text: r.message }); setAppeal({ ...appeal, details: "" }); setAppealOpen(false); appeals.refetch(); haptic.success();
     } catch (e: any) { setAppealMsg({ tone: "alert", text: e.message }); }
   }
+  const checkinOn = useFeature("checkin");
   const checkins = useQuery({ queryKey: ["checkins"], queryFn: () => api<{ checkins: { id: string; place: string; checkInAt: string; contactName: string; status: string }[] }>("/api/safety/checkins") });
   const blocks = useQuery({ queryKey: ["blocks"], queryFn: () => api<{ blocked: { id: string; firstName: string }[] }>("/api/blocks") });
   const status = me?.user.selfieStatus;
@@ -111,7 +113,7 @@ export default function Safety() {
           <T v="caption" tone="muted">What “verified” means: the person's selfie matched their profile photos when we checked. It doesn't prove their name or age, or that they're safe — keep following the tips below.</T>
         </View>
 
-        <View style={{ gap: 10 }}>
+        {checkinOn && <View style={{ gap: 10 }}>
           <T v="headline">Date check-in</T>
           <T tone="muted">Going on a date? Tell someone you trust. We'll ask if you're OK afterwards, and email them if you don't answer.</T>
           {(checkins.data?.checkins ?? []).filter((x) => ["SCHEDULED", "ASKED", "ALERTED"].includes(x.status)).map((x) => (
@@ -122,7 +124,7 @@ export default function Safety() {
             </Pressable>
           ))}
           <Button title="Set up a check-in" v="outline" icon="shield" onPress={() => router.push("/checkin/new")} />
-        </View>
+        </View>}
 
         <View style={{ gap: 10 }}>
           <T v="headline">How to report or block</T>

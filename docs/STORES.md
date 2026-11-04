@@ -67,3 +67,25 @@ products on iPhone (set the men's rows' `apple_product_id` to the standard ids).
 - Automated: `tests/unit/stores.test.ts` checks the Apple signature verification with a test certificate chain;
   the E2E suite runs the whole flow with clearly labelled `mock:` tokens, accepted only where mock payments are on.
 - Not yet tested against the live Apple and Google services (needs the accounts above).
+
+## Releasing iPhone and Android separately
+
+iPhone, Android and the web app share one codebase (`mobile/`) and one server, but each is released on its own.
+
+| | iPhone | Android | Web app (`/app`) |
+| --- | --- | --- | --- |
+| Version | `mobile/versions.json` → `ios` | `mobile/versions.json` → `android` | always the newest the server hosts |
+| Build numbers | EAS, per platform | EAS, per platform | — |
+| Release | tag `ios-vX.Y.Z` → `.github/workflows/ios-app.yml` → TestFlight | tag `android-vX.Y.Z` → `.github/workflows/android-app.yml` → Play internal testing | every deploy |
+| Test build | Actions → "iPhone app" → Run workflow | Actions → "Android app" → Run workflow | — |
+| Settings | Admin → Apps → iPhone | Admin → Apps → Android | Admin → Apps → Web app |
+
+**To release one platform:** change only its version in `versions.json`, commit, push the matching tag. The workflow refuses a tag that doesn't match.
+
+**Admin → Apps (per platform, independent):**
+- *Latest version* — older versions see a gentle "update available".
+- *Minimum version* — older versions must update before continuing. Raise it only for a serious fix (it blocks people until they update).
+- *Store link* — where the update button goes (App Store, TestFlight or Google Play link).
+- *Feature switches* — calls, date check-in, Cupid, sponsored cards, invite & earn, buying Premium, feedback. Turning one off hides it in that app only, e.g. holding a feature back while Apple reviews a build. Server rules still apply, so this is not a security control.
+
+The app sends `x-platform` and `x-app-version` with every request; `/api/public/app-config` answers for that platform.

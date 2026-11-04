@@ -1,3 +1,4 @@
+import { useFeature } from "@/lib/appConfig";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { router } from "expo-router";
@@ -28,10 +29,11 @@ const REASONS: [string, string][] = [["MISLEADING", "Misleading"], ["SCAM", "Sca
 
 /** One ad for a placement, or null. Refreshes at most every few minutes so ads stay light. */
 export function useAd(placement: Placement, enabled = true, exclude: string[] = []) {
+  const on = useFeature("ads");
   return useQuery({
     queryKey: ["ad", placement, exclude.join(",")],
     queryFn: () => api<{ ad: Ad | null }>(`/api/ads/serve?placement=${placement}${exclude.length ? `&exclude=${exclude.join(",")}` : ""}`).then((r) => r.ad).catch(() => null),
-    staleTime: 5 * 60_000, enabled,
+    staleTime: 5 * 60_000, enabled: enabled && on,
   });
 }
 
