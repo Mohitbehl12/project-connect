@@ -72,7 +72,7 @@ jobs:
           nohup npx next start -p 3000 > .ci/server-sec.log 2>&1 &
           for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/api/health >/dev/null && break; sleep 2; done
           npx tsx tests/security.ts
-          kill $(lsof -t -i:3000) || true
+          fuser -k 3000/tcp || true  # stops the security-suite server (lsof finds nothing on the runner)
           sleep 2
       - name: End-to-end suite
         env:
