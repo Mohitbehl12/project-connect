@@ -2,11 +2,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useState } from "react";
 import { ScrollView, Switch, View } from "react-native";
-import { CITIES, GENDERS, INTENTS } from "@shared/constants";
+import { GENDERS, INTENTS } from "@shared/constants";
+import { usePlaces } from "@/lib/places";
 import { Button, IconButton } from "@/components/Button";
 import { Header } from "@/components/Header";
 import { T } from "@/components/Text";
-import { Banner, Chip, Screen } from "@/components/ui";
+import { Banner, Chip, Field, Screen } from "@/components/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { haptic } from "@/lib/haptics";
@@ -28,12 +29,14 @@ export default function Preferences() {
   const [err, setErr] = useState("");
   const travelOn = !!p?.travelCity && !!p.travelUntil && new Date(p.travelUntil) > new Date();
   const [travelMsg, setTravelMsg] = useState("");
-  async function travel(city: string | null) {
+  const [travelQuery, setTravelQuery] = useState("");
+  const travelPlaces = usePlaces(travelQuery);
+  async function travel(city: string | null, label?: string) {
     setTravelMsg("");
     try {
       await api("/api/travel", { method: "PUT", body: { city, days: 7 } });
       haptic.success(); await refetchMe(); qc.invalidateQueries({ queryKey: ["discovery"] });
-      setTravelMsg(city ? `You're visiting ${city} for 7 days ✈️ People there can see you as "Visiting ${city}".` : "Travel mode is off. You're back home.");
+      setTravelMsg(city ? `You're visiting ${label ?? city} for 7 days ✈️ People there can see you as "Visiting ${label ?? city}".` : "Travel mode is off. You're back home.");
     } catch (e: any) {
       setTravelMsg(e.code === "upgrade_required" ? "Travel mode is part of Premium Plus." : e.message);
       if (e.code === "upgrade_required") router.push("/premium");
@@ -95,11 +98,12 @@ export default function Preferences() {
         </View>
         <View style={{ gap: 8 }}>
           <T v="callout" tone="muted">Travel mode ✈️</T>
-          <T v="caption" tone="muted">{travelOn ? `Visiting ${p?.travelCity} until ${new Date(p!.travelUntil!).toLocaleDateString()}. Your home city stays on your profile.` : "Going somewhere? Meet people there before you arrive — for up to 7 days."}</T>
+          <T v="caption" tone="muted">{travelOn ? `Visiting ${p?.travelCityLabel ?? p?.travelCity} until ${new Date(p!.travelUntil!).toLocaleDateString()}. Your home city stays on your profile.` : "Going somewhere? Meet people there before you arrive — for up to 7 days."}</T>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             {travelOn && <Chip label="Back home" selected={false} onPress={() => travel(null)} />}
-            {Object.keys(CITIES).filter((k) => k !== me?.profile?.city).map((k) => <Chip key={k} small label={k} selected={p?.travelCity === k && travelOn} onPress={() => travel(k)} />)}
+            {(travelQuery.trim().length >= 2 ? travelPlaces.places : travelPlaces.places.slice(0, 12)).filter((x) => x.label !== me?.profile?.city).map((x) => <Chip key={x.key} small label={travelQuery.trim().length >= 2 ? `${x.label}, ${x.countryName}` : x.label} selected={p?.travelCity === x.key && travelOn} onPress={() => travel(x.key, x.label)} />)}
           </View>
+          <Field label="Search any town or city" value={travelQuery} onChangeText={setTravelQuery} autoCorrect={false} />
           {travelMsg ? <Banner tone="info">{travelMsg}</Banner> : null}
         </View>
         {err ? <Banner tone="alert">{err}</Banner> : null}

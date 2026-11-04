@@ -7,10 +7,11 @@ import { addRiskSignal } from "@/lib/risk";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ApiError, ok, parseBody, route } from "@/lib/http";
-import { CITIES, GENDERS, INTENTS, INTERESTS, LANGUAGES, LIFESTYLE } from "@/lib/constants";
+import { GENDERS, INTENTS, INTERESTS, LANGUAGES, LIFESTYLE } from "@/lib/constants";
 import { refreshCompleteness } from "@/lib/photos";
 import type { User } from "@/db/schema";
 import { screenMessage } from "@/lib/moderation";
+import { resolvePlace } from "@/lib/places";
 import { fileAutomatedReport, logAutomatedDecision, underageCheck } from "@/lib/safety";
 
 const keysOf = <T extends object>(o: T) => Object.keys(o) as [string, ...string[]];
@@ -19,7 +20,7 @@ const opt = <T extends object>(o: T) => z.enum(keysOf(o)).nullable().optional();
 const Body = z.object({
   firstName: z.string().trim().min(1).max(40).regex(/^[\p{L}][\p{L}' .-]*$/u, "Use letters only"),
   gender: z.enum(keysOf(GENDERS)),
-  city: z.enum(keysOf(CITIES)),
+  city: z.string().trim().min(1, "Choose your city.").max(160), // a quick-pick city, a world place key, or the city you already have
   bio: z.string().trim().max(500).default(""),
   intent: z.enum(keysOf(INTENTS)),
   education: z.string().trim().max(80).nullable().optional(),
@@ -51,7 +52,13 @@ async function saveProfile(user: User, b: ProfileInput) {
   // child-safety queue for a person to check.
   const saysMinor = flags.includes("MINOR");
 
-  const c = CITIES[b.city];
+  const existingProfile = await db.query.profiles.findFirst({ where: eq(schema.profiles.userId, user.id), columns: { city: true, country: true, lat: true, lng: true } });
+  // Keeping the city you already have (sent back as its name) needs no lookup.
+  const keep = existingProfile && b.city === existingProfile.city;
+  const place = keep ? null : resolvePlace(b.city);
+  if (!keep && !place) throw new ApiError(422, "city: Choose your city from the list.", "validation");
+  const c = keep ? { country: existingProfile!.country, lat: existingProfile!.lat, lng: existingProfile!.lng } : { country: place!.country, lat: place!.lat, lng: place!.lng };
+  const cityLabel = keep ? existingProfile!.city : place!.label;
   // Country rules (Admin → Privacy & compliance): minimum age and whether we've launched there.
   const rules = await countryRules(c.country);
   if (!rules.launchEnabled) throw new ApiError(403, "Kinara isn't available in this country yet.", "country_unavailable");
@@ -64,14 +71,14 @@ async function saveProfile(user: User, b: ProfileInput) {
   const genderChanged = !!existing?.gender && existing.gender !== b.gender && user.onboardingStep >= 3;
 
   // Store the city centre with a stable per-user jitter (~±3 km). Device GPS is never collected.
-  const cityChanged = !existing || existing.city !== b.city;
+  const cityChanged = !existing || existing.city !== cityLabel;
   const seed = [...user.id].reduce((s, ch) => (s * 31 + ch.charCodeAt(0)) % 10007, 7);
   // Location = the chosen city's centre with a small fixed offset, rounded to ~1 km. We never ask for GPS.
   const lat = roundCoord(cityChanged ? c.lat + ((seed % 100) / 100 - 0.5) * 0.06 : existing!.lat);
   const lng = roundCoord(cityChanged ? c.lng + ((Math.floor(seed / 100) % 100) / 100 - 0.5) * 0.06 : existing!.lng);
 
   const values = {
-    firstName: b.firstName, dob: user.dob, gender: b.gender, bio: b.bio, country: c.country, city: b.city, lat, lng,
+    firstName: b.firstName, dob: user.dob, gender: b.gender, bio: b.bio, country: c.country, city: cityLabel, lat, lng,
     education: b.education ?? null, profession: b.profession ?? null, industry: b.industry ?? null, heightCm: b.heightCm ?? null,
     drinking: b.drinking ?? null, smoking: b.smoking ?? null, food: b.food ?? null, exercise: b.exercise ?? null, pets: b.pets ?? null,
     intent: b.intent, interests: b.interests.join(","), prompts: JSON.stringify(b.prompts), updatedAt: new Date(),

@@ -1,3 +1,4 @@
+import { resolvePlace } from "@/lib/places";
 import { deleteAccount } from "@/lib/privacy";
 import { z } from "zod";
 import { and, count, eq, gte, isNull, ne, or } from "drizzle-orm";
@@ -42,7 +43,7 @@ export const GET = route(async ({ user }) => {
       paused: !!user.deactivatedAt, restricted: !!user.restrictedAt,
     },
     profile: profile ? safeProfile : null,
-    preferences: prefs ?? null,
+    preferences: prefs ? { ...prefs, travelCityLabel: prefs.travelCity ? resolvePlace(prefs.travelCity)?.label ?? prefs.travelCity : null } : null,
     answers: Object.fromEntries(answers.map((a) => [a.questionKey, a.value])),
     features,
     membership,
