@@ -26,8 +26,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
+        with: { node-version: 22, cache: npm, cache-dependency-path: "package-lock.json\nmobile/package-lock.json" }
       - run: npm ci
+      # Some unit tests import shared app code (mobile/src/theme), whose tsconfig extends Expo's, so the app's
+      # packages must be installed too.
+      - run: npm --prefix mobile ci --ignore-scripts
       - name: Secret scan
         run: node scripts/secret-scan.mjs
       - name: Type check
@@ -50,8 +53,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
+        with: { node-version: 22, cache: npm, cache-dependency-path: "package-lock.json\nmobile/package-lock.json" }
       - run: npm ci
+      - run: npm --prefix mobile ci --ignore-scripts
       - name: Test environment and fresh database
         run: |
           sh scripts/ci-env.sh
