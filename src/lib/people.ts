@@ -3,7 +3,8 @@ import { and, eq, inArray, or } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { MatchPerson } from "./matching";
 import { ageFromDob, distanceLabel, haversineKm } from "./matching";
-import { CITIES, COUNTRIES, GENDERS, INTENTS, INTEREST_EMOJI, INTERESTS, LANGUAGES, LIFESTYLE, type LifestyleKey } from "./constants";
+import { countryName, resolvePlace } from "./places";
+import { COUNTRIES, GENDERS, INTENTS, INTEREST_EMOJI, INTERESTS, LANGUAGES, LIFESTYLE, type LifestyleKey } from "./constants";
 
 type Row = { user: typeof schema.users.$inferSelect; profile: typeof schema.profiles.$inferSelect; prefs: typeof schema.preferences.$inferSelect | null };
 
@@ -27,8 +28,8 @@ export async function loadAnswers(userIds: string[]): Promise<Map<string, Record
 /** Where someone is for matching: their own city, or the city they're visiting with travel mode. */
 export function effectiveLocation(r: Row) {
   const t = r.prefs?.travelCity;
-  if (t && CITIES[t] && r.prefs?.travelUntil && r.prefs.travelUntil.getTime() > Date.now())
-    return { city: t, country: CITIES[t].country, lat: CITIES[t].lat, lng: CITIES[t].lng, visiting: true };
+  const place = t && r.prefs?.travelUntil && r.prefs.travelUntil.getTime() > Date.now() ? resolvePlace(t) : null;
+  if (place) return { city: place.label, country: place.country, lat: place.lat, lng: place.lng, visiting: true };
   return { city: r.profile.city, country: r.profile.country, lat: r.profile.lat, lng: r.profile.lng, visiting: false };
 }
 
@@ -121,7 +122,7 @@ export function publicCard(viewer: MatchPerson, r: Row, extra: { score?: number;
     age: ageFromDob(p.dob),
     gender: GENDERS[p.gender as keyof typeof GENDERS] ?? p.gender,
     // People can hide their city (then only the country shows) and their distance. Never coordinates.
-    city: r.prefs?.showCity === false ? (COUNTRIES[p.country]?.name ?? p.country) : loc.visiting ? `Visiting ${p.city}` : p.city,
+    city: r.prefs?.showCity === false ? countryName(p.country) : loc.visiting ? `Visiting ${p.city}` : p.city,
     distance: r.prefs?.showDistance === false ? "Distance hidden" : distanceLabel(km, viewer.city === p.city && r.prefs?.showCity !== false),
     bio: p.bio,
     intent: INTENTS[p.intent as keyof typeof INTENTS] ?? p.intent,

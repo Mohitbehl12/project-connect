@@ -1642,6 +1642,29 @@ async function main() {
     check("neither can give out roles", (await C.post(`/api/admin/users/${nId}`, { action: "SET_ROLE", role: "SUPER_ADMIN", reason: "escalation attempt" })).status === 403 && (await T.post(`/api/admin/users/${nId}`, { action: "SET_ROLE", role: "SUPER_ADMIN", reason: "escalation attempt" })).status === 403);
   }
 
+  section("Any town or city in the world");
+  {
+    const W = new Client("WorldCityMember1");
+    await onboard(W, `world-${run}@test.local`, "WOMAN", "MAN", "Amara", answersA);
+    const s1 = await W.get("/api/places?q=nairobi");
+    const nbo = s1.data?.places?.[0];
+    check("search finds a city outside the quick picks", s1.status === 200 && nbo?.country === "KE" && /Nairobi/.test(nbo.label), s1.data);
+    check("…and old names people still use", (await W.get("/api/places?q=gurgaon")).data?.places?.[0]?.key === "Gurugram");
+    check("…a world result for a quick-pick city uses the quick-pick key", (await W.get("/api/places?q=mumbai")).data?.places?.[0]?.key === "Mumbai");
+    check("one letter returns nothing (no full-list dumps)", ((await W.get("/api/places?q=a")).data?.places ?? []).length === 0);
+    check("signed-out visitors can't search", (await anon.get("/api/places?q=paris")).status === 401);
+    const base = { firstName: "Amara", gender: "WOMAN", intent: "FRIENDS", bio: "Test account for the world-city journey.", interests: ["coffee", "reading", "trekking"], prompts: [] };
+    const put = await W.put("/api/profile", { ...base, city: nbo?.key });
+    const me = (await W.get("/api/me")).data?.profile;
+    check("a member saves a world city", put.status === 200 && me?.city === nbo?.label && me.country === "KE", me);
+    check("…stored as the city centre, never coordinates in the API", me && !("lat" in me));
+    check("saving the profile again with the same city keeps it", (await W.put("/api/profile", { ...base, city: me?.city, bio: "Updated bio for the world-city journey." })).status === 200 && (await W.get("/api/me")).data?.profile?.city === nbo?.label);
+    check("an unknown city is refused", (await W.put("/api/profile", { ...base, city: "Atlantis" })).data?.code === "validation");
+    check("travel mode refuses an unknown city", (await W.put("/api/travel", { city: "Atlantis" })).status === 422);
+    await W.put("/api/profile", { ...base, city: "Delhi" });
+    check("…and members can move back to a quick-pick city", (await W.get("/api/me")).data?.profile?.city === "Delhi");
+  }
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) {
     console.log("Failed:\n - " + failures.join("\n - "));

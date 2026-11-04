@@ -1,18 +1,15 @@
 "use client";
 import { useState } from "react";
 import { api } from "@/lib/client";
-import { CITIES, COUNTRIES, GENDERS, INTENTS, INTERESTS, LIFESTYLE, PERSONALITY_QUESTIONS } from "@/lib/constants";
+import { GENDERS, INTENTS, INTERESTS, LIFESTYLE, PERSONALITY_QUESTIONS } from "@/lib/constants";
 import { Alert, Field, PillPicker, Segmented, Toggle } from "./ui";
+import { CityPicker } from "./CityPicker";
 
 const PROMPT_CHOICES = [
   "A perfect first date for me is", "I'm quietly proud of", "The way to my heart is",
   "My friends would describe me as", "Something I'm learning right now", "I'll know it's going well when",
 ];
 
-const citiesByCountry = Object.entries(CITIES).reduce<Record<string, string[]>>((acc, [city, c]) => {
-  (acc[c.country] ??= []).push(city);
-  return acc;
-}, {});
 
 export function ProfileForm({ initial, submitLabel, onSaved }: { initial?: any; submitLabel: string; onSaved: () => void }) {
   const init = initial ?? {};
@@ -59,16 +56,7 @@ export function ProfileForm({ initial, submitLabel, onSaved }: { initial?: any; 
           <Segmented options={GENDERS} value={f.gender} onChange={(v) => set("gender", v)} />
         </div>
         <Field label="City" hint="Others see your city and a rounded distance — never your exact location.">
-          {(id) => (
-            <select id={id} className="input" value={f.city} onChange={(e) => set("city", e.target.value)}>
-              <option value="">Choose your city</option>
-              {Object.entries(citiesByCountry).map(([cc, cities]) => (
-                <optgroup key={cc} label={COUNTRIES[cc]?.name ?? cc}>
-                  {cities.map((c) => <option key={c} value={c}>{c}</option>)}
-                </optgroup>
-              ))}
-            </select>
-          )}
+          {(id) => <CityPicker id={id} value={f.city} onChange={(key) => set("city", key)} />}
         </Field>
         <div>
           <p className="label">I'm looking for</p>
