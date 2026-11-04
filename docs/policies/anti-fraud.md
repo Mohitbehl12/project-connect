@@ -24,6 +24,7 @@
   - MEDIUM is watched.
   - HIGH and not verified → restricted until the person passes the selfie check or staff review it.
   - Nothing bans automatically.
+- **Slow-burn romance scams.** Money talk (loans, bills, emergencies, investing, payment apps) in a chat older than 7 days with 30+ messages and no date planned warns the receiver and adds a light risk signal. Nothing is blocked.
 - **Message screening.** It looks for:
   - money and investment talk;
   - requests for one-time codes, PINs, card, bank or ID details;

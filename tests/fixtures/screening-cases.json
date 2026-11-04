@@ -1,0 +1,46 @@
+{
+  "about": "Labelled messages for each screening rule. 'expect' lists the flags a person reviewing it would agree with. Add every misjudged real case here (anonymised) so a rule change is measured, not guessed. 'knownGap' marks cases the rules miss today: they're reported, not failed.",
+  "cases": [
+    { "text": "Haha, I love that place. Shall we try the dosa next time?", "expect": [] },
+    { "text": "Long day at work, want to get chai this weekend?", "expect": [] },
+    { "text": "I'm investing a lot of time in learning guitar", "expect": [] },
+    { "text": "My sister is 16 and obsessed with K-pop", "expect": [] },
+    { "text": "I'm 10 minutes away, see you soon", "expect": [] },
+    { "text": "I was 17 when I moved to Pune", "expect": [] },
+    { "text": "Let's split the bill this time", "expect": [] },
+    { "text": "That movie was so stupid haha", "expect": ["ABUSE"], "note": "mild word, kindness check only" },
+
+    { "text": "I can show you a crypto trading platform with guaranteed profit", "expect": ["SCAM"] },
+    { "text": "Can you send me money for the visa fee? I'm stuck at the airport", "expect": ["SCAM"] },
+    { "text": "buy me a gift card please", "expect": ["SCAM"] },
+    { "text": "Need 20000 urgently, will return next week", "expect": ["SCAM"], "knownGap": true },
+    { "text": "my friend made 3x on usdt, I can teach you", "expect": ["SCAM"] },
+
+    { "text": "Send me the OTP you just got", "expect": ["FINANCIAL_INFO"] },
+    { "text": "what's your UPI PIN, I'll send the money", "expect": ["FINANCIAL_INFO", "SCAM"] },
+    { "text": "share your aadhaar number for the booking", "expect": ["FINANCIAL_INFO"] },
+
+    { "text": "I know where you live", "expect": ["THREAT"] },
+    { "text": "I'll leak your photos if you block me", "expect": ["THREAT"] },
+    { "text": "I'm going to hurt you", "expect": ["THREAT"] },
+    { "text": "you'll regret this, watch your back", "expect": ["THREAT"], "knownGap": true },
+
+    { "text": "check https://bit.ly/abc", "expect": ["RISKY_LINK", "LINK"] },
+    { "text": "download app.apk from my site", "expect": ["RISKY_LINK"] },
+    { "text": "see https://www.zomato.com/pune", "expect": ["LINK"] },
+
+    { "text": "add me on whatsapp", "expect": ["OFF_PLATFORM"] },
+    { "text": "let's move to telegram", "expect": ["OFF_PLATFORM"] },
+    { "text": "my number is +91 98765 43210", "expect": ["CONTACT_INFO"] },
+    { "text": "mail me at someone@example.com", "expect": ["CONTACT_INFO"] },
+
+    { "text": "you are an idiot", "expect": ["ABUSE"] },
+    { "text": "kys", "expect": ["ABUSE"] },
+
+    { "text": "hi, I'm 16", "expect": ["MINOR"] },
+    { "text": "I'm in class 11", "expect": ["MINOR"] },
+    { "text": "main 16 saal ki hoon", "expect": ["MINOR"] },
+    { "text": "I'm turning 18 next month", "expect": ["MINOR"] },
+    { "text": "my board exams start next week", "expect": ["MINOR"], "knownGap": true }
+  ]
+}

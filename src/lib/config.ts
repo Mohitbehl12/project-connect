@@ -50,7 +50,7 @@ export const CONFIG_DEFAULTS = {
   "rewards.verifiedPremiumDays": 0, // optional Premium days for completing selfie verification
   // Data retention
   "retention.deletedMessageDays": 90, // deleted messages are kept this long for safety review, then purged
-  "retention.loginEventDays": 180,
+  "retention.loginEventDays": 365, // sign-in history: DPDP Rules 2025 r.8(3) asks for processing logs to be kept at least 1 year (CERT-In: at least 180 days)
   "retention.endedChatDays": 90, // messages in ended chats (unmatched, blocked, deleted account) — unless reported or on legal hold
   "retention.reportedChatDays": 365, // evidence in reported chats, counted from the chat ending
   "retention.closedReportDays": 730, // closed reports: free-text details removed after this; category/outcome kept

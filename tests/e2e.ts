@@ -1613,6 +1613,35 @@ async function main() {
     check("members can't open it", (await K1.get("/api/admin/compliance")).status === 403);
   }
 
+  section("Nominee (DPDP s.14) and least-privilege staff roles");
+  {
+    const N = new Client("NomineeMember1");
+    const nId = await onboard(N, `nominee-${run}@test.local`, "WOMAN", "MAN", "Nisha", answersA);
+    check("no nominee to start with", (await N.get("/api/privacy/nominee")).data?.nominee === null);
+    check("a nominee needs a real email or phone", (await N.put("/api/privacy/nominee", { name: "Ravi Kumar", relationship: "Sibling", contact: "call me" })).status === 422);
+    const set = await N.put("/api/privacy/nominee", { name: "Ravi Kumar", relationship: "Sibling", contact: "ravi@example.com" });
+    check("a member names a nominee", set.status === 200 && set.data?.nominee?.name === "Ravi Kumar" && set.data.nominee.contact === "ravi@example.com", set.data);
+    const exp = await N.get("/api/privacy/export");
+    check("…it's in their data download", JSON.stringify(exp.data).includes("Ravi Kumar"));
+    const log = JSON.stringify((await admin.get(`/api/admin/audit?action=privacy.nominee_set`)).data ?? {});
+    check("…the audit log records the change without the nominee's details", log.includes("privacy.nominee_set") && !log.includes("ravi@example.com") && !log.includes("Ravi Kumar"));
+    check("…and they can remove it", (await N.del("/api/privacy/nominee")).data?.nominee === null && (await N.get("/api/privacy/nominee")).data?.nominee === null);
+
+    const C = new Client("ComplianceStaff1"), T = new Client("TechnicalStaff22");
+    const cId = await onboard(C, `compliance-${run}@test.local`, "WOMAN", "MAN", "Kavya", answersA);
+    const tId = await onboard(T, `technical-${run}@test.local`, "MAN", "WOMAN", "Rohan", answersB);
+    check("a super admin makes a Compliance admin", (await admin.post(`/api/admin/users/${cId}`, { action: "SET_ROLE", role: "COMPLIANCE", reason: "Compliance lead (e2e)" })).status === 200);
+    check("…and a Technical admin", (await admin.post(`/api/admin/users/${tId}`, { action: "SET_ROLE", role: "TECHNICAL", reason: "Platform engineer (e2e)" })).status === 200);
+    await C.post("/api/auth/login", { email: `compliance-${run}@test.local`, password: "Testing123" });
+    await T.post("/api/auth/login", { email: `technical-${run}@test.local`, password: "Testing123" });
+    check("Compliance opens legal documents and the audit log", (await C.get("/api/admin/legal")).status === 200 && (await C.get("/api/admin/audit")).status === 200);
+    check("…and can place a legal hold", (await C.post("/api/admin/legal-holds", { userId: nId, kind: "LAWFUL_REQUEST", reason: "Preservation request (e2e test)", days: 1 })).status === 201);
+    check("…but not payments, reports or settings changes", (await C.get("/api/admin/billing/payments")).status === 403 && (await C.get("/api/admin/reports")).status === 403 && (await C.put("/api/admin/config", { config: { "chat.kindnessCheck": true } })).status === 403);
+    check("Technical opens engineering", (await T.get("/api/admin/ops/incidents")).status === 200);
+    check("…but not member records, payments or reports", (await T.get(`/api/admin/users?q=${nId}`)).status === 403 && (await T.get("/api/admin/billing/payments")).status === 403 && (await T.get("/api/admin/reports")).status === 403);
+    check("neither can give out roles", (await C.post(`/api/admin/users/${nId}`, { action: "SET_ROLE", role: "SUPER_ADMIN", reason: "escalation attempt" })).status === 403 && (await T.post(`/api/admin/users/${nId}`, { action: "SET_ROLE", role: "SUPER_ADMIN", reason: "escalation attempt" })).status === 403);
+  }
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) {
     console.log("Failed:\n - " + failures.join("\n - "));

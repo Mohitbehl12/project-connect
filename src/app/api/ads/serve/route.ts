@@ -13,7 +13,8 @@ export const GET = route(async ({ req, user }) => {
   const device = req.headers.get("x-platform") ?? "web";
   const language = (req.headers.get("accept-language") ?? "en").slice(0, 2) === "hi" ? "hi" : "en";
   const exclude = (url.searchParams.get("exclude") ?? "").split(",").filter((x) => /^[\w-]{1,64}$/.test(x)).slice(0, 10);
-  const ad = await pickAd(user, placement, ["ios", "android"].includes(device) ? device : "web", language, exclude);
+  const gpc = req.headers.get("sec-gpc") === "1"; // Global Privacy Control: no personalised ads unless the member chose them
+  const ad = await pickAd(user, placement, ["ios", "android"].includes(device) ? device : "web", language, exclude, gpc);
   // Discover shows at most one sponsored card every N profiles (admin setting).
   return ok({ ad: ad && placement === "DISCOVER" ? { ...ad, every: await getConfig("ads.discoverEvery") } : ad });
 });
