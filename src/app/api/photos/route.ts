@@ -4,7 +4,9 @@ import { randomUUID } from "node:crypto";
 import { db, schema } from "@/db";
 import { ApiError, ok, parseBody, route } from "@/lib/http";
 import { rateLimit } from "@/lib/ratelimit";
-import { MAX_PHOTOS, MAX_UPLOAD_BYTES, QUALITY_HINT, processPhoto, refreshCompleteness, type PhotoQuality } from "@/lib/photos";
+import { MAX_PHOTOS, MAX_UPLOAD_BYTES, QUALITY_HINT, duplicatePhotoOwners, processPhoto, refreshCompleteness, type PhotoQuality } from "@/lib/photos";
+import { addRiskSignal } from "@/lib/risk";
+import { fileAutomatedReport, logAutomatedDecision } from "@/lib/safety";
 import { storage } from "@/lib/storage";
 import { audit } from "@/lib/audit";
 import { screenPhoto } from "@/lib/photoScreen";
@@ -19,6 +21,16 @@ async function myPhotos(userId: string) {
     id: r.id, url: await s.url(r.storageKey), blurhash: r.blurhash, width: r.width, height: r.height, position: r.position,
     status: r.status, quality: r.quality, hint: r.status === "PENDING" ? PENDING_HINT : r.status === "REJECTED" ? REJECTED_HINT : QUALITY_HINT[r.quality as PhotoQuality],
   })));
+}
+
+/** Same picture already on another account → a fake-profile report for a person to review (never an automatic block). */
+async function duplicatePhotoCheck(userId: string, photoId: string, dhash: string) {
+  const others = await duplicatePhotoOwners(userId, dhash);
+  if (!others.length) return;
+  await addRiskSignal(userId, "DUPLICATE_PHOTO", 20, `Same photo as ${others.length} other account${others.length > 1 ? "s" : ""}`);
+  const report = await fileAutomatedReport({ reportedId: userId, category: "FAKE", details: `Automated check: a new photo matches a photo on ${others.length} other account${others.length > 1 ? "s" : ""} (${others.slice(0, 5).join(", ")}). Check which account it belongs to.` });
+  await logAutomatedDecision({ userId, kind: "PHOTO_DUPLICATE", decision: "SENT_FOR_HUMAN_REVIEW", reason: "One of your photos looks the same as a photo on another account. A person will check whose photo it is. Nothing happens to your account automatically.", system: "rules:photo-dhash-v1", refId: report.id });
+  await audit(null, "photo.duplicate_detected", "photo", photoId, { others: others.length });
 }
 
 export const GET = route(async ({ user }) => ok({ photos: await myPhotos(user.id), max: MAX_PHOTOS }), { allowSuspended: true });
@@ -50,8 +62,9 @@ export const POST = route(async ({ req, user }) => {
   await storage().put(key, processed.data, "image/webp");
   const [row] = await db.insert(schema.photos).values({
     userId: user.id, storageKey: key, position: n, width: processed.width, height: processed.height,
-    blurhash: processed.blurhash, quality: processed.quality, status: check.status,
+    blurhash: processed.blurhash, quality: processed.quality, status: check.status, dhash: processed.dhash,
   }).returning();
+  await duplicatePhotoCheck(user.id, row.id, processed.dhash).catch(() => {}); // never blocks the upload
   const completeness = await refreshCompleteness(user.id);
   await audit(user.id, "photo.upload", "photo", row.id, { quality: processed.quality, check: check.reason });
   return ok({

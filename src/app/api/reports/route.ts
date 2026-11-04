@@ -10,8 +10,9 @@ import { getConfig } from "@/lib/config";
 import { notify } from "@/lib/notify";
 import { audit } from "@/lib/audit";
 import { orderedPair } from "@/lib/matches";
-import { caseNo, logAutomatedDecision, restrictAccount } from "@/lib/safety";
+import { caseNo, logAutomatedDecision, underageCheck } from "@/lib/safety";
 import { addRiskSignal } from "@/lib/risk";
+import { reviewPromise } from "@/lib/reportSla";
 
 const Body = z.object({
   reportedId: z.string().min(1).max(64),
@@ -59,11 +60,7 @@ export const POST = route(async ({ req, user }) => {
   const distinct = new Set(recent.map((x) => x.r)).size;
   if (distinct >= 2) await addRiskSignal(target.id, "REPEATED_REPORTS", 15, `${distinct} people in 30 days`);
   // Possible minor: two different people saying so is enough to hide the profile while a person checks.
-  if (b.category === "UNDERAGE") {
-    const minorReports = await db.selectDistinct({ r: schema.reports.reporterId }).from(schema.reports)
-      .where(and(eq(schema.reports.reportedId, target.id), eq(schema.reports.category, "UNDERAGE"), isNotNull(schema.reports.reporterId)));
-    if (minorReports.length >= 2) await restrictAccount(target.id, "Reported as possibly under 18 by more than one person — hidden while our team checks.", "rules:child-safety-v1");
-  }
+  if (b.category === "UNDERAGE") await underageCheck(target.id);
   await audit(user.id, "report.create", "report", report.id, { caseNo: report.caseNo, category: b.category, blocked: b.alsoBlock });
   if (distinct >= threshold && target.status === "ACTIVE") {
     await db.update(schema.users).set({ status: "SUSPENDED" }).where(eq(schema.users.id, target.id));
@@ -72,13 +69,14 @@ export const POST = route(async ({ req, user }) => {
     await notify(target.id, "MODERATION", "Your account is under review", "We've paused your account while our team reviews reports. You'll hear from us soon. If you think this is a mistake, you can appeal from Safety.", "/safety");
   }
 
-  await notify(user.id, "REPORT", "Your report has been received", `Case ${report.caseNo}. Our safety team will review it${b.alsoBlock ? ", and you won't see this person again" : ""}.`);
-  return ok({ id: report.id, caseNo: report.caseNo, message: `Your report has been received. Your case number is ${report.caseNo}.`, blocked: b.alsoBlock }, 201);
+  const when = reviewPromise(report.priority);
+  await notify(user.id, "REPORT", "Your report has been received", `Case ${report.caseNo}. Our safety team will review it (${when})${b.alsoBlock ? ", and you won't see this person again" : ""}.`);
+  return ok({ id: report.id, caseNo: report.caseNo, reviewWithin: when, message: `Your report has been received. Your case number is ${report.caseNo}. A person will review it, ${when}.`, blocked: b.alsoBlock }, 201);
 });
 
 /** My submitted reports and their status (no details about actions taken against the other person). */
 export const GET = route(async ({ user }) => {
-  const rows = await db.select({ id: schema.reports.id, caseNo: schema.reports.caseNo, category: schema.reports.category, status: schema.reports.status, createdAt: schema.reports.createdAt })
+  const rows = await db.select({ id: schema.reports.id, caseNo: schema.reports.caseNo, category: schema.reports.category, status: schema.reports.status, priority: schema.reports.priority, createdAt: schema.reports.createdAt })
     .from(schema.reports).where(or(eq(schema.reports.reporterId, user.id)));
-  return ok({ reports: rows.map((r) => ({ ...r, status: r.status === "OPEN" ? "Under review" : "Reviewed" })) });
+  return ok({ reports: rows.map(({ priority, ...r }) => ({ ...r, status: r.status === "OPEN" ? "Under review" : "Reviewed", reviewWithin: r.status === "OPEN" ? reviewPromise(priority) : null })) });
 }, { allowSuspended: true });

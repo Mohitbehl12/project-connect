@@ -1,5 +1,7 @@
 #!/bin/sh
 # Writes a throwaway .env for CI: fresh random test secrets, local SQLite, mock payments. Never real keys.
+# No Razorpay key id/secret: with them set, advertiser top-ups call the real Razorpay API, which can't work from CI.
+# The webhook secret stays so the signed-webhook checks still run.
 set -e
 r() { node -e "process.stdout.write(require('crypto').randomBytes($1).toString('$2'))"; }
 cat > .env <<EOF
@@ -13,8 +15,6 @@ PUSH_ENABLED="false"
 STORAGE_DRIVER="local"
 APP_URL="http://localhost:3000"
 BILLING_PROVIDER="mock"
-RAZORPAY_KEY_ID="rzp_test_ci"
-RAZORPAY_KEY_SECRET="$(r 16 hex)"
 RAZORPAY_WEBHOOK_SECRET="$(r 24 hex)"
 CRON_SECRET="$(r 24 hex)"
 FIELD_KEYS="v1:$(r 32 base64)"

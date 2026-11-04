@@ -1,7 +1,7 @@
 // Rule-based first-line message screening. Pure function — unit tested.
 // An ML/LLM classifier can be layered on top later; rules stay as a fast, explainable baseline.
 
-export type Flag = "SCAM" | "OFF_PLATFORM" | "LINK" | "RISKY_LINK" | "ABUSE" | "THREAT" | "FINANCIAL_INFO" | "CONTACT_INFO";
+export type Flag = "SCAM" | "OFF_PLATFORM" | "LINK" | "RISKY_LINK" | "ABUSE" | "THREAT" | "FINANCIAL_INFO" | "CONTACT_INFO" | "MINOR";
 
 const RULES: { flag: Flag; patterns: RegExp[] }[] = [
   {
@@ -46,6 +46,20 @@ const RULES: { flag: Flag; patterns: RegExp[] }[] = [
       /\S+\.(apk|exe|msi|scr|bat|ipa)(\b|$)/i,
     ],
   },
+  {
+    // The writer says, in the present tense, that they are under 18 ("I'm 16", "I am in class 11", "main 16 saal ki hoon").
+    // A signal for a person to check — never a decision. Distances, durations and other people's ages don't count.
+    flag: "MINOR",
+    patterns: [
+      /\b(i'?m|i am|im)\s+(only\s+|just\s+)?(1[0-7])(\s*(years?|yrs?|y\.?o\.?|y\/o)(\s*old)?)?\b(?!\s*(years?\s+|yrs?\s+)?(into|of|in|since|ago|away|km|kms|kg|cm|mins?|minutes?|hours?|hrs?|days?|weeks?|months?|times?|%|th\b|st\b|nd\b|rd\b))/i,
+      /\b(i'?m|i am|im)\s+(not\s+18\s+yet|under\s*-?\s*18|a\s+minor|underage|still\s+in\s+school)\b/i,
+      /\b(i'?m|i am|im)\s+(in|studying in)\s+((class|std\.?|standard|grade)\s*(6|7|8|9|10|11|12)(th)?|(6|7|8|9|10|11|12)th)\b(?!\s*(year|sem|semester))/i,
+      /\b(i'?m|i am|im|i)\s+(turning|will turn|will be|turn)\s+18\b/i,
+      /\bmy age is\s+(1[0-7])\b/i,
+      /\b(main|mai|mein)\s+(1[0-7])\s+(saal|sal)\s+(ki|ka)\b/i,
+      /\b(meri|mera)\s+(umar|umra|umr|age)\s+(1[0-7])\b/i,
+    ],
+  },
   { flag: "OFF_PLATFORM", patterns: [/\b(whats ?app|telegram|signal app|snap(chat)?|kik|wechat)\b/i] },
   { flag: "LINK", patterns: [/https?:\/\/\S+/i, /\bwww\.\S+\.\S+/i, /\b\S+\.(ly|link|xyz|top|click)\/\S*/i] },
   { flag: "CONTACT_INFO", patterns: [/(\+?\d[\d\s-]{8,}\d)/, /[\w.+-]+@[\w-]+\.[\w.]+/] },
@@ -65,13 +79,14 @@ export function screenMessage(text: string): Flag[] {
 }
 
 /** Flags that should open an automated report for moderator review. */
-export const REPORTABLE_FLAGS: Flag[] = ["SCAM", "ABUSE", "THREAT", "FINANCIAL_INFO"];
+export const REPORTABLE_FLAGS: Flag[] = ["SCAM", "ABUSE", "THREAT", "FINANCIAL_INFO", "MINOR"];
 
 /** Flags that stop the message being sent at all. */
 export const BLOCKING_FLAGS: Flag[] = ["RISKY_LINK"];
 
 /** Friendly warning shown to the recipient next to a flagged message. */
 export function warningFor(flags: Flag[]): string | null {
+  if (flags.includes("MINOR")) return "Kinara is only for adults. If you think this person may be under 18, stop the conversation and report them — our team checks every report like this first.";
   if (flags.includes("THREAT")) return "This message may contain a threat. Your safety comes first: you can block and report, and our team reviews threats urgently.";
   if (flags.includes("FINANCIAL_INFO")) return "Never share one-time codes, PINs, card, bank or ID details — not even with a match. Kinara staff will never ask for them.";
   if (flags.includes("SCAM")) return "This message mentions money or investments. People on Kinara will never need you to send money.";

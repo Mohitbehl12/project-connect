@@ -59,3 +59,21 @@ describe("conversationStarters", () => {
     expect(s.length).toBeLessThanOrEqual(4);
   });
 });
+
+describe("possible-minor signal (child safety)", () => {
+  const minor = (t: string) => screenMessage(t).includes("MINOR");
+  it("flags people saying they are under 18", () => {
+    for (const t of ["hi, I'm 16", "im 15 yo", "I am 17 years old", "i'm only 14", "I'm not 18 yet", "I am under 18", "i'm a minor lol",
+      "I'm in class 11", "im in 10th", "I am studying in std 9", "I'm turning 18 next month", "my age is 16", "main 16 saal ki hoon", "meri umar 15 hai", "I'm still in school"])
+      expect(minor(t), t).toBe(true);
+  });
+  it("ignores adults, distances, durations and other people", () => {
+    for (const t of ["I'm 26", "I'm 10 minutes away", "I'm 15 years into my career", "I'm 12 km from you", "I'm 17th in the marathon list",
+      "my nephew is 16", "I was 16 when I learned guitar", "I'm in 12th year of work", "I'm in 11th semester? no, just kidding", "I'm 30 and love dosa",
+      "I'm 18", "my age is 27", "I'm in class? nope, at the office"])
+      expect(minor(t), t).toBe(false);
+  });
+  it("tells the adult receiving it what to do", () => {
+    expect(warningFor(["MINOR"])).toMatch(/only for adults/);
+  });
+});

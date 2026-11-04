@@ -495,8 +495,11 @@ export const photos = sqliteTable("photos", {
   blurhash: text("blurhash").notNull(),
   status: text("status").notNull().default("LIVE"), // PENDING | LIVE | REJECTED
   quality: text("quality").notNull().default("GOOD"), // GOOD | DARK | BLURRY | SMALL
+  // 64-bit difference hash (16 hex chars) to spot the same picture on another account (catfishing, ban evasion).
+  // Not a face template: it can't identify anyone, only say two images look alike.
+  dhash: text("dhash"),
   createdAt: now("created_at"),
-}, (t) => [index("photos_user_pos").on(t.userId, t.position)]);
+}, (t) => [index("photos_user_pos").on(t.userId, t.position), index("photos_dhash").on(t.dhash)]);
 
 /** Native-app sessions: rotating refresh tokens (stored hashed). */
 export const sessions = sqliteTable("sessions", {

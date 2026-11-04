@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { api } from "@/lib/client";
-import { REPORT_CATEGORIES } from "@/lib/constants";
+import { REPORT_CATEGORIES, REPORT_HELP, type ReportCategory } from "@/lib/constants";
 import { Alert, Field, Modal, Segmented } from "./ui";
 
 export function ReportDialog({ open, onClose, userId, name, messageId, onDone }: {
@@ -29,8 +29,8 @@ export function ReportDialog({ open, onClose, userId, name, messageId, onDone }:
   return (
     <Modal open={open} onClose={onClose} title={`Report ${name}`}>
       <p className="mb-4 text-ink-soft">{name} won't know you reported them. We'll also block them so you won't see each other again.</p>
-      {(category === "SAFETY" || category === "UNDERAGE") && (
-        <div className="mb-4"><Alert tone="warn">If you're in immediate danger, contact local emergency services first — 112 in India, 911 in the US, 999 in the UK.</Alert></div>
+      {REPORT_HELP[category as ReportCategory] && (
+        <div className="mb-4"><Alert tone="warn">{REPORT_HELP[category as ReportCategory]}</Alert></div>
       )}
       <div className="space-y-5">
         <div>

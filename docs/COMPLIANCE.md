@@ -1,6 +1,6 @@
 # Privacy, safety and legal readiness
 
-_Last updated: 21 October 2026_
+_Last updated: 4 November 2026_
 
 This maps each section of the "Legal, privacy & safety-first requirements" brief to what Kinara does, where it is in the code, and what is still needed. **Nothing here means Kinara is "legally compliant" or "secure".** A qualified lawyer must review the legal documents, consent wording and country rules, and an independent firm must test security, before real members join. The app never makes those claims. Admin → Launch readiness tracks the sign-offs.
 
@@ -8,7 +8,7 @@ Status key: **Built** = working and covered by tests · **Partly** = works, with
 
 | # | Requirement | Status | How Kinara does it |
 |---|---|---|---|
-| 1 | Eligibility | Built | Date of birth at sign-up (under 18 refused) plus an "I'm 18+" box. A per-country minimum age is checked when the city/country is saved. Japan is set to "selfie check before liking". Two reports of a possible minor hide the account for review. We collect no ID documents. |
+| 1 | Eligibility | Built | Date of birth at sign-up (under 18 refused) plus an "I'm 18+" box. A per-country minimum age is checked when the city/country is saved. Japan is set to "selfie check before liking". Bios, prompts and chat messages are screened for someone saying they are under 18 ("I'm 16", "class 11", Hindi phrasing), which opens a critical report for a person. Two independent signals (two members, or a member plus screening) hide the account for review. We collect no ID documents. See docs/policies/age-verification.md. |
 | 2 | Consent | Built | `consents` table, append-only: what, when, version, source and IP. Terms, privacy, age and safety rules are recorded at sign-up. Marketing is optional and never pre-ticked. Camera, microphone, notifications and calls are recorded when the phone asks. Members see and change consents in Privacy Center › Your consents. |
 | 3 | Terms of Service | Partly | Full draft in `legal/terms.md` covering all listed topics. Needs lawyer review per launch country. |
 | 4 | Privacy Policy | Partly | Full draft in `legal/privacy.md`. The service-provider list and retention table are filled from live settings. Needs lawyer review. |
@@ -18,8 +18,8 @@ Status key: **Built** = working and covered by tests · **Partly** = works, with
 | 8 | Consent-based calling | Built | Request → accept/decline → call. Never auto-connects. Phone numbers are never shared. TURN relay only. Rate limits, cooldown after a decline, and a stop after 3 declines. Block and report on the call screen. |
 | 9 | Messaging safety | Built | Screening for scams, threats/sextortion, requests for codes/PINs/bank/ID details, off-platform pushes, contact details and abuse. Shortener, raw-IP, punycode and app-file links are refused. Mass messaging is slowed. A message limit stops one person sending many in a row without a reply. Kindness check. Report, block, mute, delete my messages in a chat, unmatch. Serious flags open a report for human review. |
 | 10 | Anti-fraud | Built | Risk signals: shared device, sign-up burst, mass messaging, repeated reports, call-request spam, new-device logins after failures, many devices in a week, payments, referrals. Signals add up to a score, not a verdict. HIGH and not verified → **restricted** (no new contact, hidden) until verified or reviewed. Nothing is banned automatically. Appeals. |
-| 11 | Fake profiles / impersonation | Built | Impersonation report category. Selfie check (pose + face match + staff decision), with the app explaining what "verified" does and doesn't mean. Password reset and sign-out of all devices. |
-| 12 | Reporting | Built | 13 categories. Case number (KN-R-YYYY-XXXXXX). "Your report has been received." Reporters see status. Priority queue. |
+| 11 | Fake profiles / impersonation | Built | Impersonation report category. A new photo that matches a photo on another account (difference hash, not a face template) opens a fake-profile report for a person and adds a risk signal; the upload is never refused for it. Selfie check (pose + face match + staff decision), with the app explaining what "verified" does and doesn't mean. Password reset and sign-out of all devices. |
+| 12 | Reporting | Built | 14 categories, including intimate-image abuse (with cybercrime.gov.in / 1930 and StopNCII guidance). Case number (KN-R-YYYY-XXXXXX). Review targets by priority (critical 12 h, high 24 h, medium 3 days, low 7 days): staff see "Due in / Overdue", reporters see "usually within …". Priority queue. |
 | 13 | Safety escalation | Partly | Critical categories go first. Legal holds preserve evidence. The Safety Policy explains lawful disclosure without promising confidentiality. **Needs you:** a named person and process for law-enforcement requests and emergencies (see below). |
 | 14 | Blocking | Built | Blocks both ways for discovery, likes, messages, calls and call requests. The blocked person is not told. Accounts created on the same app install as someone you blocked are hidden from you too. |
 | 15 | Account deletion | Built | Immediate. Before deleting, the app shows what is kept and for how long (live retention table). If the account was reported or is on legal hold, it is anonymised instead of hard-deleted, so evidence survives until its period ends. |
@@ -32,7 +32,7 @@ Status key: **Built** = working and covered by tests · **Partly** = works, with
 | 22 | User-generated content | Built | Terms give the rights licence and the uploader's warranty. A notice sits at photo upload. Photos are screened. Report and remove. |
 | 23 | Child safety | Built | Age gate, underage report → hidden after 2 reporters, zero-tolerance policy in the Guidelines and Terms. **Needs you:** a process to report CSAM to the authorities (India: NCRB portal; US: NCMEC). |
 | 24 | Third-party inventory | Built | `src/lib/vendors.ts`: data shared, purpose, location, security, retention, whether active (from live settings), DPA status per provider. Public page `/legal/service-providers`. |
-| 25 | AI safety | Partly | No protected characteristics are used or inferred. Automated decisions are logged with plain reasons, members can see and appeal them, and serious enforcement is decided by a person. Compatibility is labelled as an estimate. **Not yet:** a formal bias test of the matching weights on real data. |
+| 25 | AI safety | Partly | No protected characteristics are used or inferred. Automated decisions are logged with plain reasons, members can see and appeal them, and serious enforcement is decided by a person. Compatibility is labelled as an estimate. Admin → Privacy & compliance → Moderation quality shows per-rule false positives, appeal overturns and review times (90 days). **Not yet:** a formal bias test of the matching weights on real data. |
 | 26 | Legal versioning | Built | Versions with status, effective date, "what changed", material vs minor change (only material asks members to accept again), and a lawyer-review record. The public page shows "Draft for review" until a review is recorded. |
 | 27 | Compliance architecture | Built | `src/lib/compliance.ts` with per-country rules (open/closed, minimum age, age check, privacy law, complaint deadlines, cooling-off, tax display, data-transfer note, lawyer review). Overrides live in configuration (Admin → Privacy & compliance), not code. |
 | 28 | Legal review checkpoint | Built (tracking) | Admin → Launch readiness: 15 legal items with who/when, plus automatic checks (test codes, mock payments, sample users, unreviewed documents, contacts, DPAs, staff 2-step, backups, TURN, audit chain…). |
@@ -59,3 +59,7 @@ Status key: **Built** = working and covered by tests · **Partly** = works, with
 - **Legal drafts.** On start-up, `scripts/legal-drafts.ts` replaces any placeholder legal text with the drafts in `legal/*.md` (as a new published version). It never overwrites text edited in Admin → Legal.
 - **Legal holds.** Admin → Privacy & compliance. Retention skips held accounts. Deleting a held account anonymises it instead of removing it.
 - **Two-server set-ups.** The audit chain uses a unique sequence with retry, so it stays linear across servers. This was tested with 60 concurrent writes on two servers.
+
+## Internal policies and plans
+
+Drafts of the operating policies (age verification, anti-harassment, anti-fraud, content moderation, suspension and appeals, data retention, grievance, AI governance, incident response, data breach response, disaster recovery) are in [docs/policies](policies/README.md). They describe what the code does today and list the gaps. They are not published to members and need a lawyer's review.

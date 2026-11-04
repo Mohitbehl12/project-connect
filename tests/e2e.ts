@@ -1559,6 +1559,60 @@ async function main() {
     check("…and it can be put back", (await cfg("ios", "1.0.0")).updateRequired === false && (await cfg("ios", "1.0.0")).features.calls === true);
   }
 
+  section("Child safety screening, report review targets, duplicate photos, moderation quality");
+  {
+    const K1 = new Client("ChildSafetyOne1"), K2 = new Client("ChildSafetyTwo22"), K3 = new Client("ChildSafetyThree333");
+    const k1 = await onboard(K1, `cs1-${run}@test.local`, "WOMAN", "MAN", "Rhea", answersA);
+    const k2 = await onboard(K2, `cs2-${run}@test.local`, "MAN", "WOMAN", "Arjun", answersB);
+    const k3 = await onboard(K3, `cs3-${run}@test.local`, "MAN", "WOMAN", "Dev", answersB);
+    await K1.post("/api/likes", { toId: k2, kind: "LIKE" });
+    const km = (await K2.post("/api/likes", { toId: k1, kind: "LIKE" })).data?.matchId;
+    check("a fresh match for child-safety tests", !!km);
+    const autoReports = async (id: string, cat: string) => ((await admin.get("/api/admin/reports?status=ALL")).data?.reports ?? []).filter((r: any) => r.reportedId === id && r.automated && r.category === cat);
+
+    const ordinary = await K1.post(`/api/matches/${km}/messages`, { body: "I'm 10 minutes away from the cafe, I'm 27 btw" });
+    check("distances and adult ages are not flagged", ordinary.status === 201 && ordinary.data?.flagged === false, ordinary.data);
+    const young = await K2.post(`/api/matches/${km}/messages`, { body: "haha actually I'm 16, is that ok?" });
+    check("a message saying the sender is under 18 is still delivered", young.status === 201 && young.data?.flagged === true, young.data);
+    const yr = await autoReports(k2, "UNDERAGE");
+    check("…and opens a critical child-safety report for a person", yr.length === 1 && yr[0].priority === "CRITICAL", yr);
+    const seen = (await K1.get(`/api/matches/${km}/messages`)).data?.messages?.find((m: any) => m.id === young.data?.id);
+    check("…the adult receiving it is told Kinara is adults-only and how to report", /only for adults/.test(seen?.warning ?? ""), seen);
+    check("…one signal alone doesn't restrict anyone", (await K2.get("/api/me")).data?.user?.restricted === false);
+    const decs = JSON.stringify((await K2.get("/api/privacy/decisions")).data);
+    check("…the member can see the automated decision and that a person will check", /under 18/.test(decs) && /Nothing happens to the account automatically/.test(decs), decs.slice(0, 300));
+    await K1.post("/api/reports", { reportedId: k2, category: "UNDERAGE", details: "Said he is 16", alsoBlock: false });
+    check("a member's report plus our screening restricts the account while it's checked", (await K2.get("/api/me")).data?.user?.restricted === true);
+
+    const bioRes = await K3.put("/api/profile", { firstName: "Dev", gender: "MAN", city: "Delhi", intent: "FRIENDS", bio: "Cricket fan. I'm in class 11 and love maths.", interests: ["coffee"], prompts: [] });
+    check("a profile saying the person is under 18 is saved (not rejected)…", bioRes.status === 200, bioRes.data);
+    check("…and sent to the child-safety queue", (await autoReports(k3, "UNDERAGE")).length === 1);
+
+    // New category: intimate-image abuse, with a review target
+    const ia = await K1.post("/api/reports", { reportedId: k3, category: "IMAGE_ABUSE", details: "Threatened to post my photos", alsoBlock: true });
+    check("intimate-image abuse can be reported and is told the review target", ia.status === 201 && /usually within 12 hours/.test(ia.data?.message ?? ""), ia.data);
+    const mine = ((await K1.get("/api/reports")).data?.reports ?? []).find((r: any) => r.caseNo === ia.data?.caseNo);
+    check("…the reporter's list shows when to expect a review", mine?.reviewWithin === "usually within 12 hours", mine);
+    const q = ((await admin.get("/api/admin/reports?status=OPEN")).data?.reports ?? []).find((r: any) => r.caseNo === ia.data?.caseNo);
+    check("…staff see it as critical with a due time", q?.priority === "CRITICAL" && q.reviewHours === 12 && q.overdue === false && typeof q.dueAt === "string", q);
+
+    // Duplicate photos across accounts
+    const sharpLib = (await import("sharp")).default;
+    const pic = await sharpLib({ create: { width: 900, height: 1200, channels: 3, background: { r: 30, g: 90, b: 60 } } })
+      .composite([{ input: Buffer.from(`<svg width="900" height="1200"><circle cx="300" cy="400" r="${150 + (run.length % 7)}" fill="#E8B04B"/><rect x="420" y="700" width="380" height="300" fill="#7A2E4E"/><path d="M0 1200 L900 600 L900 1200 Z" fill="#1d1d3a"/></svg>`) }]).jpeg({ quality: 92 }).toBuffer();
+    check("the first account's photo uploads normally", (await K1.upload("/api/photos", { file: pic })).status === 201);
+    const resaved = await sharpLib(pic).resize(800).jpeg({ quality: 70 }).toBuffer();
+    const dup = await K3.upload("/api/photos", { file: resaved });
+    check("the same picture (resized, re-saved) on another account still uploads", dup.status === 201, dup.data);
+    const fr = await autoReports(k3, "FAKE");
+    check("…but opens a fake-profile report for a person to check", fr.length === 1 && /matches a photo on 1 other account/.test(fr[0].details), fr);
+    check("…without naming the other account to the uploader", !JSON.stringify(dup.data).includes(k1));
+
+    const comp = (await admin.get("/api/admin/compliance")).data?.moderationQuality;
+    check("moderation quality shows review times, screening precision and appeal overturns", comp?.days === 90 && comp.reviewTimes.length === 4 && comp.screening.some((r: any) => r.category === "UNDERAGE") && Array.isArray(comp.appeals), comp);
+    check("members can't open it", (await K1.get("/api/admin/compliance")).status === 403);
+  }
+
   console.log(`\n${passed} passed, ${failures.length} failed`);
   if (failures.length) {
     console.log("Failed:\n - " + failures.join("\n - "));

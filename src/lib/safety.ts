@@ -78,3 +78,17 @@ export async function heldUserIds(): Promise<Set<string>> {
   const rows = await db.select({ u: schema.legalHolds.userId, until: schema.legalHolds.until }).from(schema.legalHolds).where(isNull(schema.legalHolds.releasedAt));
   return new Set(rows.filter((r) => !r.until || r.until > now).map((r) => r.u));
 }
+
+/**
+ * Possible minor: hide the profile (a reversible restriction, never a ban) while a person checks, once there are
+ * two independent signals — two different members, or one member plus our own screening of what the person wrote.
+ */
+export async function underageCheck(userId: string) {
+  const rows = await db.select({ r: schema.reports.reporterId, automated: schema.reports.automated }).from(schema.reports)
+    .where(and(eq(schema.reports.reportedId, userId), eq(schema.reports.category, "UNDERAGE")));
+  const people = new Set(rows.filter((x) => x.r).map((x) => x.r)).size;
+  const screening = rows.some((x) => x.automated) ? 1 : 0;
+  if (people + screening >= 2)
+    return restrictAccount(userId, people >= 2 ? "Reported as possibly under 18 by more than one person — hidden while our team checks." : "Reported as possibly under 18, and something you wrote suggests the same — hidden while our team checks.", "rules:child-safety-v2");
+  return false;
+}

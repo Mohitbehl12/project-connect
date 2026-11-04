@@ -4,11 +4,12 @@ import { getConfig } from "./config";
 import { notify } from "./notify";
 import sharp from "sharp";
 import { encode } from "blurhash";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { storage } from "./storage";
 import { ApiError } from "./http";
 import { profileCompleteness } from "./matching";
+import { SAME_PHOTO_BITS, bands, dhashFromGrey, hamming } from "./photoHash";
 
 export const MAX_PHOTOS = 6;
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -64,7 +65,10 @@ export async function processPhoto(input: Buffer) {
   const tiny = await sharp(out.data).resize(32, 32, { fit: "inside" }).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const blurhash = encode(new Uint8ClampedArray(tiny.data), tiny.info.width, tiny.info.height, 4, 4);
 
-  return { data: out.data, width: out.info.width, height: out.info.height, blurhash, quality, brightness, sharpness };
+  const grey9x8 = await sharp(out.data).resize(9, 8, { fit: "fill" }).greyscale().raw().toBuffer();
+  const dhash = dhashFromGrey(grey9x8);
+
+  return { data: out.data, width: out.info.width, height: out.info.height, blurhash, quality, brightness, sharpness, dhash };
 }
 
 export const QUALITY_HINT: Record<PhotoQuality, string> = {
@@ -134,4 +138,17 @@ async function completionReward(userId: string) {
   const minutes = await getConfig("rewards.completeProfileBoostMinutes");
   await db.update(schema.users).set({ completionRewardedAt: new Date(), boostUntil: minutes > 0 ? new Date(Date.now() + minutes * 60_000) : u.boostUntil }).where(eq(schema.users.id, userId));
   if (minutes > 0) await notify(userId, "SUBSCRIPTION", "Your profile is 100% complete 🎉", `You've unlocked a ${minutes}-minute boost: more people will see you in Discover right now.`, "/discover");
+}
+
+/**
+ * Other accounts that already have the same picture (catfishing, stolen photos, ban evasion). Returns their user ids.
+ * Only a signal for a person to review: the upload is never refused because of it.
+ */
+export async function duplicatePhotoOwners(userId: string, dhash: string): Promise<string[]> {
+  const [b0, b1, b2, b3] = bands(dhash);
+  const col = schema.photos.dhash;
+  const rows = await db.select({ userId: schema.photos.userId, dhash: col }).from(schema.photos)
+    .where(and(ne(schema.photos.userId, userId), or(sql`substr(${col}, 1, 4) = ${b0}`, sql`substr(${col}, 5, 4) = ${b1}`, sql`substr(${col}, 9, 4) = ${b2}`, sql`substr(${col}, 13, 4) = ${b3}`)))
+    .limit(200);
+  return [...new Set(rows.filter((r) => r.dhash && hamming(r.dhash, dhash) <= SAME_PHOTO_BITS).map((r) => r.userId))];
 }

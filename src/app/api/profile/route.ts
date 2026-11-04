@@ -11,6 +11,7 @@ import { CITIES, GENDERS, INTENTS, INTERESTS, LANGUAGES, LIFESTYLE } from "@/lib
 import { refreshCompleteness } from "@/lib/photos";
 import type { User } from "@/db/schema";
 import { screenMessage } from "@/lib/moderation";
+import { fileAutomatedReport, logAutomatedDecision, underageCheck } from "@/lib/safety";
 
 const keysOf = <T extends object>(o: T) => Object.keys(o) as [string, ...string[]];
 const opt = <T extends object>(o: T) => z.enum(keysOf(o)).nullable().optional();
@@ -46,6 +47,9 @@ async function saveProfile(user: User, b: ProfileInput) {
   if (flags.includes("CONTACT_INFO") || flags.includes("LINK") || flags.includes("OFF_PLATFORM"))
     throw new ApiError(422, "Keep phone numbers, emails, links and other apps out of your profile. You can share them in chat when you're ready.", "contact_in_profile");
   if (flags.includes("ABUSE")) throw new ApiError(422, "Your profile includes language that breaks our community guidelines.", "abusive_profile");
+  // A profile saying the person is under 18 is saved (refusing would only teach people to reword it) and goes to the
+  // child-safety queue for a person to check.
+  const saysMinor = flags.includes("MINOR");
 
   const c = CITIES[b.city];
   // Country rules (Admin → Privacy & compliance): minimum age and whether we've launched there.
@@ -78,6 +82,11 @@ async function saveProfile(user: User, b: ProfileInput) {
   const onboardingStep = await syncOnboardingStep(user.id);
   void onboardingStep;
   if (genderChanged) await grantStartingMembership(user.id).catch(() => {}); // free forever applies (or stops) with the new gender
+  if (saysMinor) {
+    const report = await fileAutomatedReport({ reportedId: user.id, category: "UNDERAGE", details: "Automated screening: the profile text suggests the person may be under 18." });
+    await logAutomatedDecision({ userId: user.id, kind: "PROFILE_FLAG", decision: "SENT_FOR_HUMAN_REVIEW", reason: "Your profile suggests you may be under 18. Kinara is only for adults, so a person will check. Nothing happens to the account automatically.", system: "rules:child-safety-v2", refId: report.id });
+    await underageCheck(user.id);
+  }
   return refreshCompleteness(user.id);
 }
 

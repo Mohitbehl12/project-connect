@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import Animated, { ZoomIn } from "react-native-reanimated";
-import { REPORT_CATEGORIES } from "@shared/constants";
+import { REPORT_CATEGORIES, REPORT_HELP, type ReportCategory } from "@shared/constants";
 import { Button } from "@/components/Button";
 import { Icon } from "@/components/Icon";
 import { T } from "@/components/Text";
@@ -63,9 +63,7 @@ export default function Report() {
               {Object.entries(REPORT_CATEGORIES).map(([k, l]) => <Chip key={k} label={l} selected={category === k} onPress={() => setCategory(k)} />)}
             </View>
           </View>
-          {(category === "SAFETY" || category === "UNDERAGE") && (
-            <Banner tone="warn">If you're in immediate danger, contact local emergency services first — 112 in India, 911 in the US, 999 in the UK.</Banner>
-          )}
+          {REPORT_HELP[category as ReportCategory] ? <Banner tone="warn">{REPORT_HELP[category as ReportCategory]}</Banner> : null}
           <View style={{ gap: 6 }}>
             <T v="callout" tone="muted">Anything else we should know? (optional)</T>
             <TextInput value={details} onChangeText={setDetails} multiline maxLength={1000} accessibilityLabel="Details"

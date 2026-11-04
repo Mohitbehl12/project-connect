@@ -103,6 +103,7 @@ export const REPORT_CATEGORIES = {
   THREATS: "Threats or blackmail",
   UNWANTED_CONTACT: "Keeps contacting me after I said no",
   SEXUAL_MISCONDUCT: "Sexual misconduct or unwanted sexual content",
+  IMAGE_ABUSE: "Shared or threatened to share private or fake intimate images of me",
   SCAM: "Scam or asking for money",
   FRAUD: "Fraud (payments, stolen identity)",
   FAKE: "Fake profile or catfishing",
@@ -116,9 +117,25 @@ export const REPORT_CATEGORIES = {
 export type ReportCategory = keyof typeof REPORT_CATEGORIES;
 
 export const REPORT_PRIORITY: Record<ReportCategory, string> = {
-  UNDERAGE: "CRITICAL", SAFETY: "CRITICAL", THREATS: "CRITICAL", SEXUAL_MISCONDUCT: "CRITICAL",
+  UNDERAGE: "CRITICAL", SAFETY: "CRITICAL", THREATS: "CRITICAL", SEXUAL_MISCONDUCT: "CRITICAL", IMAGE_ABUSE: "CRITICAL",
   HARASSMENT: "HIGH", SCAM: "HIGH", FRAUD: "HIGH", IMPERSONATION: "HIGH",
   UNWANTED_CONTACT: "MEDIUM", FAKE: "MEDIUM", INAPPROPRIATE: "MEDIUM", SPAM: "LOW", OTHER: "LOW",
+};
+
+/**
+ * How fast a person looks at a report, by priority (hours from when it was filed). CRITICAL covers threats,
+ * possible minors, sexual misconduct and intimate-image abuse: India's IT Rules 2021 r.3(2)(b) require intimate
+ * images to be taken down within 24 hours of a complaint, so the internal target is well inside that.
+ * Targets, not promises: members are told "usually within", never a guarantee.
+ */
+export const REPORT_REVIEW_HOURS: Record<string, number> = { CRITICAL: 12, HIGH: 24, MEDIUM: 72, LOW: 168 };
+
+/** Extra guidance shown when someone picks a report category. */
+export const REPORT_HELP: Partial<Record<ReportCategory, string>> = {
+  SAFETY: "If you're in immediate danger, contact local emergency services first — 112 in India, 911 in the US, 999 in the UK.",
+  UNDERAGE: "If a child is in danger, contact local emergency services first — 112 in India, 911 in the US, 999 in the UK.",
+  THREATS: "If you're in immediate danger, contact local emergency services first — 112 in India, 911 in the US, 999 in the UK.",
+  IMAGE_ABUSE: "We act on these first and remove the images on Kinara. In India you can also report at cybercrime.gov.in or call 1930. StopNCII.org can help stop intimate images being shared on other sites.",
 };
 
 export const DATE_KINDS = { COFFEE: "Coffee", MEAL: "A meal", WALK: "A walk", ACTIVITY: "An activity", OTHER: "Something else" } as const;

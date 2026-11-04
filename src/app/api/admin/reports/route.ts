@@ -1,6 +1,7 @@
 import { desc, eq, inArray, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ok, route } from "@/lib/http";
+import { reviewDue } from "@/lib/reportSla";
 
 export const GET = route(async ({ req }) => {
   const status = new URL(req.url).searchParams.get("status") ?? "OPEN";
@@ -15,7 +16,7 @@ export const GET = route(async ({ req }) => {
     : [];
   const byId = new Map(people.map((p) => [p.id, p]));
   return ok({
-    reports: rows.map((r) => ({ ...r, reported: byId.get(r.reportedId) ?? null, reporter: r.reporterId ? byId.get(r.reporterId) ?? null : null })),
+    reports: rows.map((r) => ({ ...r, ...reviewDue(r), reported: byId.get(r.reportedId) ?? null, reporter: r.reporterId ? byId.get(r.reporterId) ?? null : null })),
   });
 }, { permission: "reports.view" });
 

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { count, desc, eq, isNull } from "drizzle-orm";
+import { count, desc, eq, gte, isNull } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { audit, verifyAuditChain } from "@/lib/audit";
 import { allCountryRules } from "@/lib/compliance";
@@ -8,6 +8,8 @@ import { ApiError, ok, parseBody, route } from "@/lib/http";
 import { retentionSchedule } from "@/lib/privacy";
 import { can } from "@/lib/rbac";
 import { vendors } from "@/lib/vendors";
+import { appealOverturns, reviewTimes, screeningPrecision } from "@/lib/moderationQuality";
+import { reviewDue } from "@/lib/reportSla";
 
 /** Privacy & compliance overview: country rules, service providers, retention, legal holds, audit chain, AI decisions. */
 export const GET = route(async () => {
@@ -16,7 +18,14 @@ export const GET = route(async () => {
     .innerJoin(schema.users, eq(schema.users.id, schema.legalHolds.userId)).where(isNull(schema.legalHolds.releasedAt)).orderBy(desc(schema.legalHolds.createdAt));
   const decisions = await db.select({ kind: schema.automatedDecisions.kind, n: count() }).from(schema.automatedDecisions).groupBy(schema.automatedDecisions.kind);
   const consents = await db.select({ kind: schema.consents.kind, granted: schema.consents.granted, n: count() }).from(schema.consents).groupBy(schema.consents.kind, schema.consents.granted);
+  // Moderation quality over the last 90 days: false positives, appeal overturns, review times.
+  const since = new Date(Date.now() - 90 * 86400_000);
+  const reps = (await db.select({ category: schema.reports.category, automated: schema.reports.automated, status: schema.reports.status, priority: schema.reports.priority, createdAt: schema.reports.createdAt, resolvedAt: schema.reports.resolvedAt })
+    .from(schema.reports).where(gte(schema.reports.createdAt, since))).map((r) => ({ ...r, ...reviewDue(r) }));
+  const decs = await db.select({ id: schema.automatedDecisions.id, system: schema.automatedDecisions.system, kind: schema.automatedDecisions.kind }).from(schema.automatedDecisions).where(gte(schema.automatedDecisions.createdAt, since));
+  const apps = await db.select({ kind: schema.appeals.kind, refId: schema.appeals.refId, status: schema.appeals.status }).from(schema.appeals).where(gte(schema.appeals.createdAt, since));
   return ok({
+    moderationQuality: { days: 90, screening: screeningPrecision(reps), appeals: appealOverturns(decs, apps), reviewTimes: reviewTimes(reps) },
     countries: await allCountryRules(),
     vendors: vendors().map((v) => ({ ...v, dpa: status[v.id]?.dpa ?? "NOT_STARTED", notes: status[v.id]?.notes ?? "" })),
     retention: await retentionSchedule(),
