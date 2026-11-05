@@ -43,7 +43,7 @@ jobs:
         if: env.HAS_TOKEN != 'true'
         working-directory: .
         run: echo "::notice::No EXPO_TOKEN secret yet — see the setup steps at the top of .github/workflows/ios-app.yml. Nothing was built."
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: env.HAS_TOKEN == 'true'
       - name: Tag matches the iPhone version
         if: env.HAS_TOKEN == 'true' && startsWith(github.ref, 'refs/tags/ios-v')
