@@ -485,6 +485,19 @@ export type Preferences = typeof preferences.$inferSelect;
 // ---------------------------------------------------------------------------
 
 /** Ordered, moderated profile photos. position 0 = primary. */
+/**
+ * The person a member names to exercise their privacy rights if they die or can't act (DPDP Act 2023 s.14).
+ * One per member. Contact details are encrypted; the nominee is never contacted by Kinara unless they get in touch.
+ */
+export const nominees = sqliteTable("nominees", {
+  userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  relationship: text("relationship").notNull(),
+  contact: text("contact").notNull(), // sealed email or phone
+  createdAt: now("created_at"),
+  updatedAt: now("updated_at"),
+});
+
 export const photos = sqliteTable("photos", {
   id: id(),
   userId: text("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),

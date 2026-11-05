@@ -5,6 +5,7 @@ import { useState } from "react";
 import { AppShell, PageHeader, useMe } from "@/components/AppShell";
 import { Alert, Modal, Toggle } from "@/components/ui";
 import { api, useApi } from "@/lib/client";
+import { NomineeSection } from "@/components/NomineeSection";
 
 function Section({ id, title, children }: { id?: string; title: string; children: React.ReactNode }) {
   return (
@@ -120,6 +121,8 @@ function Settings() {
             </ul>
           )}
         </Section>
+
+        <NomineeSection />
 
         <Section title="Account">
           <div className="flex flex-wrap gap-3">

@@ -63,3 +63,13 @@ Status key: **Built** = working and covered by tests · **Partly** = works, with
 ## Internal policies and plans
 
 Drafts of the operating policies (age verification, anti-harassment, anti-fraud, content moderation, suspension and appeals, data retention, grievance, AI governance, incident response, data breach response, disaster recovery) are in [docs/policies](policies/README.md). They describe what the code does today and list the gaps. They are not published to members and need a lawyer's review.
+
+## Round 2 (4 November 2026)
+
+- **Nominee (DPDP Act s.14):** members name someone to act on their data if they can't (Settings, app Privacy Center); encrypted, in the data download, removed on deletion.
+- **Sign-in history kept 365 days** by default (DPDP Rules r.8(3)).
+- **Grievance replies name the escalation route:** Data Protection Board, Grievance Appellate Committee, National Consumer Helpline.
+- **Global Privacy Control:** a browser's `Sec-GPC: 1` turns personalised ads off until the member chooses.
+- **Slow-burn romance-scam warning:** money talk after a week and 30+ messages without a planned date.
+- **New staff roles:** Compliance (legal, complaints, holds, audit) and Technical (engineering, security events), each least-privilege; legal holds have their own permission.
+- **Weekly Dependabot pull requests;** labelled screening test set with precision/recall per rule.

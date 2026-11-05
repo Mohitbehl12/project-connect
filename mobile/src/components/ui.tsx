@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { Aurora } from "./Ambient";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode, type Ref } from "react";
 import { Pressable, ScrollView, TextInput, View, type TextInputProps, type ViewStyle } from "react-native";
 import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withRepeat, withTiming, useReducedMotion } from "react-native-reanimated";
 import { SafeAreaView, type Edge } from "react-native-safe-area-context";
@@ -46,13 +46,14 @@ export function Chip({ label, emoji, selected, onPress, tone = "neutral", locked
   );
 }
 
-export function Field({ label, hint, error, ...props }: TextInputProps & { label: string; hint?: string; error?: string }) {
+export function Field({ label, hint, error, inputRef, ...props }: TextInputProps & { label: string; hint?: string; error?: string; inputRef?: Ref<TextInput> }) {
   const { c } = useTheme();
   const [focus, setFocus] = useState(false);
   return (
     <View style={{ gap: 6 }}>
       <T v="callout" tone="muted">{label}</T>
       <TextInput
+        ref={inputRef}
         placeholderTextColor={c.faint}
         accessibilityLabel={label}
         onFocus={(e) => { setFocus(true); props.onFocus?.(e); }}

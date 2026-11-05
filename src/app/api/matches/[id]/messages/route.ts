@@ -8,7 +8,7 @@ import { requireMatch } from "@/lib/matches";
 import { isBlockedBetween } from "@/lib/people";
 import { getConfig } from "@/lib/config";
 import { rateLimit } from "@/lib/ratelimit";
-import { BLOCKING_FLAGS, REPORTABLE_FLAGS, screenMessage, warningFor, type Flag } from "@/lib/moderation";
+import { BLOCKING_FLAGS, REPORTABLE_FLAGS, SLOW_BURN, screenMessage, slowBurn, warningFor, type Flag } from "@/lib/moderation";
 import { assertCanStartContact, assertNotPaused, fileAutomatedReport, logAutomatedDecision, underageCheck } from "@/lib/safety";
 import { addRiskSignal } from "@/lib/risk";
 import { isMuted } from "@/lib/matches";
@@ -106,6 +106,18 @@ export const POST = route<{ id: string }>(async ({ req, user, params }) => {
   }
 
   const flags = screenMessage(body);
+  // Slow-burn romance scams: money talk after weeks of chatting without meeting. Warn the person receiving it.
+  {
+    const ageDays = (Date.now() - new Date(match.createdAt).getTime()) / 86_400_000;
+    if (ageDays >= SLOW_BURN.minDays) {
+      const [{ n }] = await db.select({ n: count() }).from(schema.messages).where(eq(schema.messages.matchId, match.id));
+      const planned = n >= SLOW_BURN.minMessages && !!(await db.query.datePlans.findFirst({ where: and(eq(schema.datePlans.matchId, match.id), ne(schema.datePlans.status, "CANCELLED")) }));
+      if (slowBurn(body, { ageDays, messages: n, datePlanned: planned })) {
+        flags.push("SLOW_BURN");
+        await addRiskSignal(user.id, "SLOW_BURN_MONEY", 10, `Money talk after ${Math.floor(ageDays)} days and ${n} messages`).catch(() => {});
+      }
+    }
+  }
   if (flags.some((f) => BLOCKING_FLAGS.includes(f)))
     throw new ApiError(422, "For safety, links from shorteners, raw IP addresses or app files can't be sent. Share the full website address instead.", "risky_link");
   // Kindness check: a nudge before sending something that may hurt. Sending anyway is allowed (and still screened).

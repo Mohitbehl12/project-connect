@@ -21,4 +21,4 @@ export const POST = route(async ({ req, user }) => {
   }).returning();
   await audit(user.id, "legal_hold.create", "user", b.userId, { hold: h.id, kind: b.kind, reference: b.reference ?? null });
   return ok({ hold: h }, 201);
-}, { permission: "reports.resolve" });
+}, { permission: "legal.holds" });

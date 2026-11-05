@@ -47,6 +47,19 @@ export async function fileGrievance(input: { name: string; email: string; catego
   return { refNo: ref, acknowledgedAt: now, resolveDueAt };
 }
 
+/**
+ * Where else the person can go if they're not satisfied (India). Wording is a draft for the lawyer to confirm
+ * (docs/policies/grievance.md). Personal-data complaints can go to the Data Protection Board once its complaint
+ * process is in force; content and account decisions to the Grievance Appellate Committee (IT Rules 2021 r.3A).
+ */
+export function escalationLines(category: string): string[] {
+  const out = ["If you're not satisfied with this reply, you can write back quoting your reference number."];
+  if (category === "PRIVACY") out.push("For a complaint about your personal data, you can also contact the Data Protection Board of India.");
+  if (["CONTENT", "ACCOUNT", "INTIMATE_OR_IMPERSONATION", "SAFETY"].includes(category)) out.push("You can also appeal this decision to the Grievance Appellate Committee within 30 days, at gac.gov.in.");
+  if (category === "PAYMENT") out.push("For a consumer complaint, you can also contact the National Consumer Helpline (1915 or consumerhelpline.gov.in).");
+  return out;
+}
+
 export async function listGrievances(status: "open" | "closed") {
   const rows = await db.select().from(schema.grievances)
     .where(inArray(schema.grievances.status, status === "open" ? ["ACKNOWLEDGED", "IN_PROGRESS"] : ["RESOLVED", "REJECTED"]))
@@ -73,7 +86,7 @@ export async function updateGrievance(staffId: string, id: string, action: "prog
   }).where(and(eq(schema.grievances.id, id), inArray(schema.grievances.status, ["ACKNOWLEDGED", "IN_PROGRESS"])));
   await audit(staffId, `grievance.${action}`, "grievance", id, { ref: g.refNo });
   if (action !== "progress" && emailConfigured()) {
-    const m = simpleEmail(`Update on your complaint ${g.refNo}`, [`Hello ${g.name},`, reply!.trim(), "If you're not satisfied with this reply, you can write back quoting your reference number."]);
+    const m = simpleEmail(`Update on your complaint ${g.refNo}`, [`Hello ${g.name},`, reply!.trim(), ...escalationLines(g.category)]);
     await sendEmail(open(g.email, g.refNo), `Your complaint ${g.refNo}`, m.text, m.html).catch(() => false);
   }
   return { status };

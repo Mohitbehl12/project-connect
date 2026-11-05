@@ -8,4 +8,4 @@ export const DELETE = route<{ id: string }>(async ({ user, params }) => {
   if (!h) throw new ApiError(404, "Hold not found or already released.", "not_found");
   await audit(user.id, "legal_hold.release", "user", h.userId, { hold: h.id });
   return ok({ released: true });
-}, { permission: "reports.resolve" });
+}, { permission: "legal.holds" });

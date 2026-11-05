@@ -1,8 +1,9 @@
 import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput, View } from "react-native";
 import Animated, { FadeIn, FadeInRight, ZoomIn } from "react-native-reanimated";
-import { CITIES, COUNTRIES, GENDERS, INTEREST_EMOJI, INTERESTS, PERSONALITY_QUESTIONS } from "@shared/constants";
+import { GENDERS, INTEREST_EMOJI, INTERESTS, PERSONALITY_QUESTIONS } from "@shared/constants";
+import { usePlaces } from "@/lib/places";
 import { ArcMark } from "@/components/Arc";
 import { Button, IconButton } from "@/components/Button";
 import { Icon } from "@/components/Icon";
@@ -110,10 +111,7 @@ export default function Onboarding() {
     setStep(!p ? 0 : (p.interests?.split(",").filter(Boolean).length ?? 0) < 3 ? 3 : answered < 6 ? Q0 + answered : !me.preferences?.interestedIn ? PREFS : PHOTOS);
   }, [me, step]);
 
-  const cities = useMemo(() => {
-    const q = cityQuery.trim().toLowerCase();
-    return Object.entries(CITIES).filter(([n]) => !q || n.toLowerCase().includes(q));
-  }, [cityQuery]);
+  const { places, typed: cityTyped, loading: cityLoading } = usePlaces(cityQuery);
 
   if (step === null) return <Screen><View /></Screen>;
 
@@ -149,16 +147,22 @@ export default function Onboarding() {
       <>
         <T v="display">Where are you based?</T>
         <T tone="muted">People see your city and a rounded distance — never your exact location.</T>
-        <TextInput placeholder="Search cities" placeholderTextColor={c.faint} value={cityQuery} onChangeText={setCityQuery} accessibilityLabel="Search cities"
+        <TextInput placeholder="Search any town or city" placeholderTextColor={c.faint} value={cityQuery} onChangeText={setCityQuery} accessibilityLabel="Search any town or city" autoCorrect={false}
           style={{ height: 50, borderRadius: 16, backgroundColor: c.surface, paddingHorizontal: 16, fontSize: 17, color: c.text, fontFamily: "Figtree_500Medium" }} />
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: 8, paddingBottom: 12 }} keyboardShouldPersistTaps="handled">
-          {cities.map(([n, info]) => (
-            <Pressable key={n} accessibilityRole="radio" accessibilityState={{ selected: city === n }} onPress={() => { haptic.tick(); setCity(n); }}
-              style={{ flexDirection: "row", alignItems: "center", padding: 16, borderRadius: 18, backgroundColor: city === n ? c.brand : c.surface }}>
-              <T v="headline" style={{ flex: 1, color: city === n ? c.brandText : c.text }}>{n}</T>
-              <T v="caption" style={{ color: city === n ? c.brandText : c.muted }}>{COUNTRIES[info.country]?.name}</T>
-            </Pressable>
-          ))}
+          {!cityTyped ? <T v="caption" tone="faint">Popular — or type any town or city in the world</T> : null}
+          {cityTyped && cityLoading && !places.length ? <T tone="muted">Searching…</T> : null}
+          {cityTyped && !cityLoading && !places.length ? <T tone="muted">No town or city found. Check the spelling, or try a nearby city.</T> : null}
+          {places.map((p) => {
+            const on = city === p.key || city === p.label;
+            return (
+              <Pressable key={p.key} accessibilityRole="radio" accessibilityState={{ selected: on }} onPress={() => { haptic.tick(); setCity(p.key); }}
+                style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 16, borderRadius: 18, backgroundColor: on ? c.brand : c.surface }}>
+                <T v="headline" numberOfLines={1} style={{ flex: 1, color: on ? c.brandText : c.text }}>{p.label}</T>
+                <T v="caption" style={{ color: on ? c.brandText : c.muted }}>{p.countryName}</T>
+              </Pressable>
+            );
+          })}
         </ScrollView>
       </>
     );

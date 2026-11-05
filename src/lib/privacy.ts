@@ -11,6 +11,7 @@ import { openSafe } from "./crypto";
 import { storage } from "./storage";
 import { notify } from "./notify";
 import { heldUserIds } from "./safety";
+import { myNominee } from "./nominee";
 
 const DAY = 86_400_000;
 
@@ -57,6 +58,7 @@ export async function exportMyData(user: User) {
     referrals: refs,
     dateCheckins: (await db.select().from(schema.dateCheckins).where(eq(schema.dateCheckins.userId, user.id))).map((c) => ({
       place: c.place, startsAt: c.startsAt, checkInAt: c.checkInAt, contactName: c.contactName, contactEmail: c.contactEmail ? openSafe(c.contactEmail, `checkin:${user.id}`) : "(deleted a week after the date)", status: c.status })),
+    nominee: await myNominee(user.id),
     feedback: (await db.select().from(schema.feedback).where(eq(schema.feedback.userId, user.id))).map((f) => ({ at: f.createdAt, about: f.context, rating: f.rating, comment: f.comment })),
   };
 }
@@ -116,6 +118,7 @@ export async function deleteAccount(user: User) {
     db.delete(schema.devices).where(eq(schema.devices.userId, uid)),
     db.delete(schema.otpCodes).where(eq(schema.otpCodes.userId, uid)),
     db.delete(schema.sessions).where(eq(schema.sessions.userId, uid)),
+    db.delete(schema.nominees).where(eq(schema.nominees.userId, uid)),
     db.update(schema.matches).set({ status: "UNMATCHED", unmatchedBy: uid, endedAt: new Date() }).where(or(eq(schema.matches.userAId, uid), eq(schema.matches.userBId, uid))),
     db.update(schema.subscriptions).set({ status: "EXPIRED", endsAt: new Date(), cancelAtPeriodEnd: true }).where(and(eq(schema.subscriptions.userId, uid), ne(schema.subscriptions.status, "EXPIRED"))),
   ]);

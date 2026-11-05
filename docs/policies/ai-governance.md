@@ -31,7 +31,10 @@
    - Screening runs on Kinara's servers. Message text is not sent to outside AI providers unless the Privacy Policy lists them and a DPA is signed.
    - Members are told messages are screened for safety. Kinara does not claim end-to-end encryption.
 
+## Labelled test set
+
+`tests/fixtures/screening-cases.json` holds labelled messages per rule. `tests/unit/screening-cases.test.ts` fails if any rule flags a case a person marked as fine, or misses a case it should catch (apart from listed known gaps), and prints precision and recall per rule. Add every misjudged real case (anonymised) before changing a rule.
+
 ## Not done yet
 
 - A formal bias evaluation of matching on real data (needs launch data).
-- A labelled test set for each screening rule.

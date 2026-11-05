@@ -144,13 +144,17 @@ export function viewerHash(userId: string) {
 
 type Viewer = { userId: string; hash: string; country: string; city: string; age: number | null; gender: string | null; interests: string[]; device: string; language: string; personalised: boolean };
 
-export async function viewerFor(user: User, device: string, language: string): Promise<Viewer | null> {
+/**
+ * `gpc`: the browser sent Global Privacy Control (Sec-GPC: 1), a legally recognised opt-out of sale/sharing in
+ * California and several other US states. Until the member makes their own choice, it switches personalised ads off.
+ */
+export async function viewerFor(user: User, device: string, language: string, gpc = false): Promise<Viewer | null> {
   const [p, prefs] = await Promise.all([
     db.query.profiles.findFirst({ where: eq(schema.profiles.userId, user.id) }),
     db.query.preferences.findFirst({ where: eq(schema.preferences.userId, user.id) }),
   ]);
   if (!p) return null;
-  const personalised = prefs?.personalisedAds ?? (await countryRules(p.country)).personalisedAdsDefault;
+  const personalised = prefs?.personalisedAds ?? (gpc ? false : (await countryRules(p.country)).personalisedAdsDefault);
   return {
     userId: user.id, hash: viewerHash(user.id), country: p.country, city: p.city, age: ageFromDob(p.dob), device, language,
     gender: personalised ? p.gender : null, interests: personalised ? p.interests.split(",").filter(Boolean) : [], personalised,
@@ -205,9 +209,9 @@ export function readToken(tok: string) {
 function todaySpend(c: typeof schema.adCampaigns.$inferSelect) { return c.spentDay === today() ? c.spentTodayMinor : 0; }
 
 /** `exclude`: campaigns already on screen, so one page never repeats the same ad. */
-export async function pickAd(user: User, placement: Placement, device: string, language: string, exclude: string[] = []) {
+export async function pickAd(user: User, placement: Placement, device: string, language: string, exclude: string[] = [], gpc = false) {
   if (!(await getConfig("ads.enabled"))) return null;
-  const v = await viewerFor(user, device, language);
+  const v = await viewerFor(user, device, language, gpc);
   if (!v) return null;
   const now = new Date();
   const [cap, maxDay] = await Promise.all([getConfig("ads.frequencyPerCampaignPerDay"), getConfig("ads.maxPerMemberPerDay")]);
