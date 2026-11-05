@@ -50,7 +50,7 @@ jobs:
         run: |
           WANT="${GITHUB_REF_NAME#ios-v}"; HAVE=$(node -p "require('./versions.json').ios")
           if [ "$WANT" != "$HAVE" ]; then echo "::error::Tag says $WANT but mobile/versions.json has ios $HAVE. Update versions.json first."; exit 1; fi
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: env.HAS_TOKEN == 'true'
         with: { node-version: 22, cache: npm, cache-dependency-path: mobile/package-lock.json }
       - uses: expo/expo-github-action@v8
