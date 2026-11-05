@@ -11,6 +11,7 @@ import { Icon } from "@/components/Icon";
 import { Group, LinkRow, Toggle } from "@/components/SettingsKit";
 import { T } from "@/components/Text";
 import { Banner, Chip, Field, Screen } from "@/components/ui";
+import { NomineeSheet, useNominee } from "@/components/NomineeSheet";
 import { api, API_URL } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { haptic } from "@/lib/haptics";
@@ -31,11 +32,12 @@ export default function PrivacyCenter() {
   const p = me?.preferences;
   const blocked = useQuery({ queryKey: ["blocks"], queryFn: () => api<{ blocked: { id: string; firstName: string; blockedAt: string }[] }>("/api/blocks") });
   const [msg, setMsg] = useState<{ tone: "trust" | "alert"; text: string } | null>(null);
-  const [sheet, setSheet] = useState<"messages" | "delete" | "blocked" | "consents" | "decisions" | "pause" | null>(null);
+  const [sheet, setSheet] = useState<"messages" | "delete" | "blocked" | "consents" | "decisions" | "pause" | "nominee" | null>(null);
   const consents = useQuery({ queryKey: ["consents"], enabled: sheet === "consents", queryFn: () => api<{ current: { kind: string; label: string; granted: boolean; required: boolean; withdrawable: boolean; at: string | null; asked?: boolean }[]; history: { kind: string; label: string; granted: boolean; at: string; version: string | null }[] }>("/api/consents") });
   const decisions = useQuery({ queryKey: ["decisions"], enabled: sheet === "decisions", queryFn: () => api<{ restricted: boolean; decisions: { id: string; kind: string; decision: string; reason: string; at: string; reviewed: string | null }[] }>("/api/privacy/decisions") });
   const retention = useQuery({ queryKey: ["retention"], enabled: sheet === "delete", queryFn: () => api<{ schedule: { what: string; keep: string }[] }>("/api/privacy/retention") });
   const [pw, setPw] = useState("");
+  const nominee = useNominee();
   const [busy, setBusy] = useState(false);
 
   async function set(key: string, value: boolean | string) {
@@ -146,6 +148,7 @@ export default function PrivacyCenter() {
           <LinkRow icon="flag" label="Your reports and appeals" sub="Case numbers and status." onPress={() => router.push("/safety")} />
         </Group>
         <Group title="Your data">
+          <LinkRow icon="profile" label="Nominee" sub={nominee.data?.nominee ? `${nominee.data.nominee.name} (${nominee.data.nominee.relationship})` : "Who can act on your data if you can't."} onPress={() => setSheet("nominee")} />
           <LinkRow icon="download" label={busy ? "Preparing…" : "Download my data"} sub="Everything we hold about you, as a file." onPress={download} />
           <LinkRow icon="messages" label="Delete my messages" sub="Removes the messages you've sent in every chat." onPress={() => setSheet("messages")} />
           <LinkRow icon="trash" label="Delete my account" tone="alert" onPress={() => setSheet("delete")} />
@@ -206,6 +209,7 @@ export default function PrivacyCenter() {
         <Field label="Your password" value={pw} onChangeText={setPw} secureTextEntry />
         <Button title="Delete permanently" v="danger" size="lg" full disabled={!pw} loading={busy} onPress={deleteAccount} />
       </BottomSheet>
+      <NomineeSheet open={sheet === "nominee"} onClose={() => setSheet(null)} />
     </Screen>
   );
 }

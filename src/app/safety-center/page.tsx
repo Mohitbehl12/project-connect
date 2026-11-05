@@ -6,7 +6,7 @@ import { timeAgo, useApi } from "@/lib/client";
 import { REPORT_CATEGORIES } from "@/lib/constants";
 
 function SafetyCenter() {
-  const { data } = useApi<{ reports: { id: string; category: string; status: string; createdAt: string }[] }>("/api/reports");
+  const { data } = useApi<{ reports: { id: string; caseNo?: string | null; category: string; status: string; createdAt: string; reviewWithin?: string | null }[] }>("/api/reports");
   return (
     <div className="mx-auto max-w-3xl">
       <PageHeader title="Safety Center" sub="Tools and advice for meeting people safely." />
@@ -22,7 +22,7 @@ function SafetyCenter() {
             <ul className="mt-3 divide-y divide-mist rounded-card border border-mist bg-paper-raised">
               {data.reports.map((r) => (
                 <li key={r.id} className="flex items-center justify-between px-5 py-3">
-                  <span>{REPORT_CATEGORIES[r.category as keyof typeof REPORT_CATEGORIES]} <span className="text-sm text-ink-faint">· {timeAgo(r.createdAt)}</span></span>
+                  <span>{REPORT_CATEGORIES[r.category as keyof typeof REPORT_CATEGORIES]} <span className="text-sm text-ink-faint">· {r.caseNo ? `Case ${r.caseNo} · ` : ""}{timeAgo(r.createdAt)}{r.reviewWithin ? ` · reviewed ${r.reviewWithin}` : ""}</span></span>
                   <span className={`text-sm font-semibold ${r.status === "Reviewed" ? "text-sage" : "text-marigold-deep"}`}>{r.status}</span>
                 </li>
               ))}

@@ -38,7 +38,7 @@ export const POST = route<{ versionId: string }>(async ({ req, user, params }) =
     if (v.status !== "IN_REVIEW") throw new ApiError(409, "Only versions in review can go back to draft.", "bad_state");
     await db.update(T).set({ status: "DRAFT" }).where(eq(T.id, v.id));
   } else {
-    if (!can(user.role, "legal.publish")) throw new ApiError(403, "Publishing legal documents needs a super admin.", "forbidden");
+    if (!can(user.role, "legal.publish")) throw new ApiError(403, "Publishing legal documents needs a compliance admin or super admin.", "forbidden");
     if (v.status !== "IN_REVIEW") throw new ApiError(409, "Send this version for review before publishing.", "bad_state");
     if (v.createdById === user.id) throw new ApiError(403, "Someone other than the author must publish this version.", "four_eyes");
     if (!v.changeSummary && v.version > 1) throw new ApiError(422, "Add a short summary of what changed — members see it with the new version.", "change_summary_required");

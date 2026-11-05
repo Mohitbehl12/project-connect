@@ -30,7 +30,7 @@ export default function Safety() {
   const { me, refetchMe } = useAuth();
   const { c } = useTheme();
   const [msg, setMsg] = useState("");
-  const reports = useQuery({ queryKey: ["my-reports"], queryFn: () => api<{ reports: { id: string; caseNo: string | null; category: string; status: string; createdAt: string }[] }>("/api/reports") });
+  const reports = useQuery({ queryKey: ["my-reports"], queryFn: () => api<{ reports: { id: string; caseNo: string | null; category: string; status: string; createdAt: string; reviewWithin?: string | null }[] }>("/api/reports") });
   const appeals = useQuery({ queryKey: ["my-appeals"], queryFn: () => api<{ kinds: Record<string, string>; appeals: { caseNo: string; kind: string; status: string; decision: string | null; createdAt: string }[] }>("/api/appeals") });
   const params = useLocalSearchParams<{ appeal?: string }>();
   const [appealOpen, setAppealOpen] = useState(params.appeal === "1");
@@ -147,7 +147,7 @@ export default function Safety() {
             <View key={r.id} style={{ flexDirection: "row", justifyContent: "space-between", backgroundColor: c.surface, borderRadius: 16, padding: 14 }}>
               <View style={{ flex: 1 }}>
                 <T v="callout">{REPORT_CATEGORIES[r.category as keyof typeof REPORT_CATEGORIES] ?? r.category}</T>
-                {r.caseNo ? <T v="caption" tone="faint">Case {r.caseNo}</T> : null}
+                {r.caseNo ? <T v="caption" tone="faint">Case {r.caseNo}{r.reviewWithin ? ` · reviewed ${r.reviewWithin}` : ""}</T> : null}
               </View>
               <T v="callout" tone={r.status === "Reviewed" ? "trust" : "muted"}>{r.status}</T>
             </View>

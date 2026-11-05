@@ -34,6 +34,11 @@ export default function About() {
             caste or ethnicity to rank people.
           </p>
         </section>
+        <p className="mt-8 text-sm text-ink-faint">
+          Town and city names: <a className="underline" href="https://www.geonames.org" rel="noopener noreferrer">GeoNames</a> and{" "}
+          <a className="underline" href="https://simplemaps.com/data/world-cities" rel="noopener noreferrer">SimpleMaps</a>, licensed{" "}
+          <a className="underline" href="https://creativecommons.org/licenses/by/4.0/" rel="noopener noreferrer">CC BY 4.0</a>.
+        </p>
       </div>
     </PublicShell>
   );

@@ -26,20 +26,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
+        with: { node-version: 22, cache: npm, cache-dependency-path: "package-lock.json\nmobile/package-lock.json" }
       - run: npm ci
+      # Some unit tests import shared app code (mobile/src/theme), whose tsconfig extends Expo's, so the app's
+      # packages must be installed too.
+      - run: npm --prefix mobile ci --ignore-scripts
       - name: Secret scan
         run: node scripts/secret-scan.mjs
       - name: Type check
         run: npx tsc --noEmit -p .
-      - name: Unit tests
-        run: npx vitest run
-      - name: Dependency audit (fails on critical)
-        run: npm audit --omit=dev --audit-level=critical
+      # Before the unit tests: some of them open the database, which needs the data folder and a migrated schema.
       - name: Migrations apply cleanly to an empty database
         run: |
           sh scripts/ci-env.sh
           npx tsx scripts/migrate.ts
+      - name: Unit tests
+        run: DATABASE_URL="file:./data/ci.db" npx vitest run
+      - name: Dependency audit (fails on critical)
+        run: npm audit --omit=dev --audit-level=critical
 
   e2e:
     name: Build, end-to-end, security and QA
@@ -49,8 +53,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
+        with: { node-version: 22, cache: npm, cache-dependency-path: "package-lock.json\nmobile/package-lock.json" }
       - run: npm ci
+      - run: npm --prefix mobile ci --ignore-scripts
       - name: Test environment and fresh database
         run: |
           sh scripts/ci-env.sh
@@ -67,7 +72,7 @@ jobs:
           nohup npx next start -p 3000 > .ci/server-sec.log 2>&1 &
           for i in $(seq 1 60); do curl -fsS http://127.0.0.1:3000/api/health >/dev/null && break; sleep 2; done
           npx tsx tests/security.ts
-          kill $(lsof -t -i:3000) || true
+          fuser -k 3000/tcp || true  # stops the security-suite server (lsof finds nothing on the runner)
           sleep 2
       - name: End-to-end suite
         env:

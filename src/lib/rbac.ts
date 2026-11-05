@@ -9,6 +9,7 @@ export const PERMISSIONS = [
   "config.edit",
   "plans.edit",
   "legal.edit", "legal.publish",
+  "legal.holds", // place and release legal holds (evidence preservation)
   "audit.view",
   "roles.assign",
   "payments.view", // revenue, payment list, invoices — never card or bank details (we don't hold them)
@@ -35,9 +36,14 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
   SUPPORT: ["admin.access", "users.view", "reports.view", "payments.refund_request", "grievances.handle"],
   FINANCE: ["admin.access", "ads.finance", "plans.edit", "payments.view", "payments.refund_request", "payments.refund_approve", "offers.edit", "coupons.edit", "referrals.manage", "analytics.view"],
   SECURITY: ["admin.access", "users.view", "security.view", "risk.resolve", "referrals.manage", "audit.view", "ops.view"],
-  MODERATOR: ["admin.access", "users.view", "users.moderate", "users.verify", "reports.view", "reports.resolve", "messages.view_reported", "grievances.handle", "ads.review"],
+  MODERATOR: ["admin.access", "users.view", "users.moderate", "users.verify", "reports.view", "reports.resolve", "messages.view_reported", "grievances.handle", "ads.review", "legal.holds"],
+  // Compliance: legal documents (publishing still needs a second person), complaints, legal holds and the audit
+  // trail. No payments, no moderation decisions, no reported messages, no settings.
+  COMPLIANCE: ["admin.access", "users.view", "legal.edit", "legal.publish", "legal.holds", "grievances.handle", "audit.view", "analytics.view"],
+  // Technical: system health, incidents, releases and rollback, security events. No member records, payments or reports.
+  TECHNICAL: ["admin.access", "ops.view", "ops.manage", "security.view", "audit.view"],
   ADMIN: ["admin.access", "users.view", "users.moderate", "users.ban", "users.verify", "reports.view", "reports.resolve",
-    "messages.view_reported", "analytics.view", "config.edit", "plans.edit", "legal.edit", "audit.view",
+    "messages.view_reported", "analytics.view", "config.edit", "plans.edit", "legal.edit", "legal.holds", "audit.view",
     "payments.view", "payments.refund_request", "offers.edit", "coupons.edit", "referrals.manage", "security.view", "risk.resolve", "grievances.handle", "ads.review", "ads.finance", "ops.view", "ops.manage"],
   SUPER_ADMIN: [...PERMISSIONS],
 };

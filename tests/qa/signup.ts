@@ -82,7 +82,7 @@ async function journey(browser: any, p: P, i: number) {
     }, /Let's make your profile/);
   }
   await step("type a first name and choose a gender", async () => { await page.getByLabel("First name").fill(p.name); await page.getByRole("button", { name: p.gender, exact: true }).first().click(); await btn("Continue").click(); }, /Where are you based/);
-  await step(`search for ${p.city} and pick it`, async () => { await page.getByLabel("Search cities").fill(p.city.slice(0, 4)); await page.getByRole("radio", { name: new RegExp(p.city) }).first().click(); await btn("Continue").click(); });
+  await step(`search for ${p.city} and pick it`, async () => { await page.getByLabel(/Search (cities|any town or city)/).fill(p.city.slice(0, 4)); await page.getByRole("radio", { name: new RegExp(p.city) }).first().click(); await btn("Continue").click(); });
   await step(`choose "${p.goal}"`, async () => { await page.getByRole("radio", { name: new RegExp(p.goal) }).first().click(); await page.waitForTimeout(400); }, p.goal === "New connections" ? undefined : /pick one/i);
   if (p.goal !== "New connections") await step("Continue tells you to pick an option, then pick one", async () => {
     await page.getByRole("button", { name: "Pick one option above" }).last().waitFor();

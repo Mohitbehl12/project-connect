@@ -1,3 +1,4 @@
+import { DobFields } from "@/components/DobFields";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMemo, useState } from "react";
 import { KeyboardAvoidingView, Linking, Platform, Pressable, View } from "react-native";
@@ -95,11 +96,7 @@ export default function SignUp() {
             <>
               <T v="display">When's your birthday?</T>
               <T tone="muted">We show your age, never your birthday. You must be 18 or older.</T>
-              <View style={{ flexDirection: "row", gap: 10 }}>
-                <View style={{ flex: 1 }}><Field label="Day" placeholder="DD" value={dd} onChangeText={(t) => setDd(t.replace(/\D/g, "").slice(0, 2))} keyboardType="number-pad" maxLength={2} /></View>
-                <View style={{ flex: 1 }}><Field label="Month" placeholder="MM" value={mm} onChangeText={(t) => setMm(t.replace(/\D/g, "").slice(0, 2))} keyboardType="number-pad" maxLength={2} /></View>
-                <View style={{ flex: 1.4 }}><Field label="Year" placeholder="YYYY" value={yyyy} onChangeText={(t) => setYyyy(t.replace(/\D/g, "").slice(0, 4))} keyboardType="number-pad" maxLength={4} /></View>
-              </View>
+              <DobFields value={{ day: dd, month: mm, year: yyyy }} onChange={(v) => { setDd(v.day); setMm(v.month); setYyyy(v.year); }} />
               {dob && "invalid" in dob && <Banner tone="alert">That date doesn't exist. Check the day and month.</Banner>}
               {dob && !("invalid" in dob) && dob.age < 18 && <Banner tone="alert">Kinara is only for people aged 18 and over.</Banner>}
               {dob && !("invalid" in dob) && dob.age >= 18 && <T v="headline" tone="trust">You're {dob.age}. </T>}

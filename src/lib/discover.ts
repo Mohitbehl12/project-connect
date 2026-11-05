@@ -1,5 +1,5 @@
 import "server-only";
-import { and, count, eq, gte, inArray, isNull, lte, ne, notInArray, or } from "drizzle-orm";
+import { and, count, eq, gte, inArray, isNull, like, lte, ne, notInArray, or } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { User } from "@/db/schema";
 import { getConfig } from "./config";
@@ -49,7 +49,7 @@ export function filtersFrom(sp: URLSearchParams): Filters {
   const text = (k: string) => (sp.get(k) ?? "").trim().slice(0, 60) || undefined;
   const one = sp.get("interest");
   return {
-    q: text("q"), interests: [...list("interests", INTERESTS), ...(one && INTERESTS[one] ? [one] : [])], city: CITIES[sp.get("city") ?? ""] ? sp.get("city")! : undefined,
+    q: text("q"), interests: [...list("interests", INTERESTS), ...(one && INTERESTS[one] ? [one] : [])], city: (sp.get("city") ?? "").trim().slice(0, 160) || undefined, // a quick-pick city or any world city name
     ageMin: num("ageMin"), ageMax: num("ageMax"), intents: list("intents", INTENTS), lifestyle, languages: list("languages", LANGUAGES),
     education: text("education"), profession: text("profession"), verified: sp.get("verified") === "1",
   };
@@ -84,7 +84,8 @@ async function candidates(user: User, f: Filters) {
   ];
   if (!viewer.prefs.longDistance) {
     const cities = Object.entries(CITIES).filter(([, c]) => c.country === viewer.country).map(([k]) => k);
-    where.push(or(eq(schema.profiles.country, viewer.country), and(inArray(schema.preferences.travelCity, cities.length ? cities : ["__none__"]), gte(schema.preferences.travelUntil, new Date())))!);
+    // Travellers visiting this country: quick-pick city keys, or world place keys, which start with the country code.
+    where.push(or(eq(schema.profiles.country, viewer.country), and(or(inArray(schema.preferences.travelCity, cities.length ? cities : ["__none__"]), like(schema.preferences.travelCity, `${viewer.country}.%`)), gte(schema.preferences.travelUntil, new Date())))!);
   }
   const rows = await db.select({ user: schema.users, profile: schema.profiles, prefs: schema.preferences })
     .from(schema.users)

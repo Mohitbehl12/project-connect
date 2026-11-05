@@ -13,7 +13,15 @@ type Data = {
   auditChain: { ok: boolean; checked: number; brokenAt?: number; reason?: string };
   automatedDecisions: { kind: string; n: number }[];
   consentRecords: { kind: string; granted: boolean; n: number }[];
+  moderationQuality: {
+    days: number;
+    screening: { category: string; filed: number; actioned: number; dismissed: number; open: number; precisionPct: number | null; falsePositivePct: number | null }[];
+    appeals: { system: string; decisions: number; appealed: number; overturned: number; overturnPct: number | null }[];
+    reviewTimes: { priority: string; open: number; overdue: number; reviewed: number; onTime: number; medianHours: number | null }[];
+  };
 };
+
+const P = (v: number | null) => (v === null ? "—" : `${v}%`);
 
 function Compliance() {
   const staff = useStaff();
@@ -112,6 +120,20 @@ function Compliance() {
           <input className="input" placeholder="Reference (optional)" aria-label="Reference" value={hold.reference} onChange={(e) => setHold({ ...hold, reference: e.target.value })} />
           <button className="btn-primary px-4">Place hold</button>
         </form>
+      </section>
+
+      <section className="panel mt-4 overflow-x-auto p-5">
+        <h2 className="text-lg font-bold">Moderation quality (last {q.data.moderationQuality.days} days)</h2>
+        <p className="mt-1 text-sm text-ink-soft">Watch for rules that are wrong too often (high false positives or overturns) and reports reviewed late. Change a rule only after a person has looked at the cases.</p>
+        <h3 className="mt-4 font-semibold">Review times against targets</h3>
+        <table className="mt-2 w-full text-sm"><thead><tr className="text-left text-ink-faint"><th>Priority</th><th>Open</th><th>Overdue</th><th>Reviewed</th><th>On time</th><th>Median hours</th></tr></thead>
+          <tbody>{q.data.moderationQuality.reviewTimes.map((r) => <tr key={r.priority} className={r.overdue ? "text-rose" : ""}><td>{r.priority.toLowerCase()}</td><td>{r.open}</td><td>{r.overdue}</td><td>{r.reviewed}</td><td>{r.reviewed ? `${r.onTime} of ${r.reviewed}` : "—"}</td><td>{r.medianHours ?? "—"}</td></tr>)}</tbody></table>
+        <h3 className="mt-4 font-semibold">Automated screening: how often a person agreed</h3>
+        <table className="mt-2 w-full text-sm"><thead><tr className="text-left text-ink-faint"><th>Category</th><th>Flagged</th><th>Actioned</th><th>Dismissed</th><th>Waiting</th><th>False positives</th></tr></thead>
+          <tbody>{q.data.moderationQuality.screening.length ? q.data.moderationQuality.screening.map((r) => <tr key={r.category}><td>{r.category.toLowerCase().replace("_", " ")}</td><td>{r.filed}</td><td>{r.actioned}</td><td>{r.dismissed}</td><td>{r.open}</td><td>{P(r.falsePositivePct)}</td></tr>) : <tr><td colSpan={6} className="text-ink-faint">No automated reports yet</td></tr>}</tbody></table>
+        <h3 className="mt-4 font-semibold">Appeals overturned</h3>
+        <table className="mt-2 w-full text-sm"><thead><tr className="text-left text-ink-faint"><th>Decided by</th><th>Decisions</th><th>Appealed</th><th>Overturned</th><th>Overturn rate</th></tr></thead>
+          <tbody>{q.data.moderationQuality.appeals.length ? q.data.moderationQuality.appeals.map((r) => <tr key={r.system}><td>{r.system}</td><td>{r.decisions || "—"}</td><td>{r.appealed}</td><td>{r.overturned}</td><td>{P(r.overturnPct)}</td></tr>) : <tr><td colSpan={5} className="text-ink-faint">No decisions yet</td></tr>}</tbody></table>
       </section>
 
       <section className="panel mt-4 grid gap-6 p-5 md:grid-cols-2">

@@ -1,0 +1,27 @@
+# Weekly dependency update pull requests, so security fixes are seen within days. CI tests each one; a person merges.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule: { interval: weekly, day: monday, time: "04:30", timezone: Asia/Kolkata }
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch: { update-types: [minor, patch] }
+    labels: [dependencies]
+  - package-ecosystem: npm
+    directory: "/mobile"
+    schedule: { interval: weekly, day: monday, time: "04:30", timezone: Asia/Kolkata }
+    open-pull-requests-limit: 3
+    groups:
+      minor-and-patch: { update-types: [minor, patch] }
+    # Expo SDK upgrades move many packages together; do those by hand.
+    ignore:
+      - dependency-name: "expo*"
+        update-types: [version-update:semver-major]
+      - dependency-name: "react-native*"
+        update-types: [version-update:semver-major]
+    labels: [dependencies, mobile]
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule: { interval: monthly }
+    labels: [dependencies]

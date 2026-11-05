@@ -22,6 +22,8 @@ export const RISK_KINDS = {
   REPEATED_REPORTS: "Reported by several different people",
   LOGIN_ANOMALY: "Unusual sign-in pattern (many failures or places)",
   DEVICE_CHURN: "Signed in from many new devices in a week",
+  DUPLICATE_PHOTO: "Uploaded a photo already used by another account",
+  SLOW_BURN_MONEY: "Raised money after a long chat without meeting (common romance-scam turn)",
 } as const;
 export type RiskKind = keyof typeof RISK_KINDS;
 

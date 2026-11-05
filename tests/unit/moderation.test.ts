@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { screenMessage, warningFor } from "../../src/lib/moderation";
+import { screenMessage, slowBurn, warningFor } from "../../src/lib/moderation";
 import { conversationStarters } from "../../src/lib/starters";
 
 describe("screenMessage", () => {
@@ -57,5 +57,41 @@ describe("conversationStarters", () => {
     expect(s.some((x) => x.text.includes("my sourdough"))).toBe(true);
     expect(s.some((x) => x.tip.includes("Pune"))).toBe(true);
     expect(s.length).toBeLessThanOrEqual(4);
+  });
+});
+
+describe("possible-minor signal (child safety)", () => {
+  const minor = (t: string) => screenMessage(t).includes("MINOR");
+  it("flags people saying they are under 18", () => {
+    for (const t of ["hi, I'm 16", "im 15 yo", "I am 17 years old", "i'm only 14", "I'm not 18 yet", "I am under 18", "i'm a minor lol",
+      "I'm in class 11", "im in 10th", "I am studying in std 9", "I'm turning 18 next month", "my age is 16", "main 16 saal ki hoon", "meri umar 15 hai", "I'm still in school"])
+      expect(minor(t), t).toBe(true);
+  });
+  it("ignores adults, distances, durations and other people", () => {
+    for (const t of ["I'm 26", "I'm 10 minutes away", "I'm 15 years into my career", "I'm 12 km from you", "I'm 17th in the marathon list",
+      "my nephew is 16", "I was 16 when I learned guitar", "I'm in 12th year of work", "I'm in 11th semester? no, just kidding", "I'm 30 and love dosa",
+      "I'm 18", "my age is 27", "I'm in class? nope, at the office"])
+      expect(minor(t), t).toBe(false);
+  });
+  it("tells the adult receiving it what to do", () => {
+    expect(warningFor(["MINOR"])).toMatch(/only for adults/);
+  });
+});
+
+describe("slow-burn romance-scam turn", () => {
+  const long = { ageDays: 21, messages: 140, datePlanned: false };
+  it("warns when a long chat without a meeting turns to money", () => {
+    for (const t of ["My uncle has a trading platform, the returns are amazing", "I'm stuck at the hospital, can you help me pay ₹15,000?",
+      "Could you lend me a little until my salary comes?", "Just send to my UPI, I'll return it tomorrow", "can you transfer me 5000 for rent"])
+      expect(slowBurn(t, long), t).toBe(true);
+    expect(warningFor(["SLOW_BURN"])).toMatch(/Romance scams/);
+  });
+  it("stays quiet in new or short chats, after a date is planned, and for ordinary talk", () => {
+    const t = "My uncle has a trading platform, the returns are amazing";
+    expect(slowBurn(t, { ...long, ageDays: 2 })).toBe(false);
+    expect(slowBurn(t, { ...long, messages: 12 })).toBe(false);
+    expect(slowBurn(t, { ...long, datePlanned: true })).toBe(false);
+    for (const x of ["Long day at work, want to get chai this weekend?", "I loved that book you mentioned", "Haha my cat knocked over the plant again"])
+      expect(slowBurn(x, long), x).toBe(false);
   });
 });
