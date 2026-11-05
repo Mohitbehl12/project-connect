@@ -83,7 +83,10 @@ export function searchPlaces(q: string, opts: { country?: string; limit?: number
     }
     if (score >= 0) out.push({ r, score });
   }
-  out.sort((a, b) => b.score - a.score || b.r[6] - a.r[6]);
+  // How well the name matches, plus how big the place is: "luck" puts Lucknow (3.4 million) above Luck, Wisconsin
+  // (1,000), while "paris" still puts Paris, France first.
+  const rank = (x: { r: Row; score: number }) => x.score + Math.log10(x.r[6] + 10) * 0.6;
+  out.sort((a, b) => rank(b) - rank(a));
   const seen = new Set<string>();
   const places: Place[] = [];
   for (const { r } of out) {

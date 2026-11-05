@@ -6,6 +6,7 @@ describe("world places", () => {
     const show = (q: string) => searchPlaces(q, { limit: 3 }).map((p) => `${p.label}|${p.country}`);
     console.log(["lucknow", "sao paulo", "springfield illinois", "paris", "nairobi", "gurgaon", "shimla"].map((q) => `${q}: ${show(q).join(" ; ")}`).join("\n"));
     expect(searchPlaces("lucknow")[0]).toMatchObject({ country: "IN", name: "Lucknow" });
+    expect(searchPlaces("luck")[0]).toMatchObject({ country: "IN", name: "Lucknow" }); // a big city beats a tiny exact match
     expect(searchPlaces("sao paulo")[0]).toMatchObject({ country: "BR" });
     expect(searchPlaces("paris")[0]).toMatchObject({ country: "FR" });
     expect(searchPlaces("nairobi")[0]).toMatchObject({ country: "KE" });

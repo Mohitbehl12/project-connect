@@ -18,10 +18,13 @@ export function CityPicker({ id, value, onChange }: { id?: string; value: string
   const [active, setActive] = useState(0);
   const [loading, setLoading] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  useEffect(() => setQ(value), [value]);
+  // After a pick the form holds the city's key; show its name, never the key.
+  const picked = useRef<{ key: string; label: string } | null>(null);
+  const shown = picked.current && picked.current.key === value ? picked.current.label : value;
+  useEffect(() => setQ(shown), [shown]);
 
   const popular: Place[] = Object.entries(CITIES).map(([k, c]) => ({ key: k, label: k, countryName: COUNTRIES[c.country]?.name ?? c.country }));
-  const typed = q.trim().length >= 2 && q !== value;
+  const typed = q.trim().length >= 2 && q !== shown;
   const list = typed ? results : popular;
 
   useEffect(() => {
@@ -35,11 +38,11 @@ export function CityPicker({ id, value, onChange }: { id?: string; value: string
     return () => clearTimeout(timer.current);
   }, [q, typed]);
 
-  const pick = (p: Place) => { onChange(p.key, p.label); setQ(p.label); setOpen(false); };
+  const pick = (p: Place) => { picked.current = { key: p.key, label: p.label }; onChange(p.key, p.label); setQ(p.label); setOpen(false); };
   return (
     <div className="relative">
       <input id={inputId} className="input" role="combobox" aria-expanded={open} aria-controls={`${inputId}-list`} aria-autocomplete="list" autoComplete="off"
-        placeholder="Search any town or city" value={q} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => setOpen(false), 150)}
+        placeholder="Search any town or city" value={q} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => { setOpen(false); setQ(shown); }, 150)}
         onChange={(e) => { setQ(e.target.value); setOpen(true); }}
         onKeyDown={(e) => {
           if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(a + 1, list.length - 1)); }
