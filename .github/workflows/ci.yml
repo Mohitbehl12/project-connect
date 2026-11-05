@@ -102,7 +102,7 @@ jobs:
         run: tail -n 200 .ci/server.log .ci/server-sec.log 2>/dev/null || true
       - name: Keep QA results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: qa-results
           path: qa-results/
