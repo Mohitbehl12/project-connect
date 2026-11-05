@@ -42,7 +42,7 @@
     "bcryptjs": "^3.0.3",
     "blurhash": "^2.0.5",
     "drizzle-orm": "^0.45.4",
-    "ioredis": "^5.4.2",
+    "ioredis": "^6.0.0",
     "jose": "^6.2.12",
     "next": "^15.5.28",
     "nsfwjs": "^4.4.0",
