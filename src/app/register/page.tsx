@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { PublicShell } from "@/components/PublicShell";
+import { DobInput } from "@/components/DobInput";
 import { Alert, Field } from "@/components/ui";
 import { api } from "@/lib/client";
 
@@ -13,11 +14,11 @@ export default function Register() {
   const [marketing, setMarketing] = useState(false); // optional, never pre-ticked
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
-  const maxDob = (() => { const d = new Date(); d.setFullYear(d.getFullYear() - 18); return d.toISOString().slice(0, 10); })();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr("");
+    if (!f.dob) return setErr("Enter your date of birth as day, month and year.");
     if (!checks.confirmAdult || !checks.acceptLegal || !checks.safetyAcknowledged) return setErr("Tick all three boxes to continue.");
     setBusy(true);
     try {
@@ -47,7 +48,7 @@ export default function Register() {
             {(id) => <input id={id} type="password" className="input" autoComplete="new-password" required minLength={8} value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} />}
           </Field>
           <Field label="Date of birth" hint="You must be 18 or older. Your exact birthday is never shown — only your age.">
-            {(id) => <input id={id} type="date" className="input" required max={maxDob} value={f.dob} onChange={(e) => setF({ ...f, dob: e.target.value })} />}
+            {(id) => <DobInput id={id} onChange={(dob) => setF((s) => ({ ...s, dob }))} />}
           </Field>
           <div className="space-y-3 rounded-xl bg-paper-sunk p-4">
             {box("confirmAdult", "I'm 18 or older.")}
