@@ -1,6 +1,6 @@
 # Incident Response Plan (draft)
 
-**Applies to:** security incidents affecting Kinara's systems, accounts or data. Personal-data breaches also follow the [Data breach response](data-breach-response.md) plan.
+**Applies to:** security incidents affecting Discover's systems, accounts or data. Personal-data breaches also follow the [Data breach response](data-breach-response.md) plan.
 
 ## Roles (to be named by the owner)
 

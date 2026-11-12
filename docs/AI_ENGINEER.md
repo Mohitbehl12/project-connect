@@ -1,6 +1,6 @@
 # AI engineer — runbook
 
-Kinara runs an autonomous **detect → analyse → propose → test → approve → deploy → monitor → roll back** loop.
+Discover runs an autonomous **detect → analyse → propose → test → approve → deploy → monitor → roll back** loop.
 Since 2026-11-12, at the owner's instruction, the AI engineer also **merges its own pull requests once every
 CI check has passed** (see "Automatic merging"). No person reviews them first; CI, the independent
 `qa-reviewer` check, the release watchdog and the `needs-human` label are the safeguards. This file is the
@@ -94,7 +94,7 @@ Never merged automatically: Dependabot PRs, PRs opened by a person, drafts, anyt
 `.github/workflows/`, `render.yaml`, `scripts/start.sh`, `.claude/` or this file. Those wait for a person.
 
 **To stop automatic merging:** add `needs-human` to a PR to hold that one; pause the scheduled task
-"Kinara AI engineer (every 6 hours)" to hold everything; or restore the previous wording of this section's
+"Discover AI engineer (every 6 hours)" to hold everything; or restore the previous wording of this section's
 rules by reverting the commit that added it.
 
 ## Master agent and sub-agents

@@ -5,7 +5,7 @@ import { getConfig } from "./config";
 import { feedbackSummary } from "./feedback";
 import { metricsSince, opsAction } from "./ops";
 
-// The feature scout reads how Kinara is used (aggregates only — never one person's activity) and writes
+// The feature scout reads how Discover is used (aggregates only — never one person's activity) and writes
 // improvement proposals. It never builds anything: a person approves a proposal in Admin → Engineering, and only
 // then does it become a GitHub issue for the AI engineer. Each signal has a stable key so a proposal is made once;
 // a rejected idea is not proposed again.

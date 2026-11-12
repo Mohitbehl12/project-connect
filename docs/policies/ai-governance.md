@@ -28,8 +28,8 @@
    - New rules or models go through a pull request with tests and human approval, and they get a new version tag.
    - AI may propose code changes on branches; it cannot merge, deploy, alter legal policies or change suspension rules.
 6. **Privacy.**
-   - Screening runs on Kinara's servers. Message text is not sent to outside AI providers unless the Privacy Policy lists them and a DPA is signed.
-   - Members are told messages are screened for safety. Kinara does not claim end-to-end encryption.
+   - Screening runs on Discover's servers. Message text is not sent to outside AI providers unless the Privacy Policy lists them and a DPA is signed.
+   - Members are told messages are screened for safety. Discover does not claim end-to-end encryption.
 
 ## Labelled test set
 
