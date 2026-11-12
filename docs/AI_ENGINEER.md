@@ -15,6 +15,7 @@ reviewing its work.
 | GitHub sync | `monitor.ts → githubSync()` every 15 min | Opens an issue per incident at or above *Settings → send to the AI engineer from* (default MEDIUM) and per **approved** proposal; reads the engineer's PRs and diagnosis comments back into the incident. |
 | Feature scout | `src/lib/scout.ts`, daily | Turns usage totals (onboarding drop-off, empty searches, checkout abandonment, slow screens, report categories, unused features) into proposals (`FEAT-YYYY-NNNN`). Never one person's activity. |
 | AI engineer | scheduled Claude task, every 6 h | Works the GitHub queue using this runbook. Opens PRs. **Never merges.** |
+| Master agent and sub-agents | `.claude/agents/` | How the AI engineer organises a run: `master-agent` diagnoses and orchestrates, `developer` writes the fix, `qa-reviewer` checks it independently before a PR is opened. They work under this runbook and change none of its rules. |
 | CI | `.github/workflows/ci.yml` | On every PR and push: secret scan, types, unit tests, dependency audit, migrations on an empty DB, build, security suite, e2e, QA API cases; nightly also the browser QA. |
 | Uptime | `.github/workflows/uptime.yml` every 15 min | Outside check of `/api/health`; opens/closes an `uptime` issue. |
 | Dashboard | Admin → Engineering | Health, incidents, releases (manual rollback), proposals (approve/reject), the append-only activity trail, thresholds. |
@@ -60,6 +61,24 @@ Issues labelled `needs-human` follow the High/Critical rules whatever the score.
 6. **PR.** Open a PR to `main` using `.github/pull_request_template.md`, every section filled, `Fixes #<issue>` in the body, labels `ai-engineer` and `risk:<band>`. Draft if High. Add the fix to `docs/AI_KNOWLEDGE.md` in the same PR (symptom → cause → fix → test).
 7. **Approved features** (`feature` + `approved` labels): same flow on `ai/feature/FEAT-…`. Keep the change behind a config flag defaulting to off when it changes what members see, so it can be turned on deliberately.
 8. **Report.** End the run with a short summary: issues looked at, diagnoses posted, PRs opened (links), anything skipped and why.
+
+## Master agent and sub-agents
+
+The agent definitions in `.claude/agents/` are instructions, not extra permissions. Each one states that this
+runbook outranks it.
+
+| Agent | Role in a run | Can change code |
+|---|---|---|
+| `master-agent` | Reads the queue, diagnoses, briefs the others, runs the full test set, opens the PR, reports | Yes |
+| `developer` | Writes the smallest fix and its regression test from the master agent's brief | Yes |
+| `qa-reviewer` | Checks the fix against the issue without seeing the developer's summary: test fails before and passes after, nothing on the never-list touched, no test weakened | No (read and run only) |
+| `researcher`, `doc-writer`, `business-analyst`, `automation-builder` | Used when a task needs outside facts, documentation, requirements or tooling | `researcher` and `business-analyst` no; the others yes |
+
+If a session does not offer these agents, the AI engineer follows `.claude/agents/master-agent.md` as written
+instructions and does the fix and the review as two separate passes itself.
+
+To call the master agent by hand, open Claude Code in this repository and run `claude --agent master-agent`, or
+write `@master-agent <objective>` in a running session. Work still arrives as a pull request.
 
 ## After a person merges
 
