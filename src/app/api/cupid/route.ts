@@ -11,9 +11,11 @@ const Body = z.object({ task: z.enum(["opener", "reply", "date", "bio"]), matchI
 
 async function person(userId: string) {
   const p = await db.query.profiles.findFirst({ where: eq(schema.profiles.userId, userId) });
+  // A member who shows only their country must not have their city revealed through a suggestion.
+  const prefs = await db.query.preferences.findFirst({ where: eq(schema.preferences.userId, userId), columns: { showCity: true } });
   let prompts: { q: string; a: string }[] = [];
   try { prompts = JSON.parse(p?.prompts ?? "[]"); } catch { /* ignore */ }
-  return { firstName: p?.firstName ?? "", interests: (p?.interests ?? "").split(",").filter(Boolean), city: p?.city ?? "", prompts, drinking: p?.drinking, intent: p?.intent };
+  return { firstName: p?.firstName ?? "", interests: (p?.interests ?? "").split(",").filter(Boolean), city: prefs?.showCity === false ? "" : p?.city ?? "", prompts, drinking: p?.drinking, intent: p?.intent };
 }
 
 /** Cupid ❤️: suggestions only (rule-based, from public profile details). Nothing is ever sent for you. */

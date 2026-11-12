@@ -49,6 +49,7 @@ export function toMatchPerson(r: Row, answers: Record<string, number>): MatchPer
     answers,
     completeness: p.completeness,
     verified: r.user.selfieStatus === "VERIFIED",
+    hideCity: r.prefs?.showCity === false,
     prefs: {
       interestedIn: csv(r.prefs?.interestedIn),
       ageMin: r.prefs?.ageMin ?? 18,

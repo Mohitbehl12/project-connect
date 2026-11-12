@@ -94,7 +94,14 @@ export async function deleteAccount(user: User) {
 
   const files = await db.select({ key: schema.photos.storageKey }).from(schema.photos).where(eq(schema.photos.userId, user.id));
   for (const f of files) await storage().delete(f.key).catch(() => {});
-  await audit(user.id, "user.delete_account", "user", user.id, { photos: files.length });
+  // Selfies waiting for a decision are files too; the rows go with the account, the images must not be left behind.
+  const selfies = await db.select({ id: schema.verificationAttempts.id, key: schema.verificationAttempts.storageKey }).from(schema.verificationAttempts)
+    .where(and(eq(schema.verificationAttempts.userId, user.id), isNotNull(schema.verificationAttempts.storageKey)));
+  for (const s of selfies) {
+    await storage().delete(s.key!).catch(() => {});
+    await db.update(schema.verificationAttempts).set({ storageKey: null }).where(eq(schema.verificationAttempts.id, s.id));
+  }
+  await audit(user.id, "user.delete_account", "user", user.id, { photos: files.length, selfies: selfies.length });
 
   const hasPayments = (await db.select({ id: schema.payments.id }).from(schema.payments).where(eq(schema.payments.userId, user.id)).limit(1)).length > 0;
   // Evidence must survive: if someone reported this account, or it's under a legal hold, we anonymise instead
@@ -176,6 +183,21 @@ export async function runRetention(now = new Date()) {
   // 4. Short-lived secrets.
   out.otpCodesDeleted = (await db.delete(schema.otpCodes).where(lt(schema.otpCodes.createdAt, ago(1))).returning({ id: schema.otpCodes.id })).length;
   out.passwordResetsDeleted = (await db.delete(schema.passwordResets).where(lt(schema.passwordResets.createdAt, ago(1))).returning({ id: schema.passwordResets.id })).length;
+
+  // 4b. Selfies nobody decided on: the image is only kept "until staff decide", so an undecided one must not
+  // sit in storage indefinitely. After 30 days it is deleted and the member can simply take a new one.
+  const staleSelfies = await db.select({ id: schema.verificationAttempts.id, userId: schema.verificationAttempts.userId, key: schema.verificationAttempts.storageKey })
+    .from(schema.verificationAttempts)
+    .where(and(isNotNull(schema.verificationAttempts.storageKey), inArray(schema.verificationAttempts.state, ["PENDING", "CHALLENGE", "RETAKE"]),
+      lt(schema.verificationAttempts.createdAt, ago(30)), held.length ? notInArray(schema.verificationAttempts.userId, held) : undefined));
+  out.staleSelfiesDeleted = 0;
+  for (const s of staleSelfies) {
+    await storage().delete(s.key!).catch(() => {});
+    await db.update(schema.verificationAttempts).set({ storageKey: null, state: "REJECTED", decidedAt: now, note: "Expired: not reviewed within 30 days. The selfie was deleted." }).where(eq(schema.verificationAttempts.id, s.id));
+    const reset = await db.update(schema.users).set({ selfieStatus: "NONE" }).where(and(eq(schema.users.id, s.userId), eq(schema.users.selfieStatus, "PENDING"))).returning({ id: schema.users.id });
+    if (reset.length) await notify(s.userId, "VERIFICATION", "Please take your selfie again", "We couldn't review your selfie in time, so we deleted it. Take a new one whenever you like.", "/settings");
+    out.staleSelfiesDeleted++;
+  }
 
   // 5. Safety records: resolved risk signals and old automated decisions go; closed reports lose their free text.
   out.riskSignalsDeleted = (await db.delete(schema.riskSignals).where(and(isNotNull(schema.riskSignals.resolvedAt), lt(schema.riskSignals.resolvedAt, ago(await days("retention.resolvedRiskSignalDays"))))).returning({ id: schema.riskSignals.id })).length;

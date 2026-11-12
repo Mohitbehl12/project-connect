@@ -711,6 +711,36 @@ async function main() {
     check("approved member is verified", (await V.get("/api/me")).data?.user?.selfieStatus === "VERIFIED");
     check("the selfie is deleted after the decision", (await fetch(selfieUrl, { headers: { cookie: admin.cookie } })).status !== 200);
     check("it leaves the queue", !(await admin.get("/api/admin/verification")).data?.queue?.some((x: any) => x.userId === vId));
+
+    // The badge vouches for the photos staff compared with the selfie, not for whatever is uploaded later.
+    const before = ((await V.get("/api/photos")).data?.photos ?? []) as { id: string; status: string }[];
+    const added = await V.upload("/api/photos", { file: profileFace });
+    check("a photo added after verification waits for a person", added.status === 201 && added.data.photo?.status === "PENDING", added.data);
+    check("adding a photo doesn't remove the badge", (await V.get("/api/me")).data?.user?.selfieStatus === "VERIFIED");
+    let last: any = null;
+    for (const ph of before) last = await V.del(`/api/photos/${ph.id}`);
+    check("removing every verified photo removes the badge", before.length >= 1 && last?.status === 200 && last.data?.badgeRemoved === true, last?.data);
+    check("the member is no longer shown as verified", (await V.get("/api/me")).data?.user?.selfieStatus === "NONE");
+    check("…and is told why", ((await V.get("/api/notifications")).data?.notifications ?? []).some((n: any) => /verify your photos again/i.test(n.title)), null);
+  }
+
+  section("Phone numbers: an unverified claim can't lock out the real owner");
+  {
+    const S1 = new Client("Squat"), S2 = new Client("Owner77");
+    for (const [c, tag] of [[S1, "sq"], [S2, "own"]] as const)
+      await c.post("/api/auth/register", { email: `${tag}.${run}@e2e.test`, password: "Testing123", dob: "1995-02-03", acceptLegal: true, confirmAdult: true, safetyAcknowledged: true });
+    const number = `+9177${String(Date.now()).slice(-8)}`;
+    const claim = await S1.post("/api/auth/otp", { action: "send", channel: "PHONE", phone: number });
+    check("someone asks for a code for a number and never verifies it", claim.status === 200, claim.data);
+    const real = await S2.post("/api/auth/otp", { action: "send", channel: "PHONE", phone: number });
+    check("the real owner can still ask for a code", real.status === 200 && /^\d{6}$/.test(real.data?.devOtp ?? ""), real.data);
+    const late = await S1.post("/api/auth/otp", { action: "verify", channel: "PHONE", code: claim.data?.devOtp });
+    check("the first claim can no longer be completed", late.status === 409 && late.data?.code === "phone_released", late.data);
+    check("the real owner verifies", (await S2.post("/api/auth/otp", { action: "verify", channel: "PHONE", code: real.data?.devOtp })).status === 200);
+    const again = await S1.post("/api/auth/otp", { action: "send", channel: "PHONE", phone: number });
+    check("a verified number can't be taken by anyone else", again.status === 409 && again.data?.code === "phone_taken", again.data);
+    const me2 = (await S2.get("/api/me")).data?.user;
+    check("the owner keeps the number, verified", me2?.phoneVerified === true, me2);
   }
 
   section("Offers: no false urgency");
