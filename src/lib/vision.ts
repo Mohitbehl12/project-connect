@@ -40,6 +40,9 @@ export type Face = { score: number; descriptor: number[] };
 
 /** Faces found in an image, each with a 128-number descriptor, or null if the check couldn't run. */
 export async function findFaces(image: Buffer, timeoutMs = 30_000): Promise<Face[] | null> {
+  // The face models need the same extra memory as the nudity model. With on-server checks off they must not
+  // load at all: the selfie then goes to staff unchecked (null), which the callers already handle.
+  if (!localScanEnabled()) return null;
   const { data, info } = await sharp(image).rotate().resize(640, 640, { fit: "inside", withoutEnlargement: true }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
   return ask<Face[]>("faces", data, info.width, info.height, timeoutMs);
 }

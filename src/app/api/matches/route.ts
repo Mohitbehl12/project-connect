@@ -1,6 +1,6 @@
 import { countryName } from "@/lib/places";
 import { openSafe } from "@/lib/crypto";
-import { and, desc, eq, inArray, isNull, ne, or } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, max, ne, or } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ok, route } from "@/lib/http";
 import { ageFromDob } from "@/lib/matching";
@@ -21,9 +21,14 @@ export const GET = route(async ({ user }) => {
   const byId = new Map(people.map((x) => [x.u.id, x]));
 
   const ids = ms.map((m) => m.id);
-  const msgs = await db.select().from(schema.messages).where(inArray(schema.messages.matchId, ids)).orderBy(desc(schema.messages.createdAt));
-  const unread = await db.select().from(schema.messages)
-    .where(and(inArray(schema.messages.matchId, ids), ne(schema.messages.senderId, user.id), isNull(schema.messages.readAt)));
+  // Only the newest message of each conversation, and a count of unread ones: never the whole history.
+  const newest = db.select({ matchId: schema.messages.matchId, at: max(schema.messages.createdAt).as("at") }).from(schema.messages)
+    .where(inArray(schema.messages.matchId, ids)).groupBy(schema.messages.matchId).as("newest");
+  const msgs = (await db.select({ m: schema.messages }).from(schema.messages)
+    .innerJoin(newest, and(eq(schema.messages.matchId, newest.matchId), eq(schema.messages.createdAt, newest.at)))).map((x) => x.m);
+  const unreadCounts = new Map((await db.select({ matchId: schema.messages.matchId, n: count() }).from(schema.messages)
+    .where(and(inArray(schema.messages.matchId, ids), ne(schema.messages.senderId, user.id), isNull(schema.messages.readAt)))
+    .groupBy(schema.messages.matchId)).map((r) => [r.matchId, r.n]));
 
   const photoMap = await photosFor(otherIds);
   const list = ms.flatMap((m) => {
@@ -37,7 +42,7 @@ export const GET = route(async ({ user }) => {
       createdAt: m.createdAt,
       other: { id: otherId, firstName: o.p.firstName, age: ageFromDob(o.p.dob), city: o.pr?.showCity === false ? countryName(o.p.country) : o.p.city, verified: o.u.selfieStatus === "VERIFIED", photo: photoMap.get(otherId)?.[0] ?? null },
       lastMessage: last ? { body: last.deletedAt ? "Message deleted" : openSafe(last.body, last.matchId).slice(0, 80), mine: last.senderId === user.id, at: last.createdAt } : null,
-      unread: unread.filter((x) => x.matchId === m.id).length,
+      unread: unreadCounts.get(m.id) ?? 0,
     }];
   });
   // Conversations with recent activity first, then new matches.

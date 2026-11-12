@@ -8,7 +8,7 @@ import { localScanEnabled, scanLocally } from "./vision";
 //              nudity model that runs on our own server (workers/vision.mjs; PHOTO_SCAN_LOCAL=false turns it
 //              off). If no check can run, staff review the photo in Admin → Photo review.
 //   "review" — staff review every photo, even when the automatic check passes.
-//   "off"    — no checks. Testing only.
+//   "off"    — no checks. Development and test machines only: on a real server it behaves like "review".
 // Policy: explicit content is refused; borderline photos wait for a person; swimwear and similar are fine.
 // The Sightengine call is untested against a live account. The on-server model is an automated first line,
 // not perfect: anything it's unsure about goes to a person.
@@ -48,7 +48,9 @@ async function sightengine(image: Buffer): Promise<ScreenResult> {
 
 export async function screenPhoto(image: Buffer): Promise<ScreenResult> {
   const mode = await getConfig("moderation.photoScreening");
-  if (mode === "off") return { status: "LIVE", reason: "checks off" };
+  // "off" exists for local testing. On a real server it must never publish an unchecked photo, so there it
+  // behaves like "review": a person looks first.
+  if (mode === "off") return isLocalDev() ? { status: "LIVE", reason: "checks off" } : { status: "PENDING", reason: "checks off: staff review" };
   const scanner = !!(process.env.SIGHTENGINE_USER && process.env.SIGHTENGINE_SECRET);
   let r: ScreenResult | null = null;
   if (scanner) {
@@ -62,5 +64,13 @@ export async function screenPhoto(image: Buffer): Promise<ScreenResult> {
   if (mode === "review") return { status: "PENDING", reason: "staff review" };
   if (r) return r;
   // No scanner: a person checks it — except on a development machine.
-  return process.env.NODE_ENV === "production" ? { status: "PENDING", reason: "staff review" } : { status: "LIVE", reason: "development" };
+  return isLocalDev() ? { status: "LIVE", reason: "development" } : { status: "PENDING", reason: "staff review" };
+}
+
+/**
+ * Only an explicit development or test environment may publish a photo nobody checked. An unset or unknown
+ * NODE_ENV is treated as a real server, so a misconfigured deployment fails closed.
+ */
+function isLocalDev() {
+  return process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test";
 }

@@ -3,6 +3,7 @@ import { statfs } from "node:fs/promises";
 import os from "node:os";
 import { and, count, desc, eq, gte, inArray, isNotNull, lt, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { reconcileRazorpay } from "./payments/reconcile";
 import { verifyAuditChain } from "./audit";
 import { getConfig, setConfig } from "./config";
 import { sendEmail } from "./email";
@@ -217,6 +218,7 @@ async function hourly(now: Date) {
 
 // ---- daily: feature scout and retention -----------------------------------------------------------------------
 async function daily(now: Date) {
+  const reconciliation = await reconcileRazorpay(now).catch((e) => { console.error("[monitor] payment reconciliation failed", (e as Error).message); return { ran: false as const, reason: "error" }; });
   const proposals = await scoutFeatures(now).catch((e) => { console.error("[monitor] scout failed", e); return []; });
   const report = await maybeWeeklyReport(now).catch((e) => { console.error("[monitor] weekly report failed", e); return null; });
   if (report) await sendWeeklyReport(report);
@@ -225,7 +227,7 @@ async function daily(now: Date) {
   await db.delete(schema.opsHealth).where(lt(schema.opsHealth.at, new Date(now.getTime() - 14 * 86400_000)));
   // Keep the newest 50 occurrences of each incident.
   await db.run(sql`delete from ops_incident_events where id in (select id from (select id, row_number() over (partition by incident_id order by at desc) rn from ops_incident_events) where rn > 50)`);
-  return { proposals };
+  return { proposals, reconciliation };
 }
 
 // ---- alerts ---------------------------------------------------------------------------------------------------
