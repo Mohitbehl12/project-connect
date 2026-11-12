@@ -94,7 +94,7 @@ function Pay() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col gap-5 bg-paper px-5 py-8 text-ink">
-      <p className="font-display text-xl font-extrabold text-ink">Kinara</p>
+      <p className="font-display text-xl font-extrabold text-ink">Discover</p>
       {!info && state !== "error" && <p className="text-ink-soft">Loading…</p>}
       {state === "error" && <div className="panel p-5"><p className="font-bold">Something went wrong</p><p className="mt-1 text-ink-soft">{message}</p><a className="btn btn-primary mt-4" href={back}>Back to the app</a></div>}
       {info && state !== "error" && (
@@ -115,7 +115,7 @@ function Pay() {
               <p className="text-3xl">🎉</p>
               <p className="font-display text-2xl font-extrabold">Payment successful</p>
               <p className="mt-1 text-ink-soft">{info.payment.planName} is on. Your receipt and invoice are in the app.</p>
-              <a className="btn btn-primary mt-4 w-full" href={back}>Back to Kinara</a>
+              <a className="btn btn-primary mt-4 w-full" href={back}>Back to Discover</a>
             </div>
           ) : state === "failed" ? (
             <div className="panel p-5">

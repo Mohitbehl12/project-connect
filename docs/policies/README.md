@@ -1,6 +1,6 @@
 # Internal policies and plans (drafts for review)
 
-**Status: DRAFT — not legal advice, not published to members.** Each policy below describes how Kinara staff and
+**Status: DRAFT — not legal advice, not published to members.** Each policy below describes how Discover staff and
 systems actually work today, with the code that enforces it. A qualified lawyer must review them for every
 launch country before they are adopted. Member-facing documents live in `legal/` and are published only through
 Admin → Legal (four-eyes, versioned). Nothing in this folder changes them.

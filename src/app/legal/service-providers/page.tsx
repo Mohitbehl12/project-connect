@@ -13,7 +13,7 @@ export default function ServiceProviders() {
     <PublicShell>
       <article className="mx-auto max-w-3xl space-y-6 px-4 py-12 md:px-8">
         <h1 className="text-4xl font-extrabold">Service providers</h1>
-        <p className="text-ink-soft">These companies process data for Kinara, only to provide their service to us. This list is generated from our live settings.</p>
+        <p className="text-ink-soft">These companies process data for Discover, only to provide their service to us. This list is generated from our live settings.</p>
         <div className="space-y-4">
           {active.map((v) => (
             <section key={v.id} className="panel p-5 text-sm">

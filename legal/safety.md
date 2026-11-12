@@ -1,12 +1,12 @@
 # Safety Policy
 
-This policy explains how Kinara works to keep members safe, what we expect from you, and how to get help. No service can remove every risk, but we design every feature with safety in mind.
+This policy explains how Discover works to keep members safe, what we expect from you, and how to get help. No service can remove every risk, but we design every feature with safety in mind.
 
-## How Kinara protects you
+## How Discover protects you
 
 - **Adults only:** date-of-birth check at sign-up and age rules per country; profiles reported as possibly under 18 are hidden while we check.
 - **Consent first:** nobody can message you unless you both liked each other; nobody can call you unless you accept a call request; photos and voice messages unlock only after you've both written.
-- **Privacy:** no GPS, rounded distances, your phone number and email are never shown, and calls go through Kinara.
+- **Privacy:** no GPS, rounded distances, your phone number and email are never shown, and calls go through Discover.
 - **Screening:** messages and photos are checked automatically for scams, threats, explicit images and risky links. You're warned about risky messages, and some links are blocked.
 - **Selfie verification:** a check that your selfie matches your profile photos. It shows a badge; it does not prove identity or that someone is safe.
 - **Fraud and abuse detection:** signals such as many accounts from one device or mass messaging are reviewed by people. Accounts with several signals may have new contact paused until they verify.
@@ -26,7 +26,7 @@ Block, report, mute a chat, unmatch, decline or turn off call requests, hide you
 
 ## Emergencies
 
-If you are in immediate danger, call your local emergency number (in India, 112). Kinara cannot send emergency help.
+If you are in immediate danger, call your local emergency number (in India, 112). Discover cannot send emergency help.
 
 ## Reporting and escalation
 

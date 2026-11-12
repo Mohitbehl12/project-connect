@@ -1577,7 +1577,7 @@ async function main() {
     const yr = await autoReports(k2, "UNDERAGE");
     check("…and opens a critical child-safety report for a person", yr.length === 1 && yr[0].priority === "CRITICAL", yr);
     const seen = (await K1.get(`/api/matches/${km}/messages`)).data?.messages?.find((m: any) => m.id === young.data?.id);
-    check("…the adult receiving it is told Kinara is adults-only and how to report", /only for adults/.test(seen?.warning ?? ""), seen);
+    check("…the adult receiving it is told Discover is adults-only and how to report", /only for adults/.test(seen?.warning ?? ""), seen);
     check("…one signal alone doesn't restrict anyone", (await K2.get("/api/me")).data?.user?.restricted === false);
     const decs = JSON.stringify((await K2.get("/api/privacy/decisions")).data);
     check("…the member can see the automated decision and that a person will check", /under 18/.test(decs) && /Nothing happens to the account automatically/.test(decs), decs.slice(0, 300));

@@ -1,6 +1,6 @@
 # AI engineer — runbook
 
-Kinara runs an autonomous **detect → analyse → propose → test → approve → deploy → monitor → roll back** loop.
+Discover runs an autonomous **detect → analyse → propose → test → approve → deploy → monitor → roll back** loop.
 Machines do the first three steps and the last two; **a person approves every merge**. This file is the
 instruction set the AI engineer (a scheduled Claude task, every 6 hours) follows, and the reference for people
 reviewing its work.

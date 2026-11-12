@@ -54,12 +54,12 @@ export default function PrivacyCenter() {
       if (Platform.OS === "web") {
         const a = document.createElement("a");
         a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
-        a.download = "kinara-data.json"; a.click();
+        a.download = "discover-data.json"; a.click();
       } else {
-        const f = new File(Paths.cache, "kinara-data.json");
+        const f = new File(Paths.cache, "discover-data.json");
         if (f.exists) f.delete();
         f.create(); f.write(text);
-        await Sharing.shareAsync(f.uri, { mimeType: "application/json", dialogTitle: "Your Kinara data" });
+        await Sharing.shareAsync(f.uri, { mimeType: "application/json", dialogTitle: "Your Discover data" });
       }
       haptic.success();
     } catch (e: any) { setMsg({ tone: "alert", text: e.message }); } finally { setBusy(false); }
@@ -181,7 +181,7 @@ export default function PrivacyCenter() {
         {consents.data?.current.map((x) => x.withdrawable ? (
           <Toggle key={x.kind} label={x.label} sub={x.at ? `${x.granted ? "On" : "Off"} since ${new Date(x.at).toLocaleDateString()}` : x.asked ? (x.granted ? "On" : "Off") : "Not asked yet — we ask when a feature first needs it"} value={x.granted} onChange={(v) => setConsent(x.kind, v)} />
         ) : (
-          <View key={x.kind} style={{ paddingVertical: 8 }}><T v="callout" strong>{x.label}</T><T v="caption" tone="muted">{x.at ? `Agreed ${new Date(x.at).toLocaleDateString()}` : "—"} · needed to use Kinara (delete your account to withdraw)</T></View>
+          <View key={x.kind} style={{ paddingVertical: 8 }}><T v="callout" strong>{x.label}</T><T v="caption" tone="muted">{x.at ? `Agreed ${new Date(x.at).toLocaleDateString()}` : "—"} · needed to use Discover (delete your account to withdraw)</T></View>
         ))}
         <T v="caption" tone="muted">Camera, microphone and notifications are also controlled by your phone. Turning one off here records your choice; to block access completely, change it in your phone's settings.</T>
       </BottomSheet>

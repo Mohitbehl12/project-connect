@@ -1,4 +1,4 @@
-// Kinara design tokens. Colours come from the chosen colour theme (see ./themes.ts):
+// Discover design tokens. Colours come from the chosen colour theme (see ./themes.ts):
 // read them with useTheme() — `c` for the palette and `g` for gradients. The exports below are the
 // default theme, for the few places that run outside React.
 import { DEFAULT_THEME, themeById } from "./themes";

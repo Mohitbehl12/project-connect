@@ -107,7 +107,7 @@ export default function Subscription() {
             ))}
           </View>
         )}
-        <T v="caption" tone="faint">Card numbers, UPI PINs and bank passwords are handled by the payment gateway and never stored by Kinara.</T>
+        <T v="caption" tone="faint">Card numbers, UPI PINs and bank passwords are handled by the payment gateway and never stored by Discover.</T>
       </ScrollView>
 
       <BottomSheet open={sheet === "cancel"} onClose={() => setSheet(null)} title="Cancel your subscription?">

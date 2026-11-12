@@ -129,7 +129,7 @@ export const POST = route<{ id: string }>(async ({ req, user, params }) => {
   // Someone saying they're under 18 goes to the child-safety queue (critical) on its own report.
   if (flags.includes("MINOR")) {
     const report = await fileAutomatedReport({ reportedId: user.id, matchId: match.id, messageId: msg.id, category: "UNDERAGE", details: "Automated screening: the sender said in chat that they may be under 18." });
-    await logAutomatedDecision({ userId: user.id, kind: "MESSAGE_FLAG", decision: "SENT_FOR_HUMAN_REVIEW", reason: "A message suggested you may be under 18. Kinara is only for adults, so a person will check. Nothing happens to the account automatically.", system: "rules:child-safety-v2", refId: report.id });
+    await logAutomatedDecision({ userId: user.id, kind: "MESSAGE_FLAG", decision: "SENT_FOR_HUMAN_REVIEW", reason: "A message suggested you may be under 18. Discover is only for adults, so a person will check. Nothing happens to the account automatically.", system: "rules:child-safety-v2", refId: report.id });
     await underageCheck(user.id);
   }
   const reportable = flags.filter((f) => REPORTABLE_FLAGS.includes(f) && f !== "MINOR");

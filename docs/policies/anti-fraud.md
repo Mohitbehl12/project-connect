@@ -31,9 +31,9 @@
   - moves to other apps;
   - shortened links, raw-IP links, punycode links and app files (refused outright).
 
-  The receiver gets a plain warning. Kinara staff never ask members for codes or payments.
+  The receiver gets a plain warning. Discover staff never ask members for codes or payments.
 - **Verification.** Phone and email codes, plus the selfie check. Badges say exactly what was checked.
-- **Payments.** Razorpay and the app stores handle card data; Kinara never sees it. Refunds need two people.
+- **Payments.** Razorpay and the app stores handle card data; Discover never sees it. Refunds need two people.
 
 ## Response
 

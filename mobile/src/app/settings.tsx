@@ -116,7 +116,7 @@ export default function Settings() {
           </View>
         </Group>
         <Group title="Tell us what you think">
-          <FeedbackAsk context="APP" always question="How is Kinara working for you?" />
+          <FeedbackAsk context="APP" always question="How is Discover working for you?" />
         </Group>
         <Group title="Account">
           <View style={{ paddingVertical: 12, gap: 2 }}>

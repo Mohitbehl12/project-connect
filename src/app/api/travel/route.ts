@@ -16,7 +16,7 @@ export const PUT = route(async ({ req, user }) => {
   const place = b.city ? resolvePlace(b.city) : null;
   if (b.city) {
     if (!place) throw new ApiError(422, "city: Pick a city from the list.", "validation");
-    if (!(await countryRules(place.country)).launchEnabled) throw new ApiError(422, "Kinara isn't available in that country yet.", "country_unavailable");
+    if (!(await countryRules(place.country)).launchEnabled) throw new ApiError(422, "Discover isn't available in that country yet.", "country_unavailable");
     const f = await planFeatures(user.planCode, user.planEndsAt);
     if (!f.travelMode) throw new ApiError(402, "Travel mode is part of Premium Plus.", "upgrade_required");
   }

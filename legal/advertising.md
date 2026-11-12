@@ -1,6 +1,6 @@
 # Advertising Terms and Policy
 
-These terms apply to businesses that advertise on Kinara ("you", the advertiser). They sit alongside our Terms of Service. {{company}} runs Kinara. Questions: {{supportEmail}}.
+These terms apply to businesses that advertise on Discover ("you", the advertiser). They sit alongside our Terms of Service. {{company}} runs Discover. Questions: {{supportEmail}}.
 
 ## 1. Who can advertise
 
@@ -53,7 +53,7 @@ Finance, health, alcohol and dating or relationship services need extra checks: 
 
 ## 8. Your content
 
-You confirm you own or have permission to use everything in your ads (including images of people, who must have agreed), and that your ads are truthful and lawful. You give us a licence to show, resize and format them on Kinara while your campaign runs.
+You confirm you own or have permission to use everything in your ads (including images of people, who must have agreed), and that your ads are truthful and lawful. You give us a licence to show, resize and format them on Discover while your campaign runs.
 
 ## 9. Suspension
 
