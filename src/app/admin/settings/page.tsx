@@ -79,7 +79,7 @@ function Settings() {
         <select aria-label="Photo checks" className="input mt-3 max-w-md" value={cfg["moderation.photoScreening"] ?? "auto"} onChange={(e) => setCfg({ ...cfg, "moderation.photoScreening": e.target.value })}>
           <option value="auto">Automatic check, staff review when unsure (recommended)</option>
           <option value="review">Staff review every photo</option>
-          <option value="off">No checks (testing only)</option>
+          <option value="off">No checks (development only; on this server it means staff review)</option>
         </select>
         <div><button className="btn-primary mt-4" disabled={!staff.permissions.includes("config.edit")} onClick={() => save({ config: { "moderation.photoScreening": cfg["moderation.photoScreening"] } }, "Photo checks")}>Save photo checks</button></div>
       </section>
