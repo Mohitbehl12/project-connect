@@ -87,7 +87,8 @@ A pull request is merged only when **all** of these hold:
 6. The site is healthy: there is no open `uptime` issue and no open incident issue for a failed release
    (`DEPLOY`). If either exists, merge nothing in this run.
 7. If the PR changes any path listed in `scripts/sensitive-paths.txt` (payments and pricing, sign-in and
-   permissions, privacy, consent, legal text, audit, moderation and safety rules, database migrations and the
+   permissions, privacy, consent, legal text (including the drafts in `legal/` and the scripts that publish
+   them), audit, moderation and safety rules, database migrations and the
    schema, deployment and CI settings, these rules), it also carries `owner-approved`, added by the owner after
    reviewing the latest commit. The "Owner approval for sensitive changes" check enforces this: it stays red
    without the label, and new commits remove the label. Added 2026-11-13 at the owner's instruction.
