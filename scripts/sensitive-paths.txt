@@ -1,0 +1,30 @@
+# Changes to any of these paths need the owner's approval before merging: the "Owner approval" check stays red
+# until the owner adds the `owner-approved` label, and the label is removed again whenever new commits arrive.
+# One regular expression per line, matched against each changed file's path. Lines starting with # are ignored.
+# Sign-in, accounts and permissions
+^src/lib/(auth|login|otp|totp|passwordReset|rbac|staff|crypto|ratelimit|risk|fraud|verification)\.ts$
+^src/app/api/(auth|staff|admin|security|verification)/
+^src/middleware\.ts$
+# Payments and pricing
+^src/lib/(billing|admin-billing|pricing|invoice|paytoken|storeProducts|boosts)\.ts$
+^src/lib/payments/
+^src/app/api/(billing|subscriptions|webhooks|boosts|plans)/
+^src/app/(pay|plans)/
+# Privacy, consent, legal and audit
+^src/lib/(privacy|consent|compliance|legal|legalText|audit|backup|backupCore|nominee|grievances)\.ts$
+^src/app/api/(privacy|consents|legal|grievances)/
+^src/app/legal/
+# Moderation and safety rules
+^src/lib/(moderation|moderationQuality|safety|appeals|photoScreen|photoReview|reportSla)\.ts$
+# Database migrations and schema
+^drizzle/
+^src/db/schema\.ts$
+^scripts/migrate\.ts$
+# Deployment, CI and the AI engineer's own rules
+^\.github/
+^render\.yaml$
+^scripts/start\.sh$
+^scripts/sensitive-paths\.txt$
+^\.claude/
+^docs/AI_ENGINEER\.md$
+^next\.config\.
