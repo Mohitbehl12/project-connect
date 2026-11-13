@@ -63,10 +63,38 @@ One Discover request costs about 130 ms of processor time, and it blocks everyth
 
 ### What would raise the ceiling, cheapest first
 
-1. Select only the columns scoring needs for the candidate rows.
-2. Cache a member's scored candidates for a short time, cleared when they like or pass.
+1. ~~Select only the columns scoring needs for the candidate rows.~~ Done (see below).
+2. ~~Cache a member's scored candidates for a short time.~~ Done (see below).
 3. Move the database to a shared libSQL service, so queries stop blocking the Node process.
 4. Run a second server (needs Redis, already supported).
 
 None of these is needed for a beta of a few hundred people. Rerun this test on the real server size before
 inviting more than about a hundred people at once.
+
+## After the Discover speed-up (13 November 2026)
+
+What changed in `src/lib/discover.ts`:
+
+- The up-to-1,000 candidate rows now read only the columns that filtering and scoring use. Bio is read only
+  when the member searches by keyword. Full profiles are read only for the people on the page being shown.
+- Each member's scored list is cached in memory for 5 minutes, bounded to 500 lists per server.
+- Safety is not cached. On every request:
+  - people the member has since liked, passed or blocked, or who blocked them, are removed;
+  - the people shown are re-read with the same rules: active, not paused, restricted or deleted, discoverable;
+  - their latest settings are checked again: who they want to meet, incognito, verified-only.
+- A change to the member's own preferences or location gives a fresh list.
+- A newly finished profile clears every cached list, so new people appear straight away.
+- The only thing that can lag, by up to 5 minutes, is an edit to someone's interests or lifestyle changing
+  their place in the ranking.
+
+Same machine and database as above, with the same settings:
+
+| Members online | Discover p50 before → after | Discover p95 before → after | Worst p95 after | Errors before → after | Result after |
+| --- | --- | --- | --- | --- | --- |
+| 100 | 405 ms → 34 ms | 1,466 ms → 761 ms | 761 ms | 0% → 0% | Pass |
+| 200 | timeouts → 143 ms | over 15 s → 5,631 ms | 5,631 ms | 19% → 0% | Fail (slow) |
+
+At 200 members the slow requests all come in the first minute. Every member signs in in the same second and
+none has a cached list yet, so each needs a fresh one, about 200 ms of processor time. Real members don't all
+arrive in the same second. Still, rerun this test on the real server size, and add a second server (item 4)
+before inviting more than about 150 people to be online at once.

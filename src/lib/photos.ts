@@ -10,6 +10,7 @@ import { storage } from "./storage";
 import { ApiError } from "./http";
 import { profileCompleteness } from "./matching";
 import { SAME_PHOTO_BITS, bands, dhashFromGrey, hamming } from "./photoHash";
+import { invalidateDiscover } from "./discoverCache";
 
 export const MAX_PHOTOS = 6;
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -127,6 +128,7 @@ export async function syncOnboardingStep(userId: string) {
     await db.update(schema.users).set({ onboardingStep: step }).where(eq(schema.users.id, userId));
     // Finishing sign-up is when the free months for women start (once per account; see billing).
     if (step === 3) await grantStartingMembership(userId).catch(() => {});
+    if (step === 3) invalidateDiscover(); // a new profile is visible to others at once, not after the cache expires
   }
   return Math.max(step, user?.onboardingStep ?? 0);
 }
