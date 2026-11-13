@@ -4,7 +4,7 @@ import { ErrorReporter } from "@/components/ErrorReporter";
 
 export const metadata: Metadata = {
   title: { default: "Twofold", template: "%s · Twofold" },
-  description: "Dating built around intent, compatibility and safety.",
+  description: "Two hearts. One story. Twofold is dating built around intent, compatibility and safety.",
 };
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#7B48CC" };
