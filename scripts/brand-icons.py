@@ -1,4 +1,4 @@
-"""Draws the TwoFold logo (two overlapping rings with a filled centre) at every size the web site and the
+"""Draws the Twofold logo (two overlapping rings with a filled centre) at every size the web site and the
 apps need. Run from the repo root: python3 scripts/brand-icons.py  (needs Pillow)."""
 from PIL import Image, ImageDraw, ImageChops
 
@@ -35,4 +35,4 @@ save(tile(64), "mobile/assets/favicon.png")
 save(tile(64), "public/twofold-mark.png")
 save(tile(48), "src/app/icon.png")
 tile(64).save("public/favicon.ico", sizes=[(16, 16), (32, 32), (48, 48), (64, 64)])
-print("TwoFold icons written.")
+print("Twofold icons written.")

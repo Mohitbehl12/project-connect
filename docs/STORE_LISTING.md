@@ -1,4 +1,4 @@
-# TwoFold: App Store and Google Play submission pack
+# Twofold: App Store and Google Play submission pack
 
 Version **1.0.0**. Everything here is ready to paste. Before you submit, read "Things to confirm", because the stores check these closely for dating apps.
 
@@ -6,7 +6,7 @@ Version **1.0.0**. Everything here is ready to paste. Before you submit, read "T
 
 | Field | Value |
 |---|---|
-| App name | TwoFold: Dating & Chemistry |
+| App name | Twofold: Dating & Chemistry |
 | Subtitle (iOS, 30 chars) | Meet, flirt, find chemistry |
 | Short description (Play, 80 chars) | Flirt, match and chat with verified people — calls only after you say yes. |
 | Category | Lifestyle (iOS: primary Lifestyle, secondary Social Networking) · Play: Dating |
@@ -23,7 +23,7 @@ Use your own domain before launch. The onrender.com address is fine for testing.
 
 > Meet someone who makes your heart skip a beat. ❤️
 >
-> TwoFold is dating with chemistry, and with safety built in. See what you really have in common before you say hello, then break the ice your way.
+> Twofold is dating with chemistry, and with safety built in. See what you really have in common before you say hello, then break the ice your way.
 >
 > ❤️ **Like, Super Like ⭐ or send a Spark ✨.** Every profile shows a compatibility score and the reasons behind it: shared goals, interests and how you both handle life.
 > 💕 **It's a match!** Say hello, send a wink 😉 or a heart, or let Cupid suggest an opener.
@@ -50,7 +50,7 @@ Use 6.7" iPhone and phone-size Android shots of: Discover with the Love Moment c
 
 ## App Review notes (Apple) / test instructions (Google)
 
-> TwoFold is an 18+ dating app. Demo login: `appreview@yourdomain` / `<set a strong password>`. It has two sample matches with existing chats, so you can see chat, reactions, winks and call requests.
+> Twofold is an 18+ dating app. Demo login: `appreview@yourdomain` / `<set a strong password>`. It has two sample matches with existing chats, so you can see chat, reactions, winks and call requests.
 > User-generated content safeguards (Guideline 1.2): report and block on every profile, chat and call; automated screening of messages and photos; human review of reports; appeal process; Terms and Community Guidelines accepted at sign-up.
 > Account deletion: Profile › Privacy Center › Delete my account.
 > Calls: voice and video between matches only, after the recipient accepts a call request.
@@ -60,7 +60,7 @@ Create a dedicated review account with fictional sample matches. **Don't send th
 
 ## App Privacy (Apple "nutrition label")
 
-Tracking: **No**. TwoFold doesn't track people across other companies' apps or websites, and has no ad SDKs.
+Tracking: **No**. Twofold doesn't track people across other companies' apps or websites, and has no ad SDKs.
 
 | Data type | Collected | Linked to the person | Purpose |
 |---|---|---|---|

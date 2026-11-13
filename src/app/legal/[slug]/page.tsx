@@ -33,7 +33,7 @@ export default async function LegalPage({ params }: { params: Promise<{ slug: st
         <p className="text-sm text-ink-faint">Version {v.version} · effective {v.effectiveAt?.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</p>
         {!v.lawyerReviewedAt && (
           <p role="note" className="rounded-xl bg-marigold-wash px-4 py-3 text-sm text-marigold-deep">
-            Draft for review: this document has not yet been checked by a qualified lawyer and may change before TwoFold launches publicly.
+            Draft for review: this document has not yet been checked by a qualified lawyer and may change before Twofold launches publicly.
           </p>
         )}
         {v.changeSummary && <p className="rounded-xl bg-paper-sunk px-4 py-3 text-sm"><strong>What changed in this version:</strong> {v.changeSummary}</p>}

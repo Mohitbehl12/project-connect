@@ -29,7 +29,7 @@ export function UpdateGate() {
   const open = () => { if (d.storeUrl) Linking.openURL(d.storeUrl).catch(() => {}); };
   if (d.updateRequired) return (
     <View accessibilityViewIsModal style={{ position: "absolute", left: 0, right: 0, top: 0, bottom: 0, backgroundColor: c.bg, alignItems: "center", justifyContent: "center", padding: 28, gap: 14, zIndex: 100 }}>
-      <T v="title" center>Time to update TwoFold</T>
+      <T v="title" center>Time to update Twofold</T>
       <T tone="muted" center>{d.message ?? "This version is no longer supported. The update keeps your matches and messages."}</T>
       {d.storeUrl ? (
         <Pressable accessibilityRole="button" onPress={open} style={{ marginTop: 6, backgroundColor: c.brand, borderRadius: 999, paddingHorizontal: 28, paddingVertical: 14 }}>
@@ -40,7 +40,7 @@ export function UpdateGate() {
   );
   if (d.updateAvailable && !later) return (
     <View style={{ position: "absolute", left: 12, right: 12, bottom: 96, padding: 12, borderRadius: 16, backgroundColor: c.surface, borderWidth: 1, borderColor: c.line, flexDirection: "row", alignItems: "center", gap: 10, zIndex: 50 }}>
-      <T v="callout" style={{ flex: 1 }}>{d.message ?? "A new version of TwoFold is available."}</T>
+      <T v="callout" style={{ flex: 1 }}>{d.message ?? "A new version of Twofold is available."}</T>
       {d.storeUrl && <Pressable accessibilityRole="button" onPress={open}><T v="callout" strong>Update</T></Pressable>}
       <Pressable accessibilityRole="button" accessibilityLabel="Not now" onPress={() => setLater(true)}><T v="callout" tone="muted">Later</T></Pressable>
     </View>

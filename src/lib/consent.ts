@@ -15,7 +15,7 @@ export const CONSENT_KINDS = {
   AGE_18: { label: "Confirmed 18 or older", required: true, withdrawable: false },
   SAFETY_RULES: { label: "Community and safety rules acknowledged", required: true, withdrawable: false },
   MARKETING: { label: "News and offers by email or notification", required: false, withdrawable: true },
-  LOCATION: { label: "Show others my approximate distance (from my city — TwoFold never uses GPS)", required: false, withdrawable: true },
+  LOCATION: { label: "Show others my approximate distance (from my city — Twofold never uses GPS)", required: false, withdrawable: true },
   CAMERA: { label: "Camera for photos, selfie check and video calls", required: false, withdrawable: true },
   MICROPHONE: { label: "Microphone for voice messages and calls", required: false, withdrawable: true },
   VIDEO_CALLS: { label: "Take part in voice and video calls (only after you accept a request)", required: false, withdrawable: true },

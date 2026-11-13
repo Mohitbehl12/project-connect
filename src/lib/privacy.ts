@@ -40,7 +40,7 @@ export async function exportMyData(user: User) {
   const { lat: _lat, lng: _lng, ...profileOut } = profile ?? ({} as any);
   return {
     exportedAt: new Date().toISOString(),
-    note: "Your TwoFold data. Exact location coordinates are stored only to calculate distances and are not included here; your city is.",
+    note: "Your Twofold data. Exact location coordinates are stored only to calculate distances and are not included here; your city is.",
     account: { email: user.email, phone: user.phone, dob: user.dob, createdAt: user.createdAt, emailVerified: user.emailVerified, phoneVerified: user.phoneVerified, selfieStatus: user.selfieStatus, referralCode: user.referralCode },
     profile: profile ? profileOut : null,
     preferences: prefs ?? null,
@@ -217,7 +217,7 @@ export async function runRetention(now = new Date()) {
     for (const u of idle.filter((x) => !held.includes(x.id))) {
       const warned = await db.query.auditLogs.findFirst({ where: and(eq(schema.auditLogs.action, "retention.inactive_warned"), eq(schema.auditLogs.entityId, u.id), gte(schema.auditLogs.createdAt, u.lastActiveAt)) });
       if (!warned) {
-        await notify(u.id, "SECURITY", "Your account will be deleted soon", `You haven't used TwoFold for ${months} months. Sign in within 30 days to keep your account; otherwise we'll delete it and your data.`);
+        await notify(u.id, "SECURITY", "Your account will be deleted soon", `You haven't used Twofold for ${months} months. Sign in within 30 days to keep your account; otherwise we'll delete it and your data.`);
         await audit(null, "retention.inactive_warned", "user", u.id);
         out.inactiveWarned++;
       } else if (warned.createdAt < ago(30)) {

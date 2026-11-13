@@ -17,7 +17,7 @@ const Body = z.object({
 export const POST = route(async ({ req, user }) => {
   const b = await parseBody(req, Body);
   const def = CONSENT_KINDS[b.kind];
-  if (!def.withdrawable) throw new ApiError(422, "This one is needed to use TwoFold. To withdraw it, delete your account in Privacy Center.", "required_consent");
+  if (!def.withdrawable) throw new ApiError(422, "This one is needed to use Twofold. To withdraw it, delete your account in Privacy Center.", "required_consent");
   await recordConsent(user.id, b.kind, b.granted, { source: b.source, ip: await clientIp(), version: b.kind === "MARKETING" ? "marketing-v1" : b.kind === "PERSONALISED_ADS" ? "ads-v1" : undefined });
   if (b.kind === "MARKETING") await db.update(schema.preferences).set({ marketing: b.granted }).where(eq(schema.preferences.userId, user.id));
   if (b.kind === "PROFILE_VISIBLE") await db.update(schema.preferences).set({ discoverable: b.granted }).where(eq(schema.preferences.userId, user.id));

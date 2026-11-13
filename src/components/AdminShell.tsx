@@ -57,7 +57,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
       <div className="min-h-dvh lg:flex">
         <aside className="border-b border-mist bg-ink text-paper lg:sticky lg:top-0 lg:h-dvh lg:w-60 lg:shrink-0 lg:border-0">
           <div className="flex items-center justify-between px-5 py-4 lg:block lg:py-6">
-            <p className="font-display text-lg font-extrabold">TwoFold <span className="font-body text-sm font-semibold text-marigold">Admin</span></p>
+            <p className="font-display text-lg font-extrabold">Twofold <span className="font-body text-sm font-semibold text-marigold">Admin</span></p>
             <p className="hidden text-xs text-ink-faint lg:mt-1 lg:block">{data.user.email} · {data.user.role.replace("_", " ").toLowerCase()}</p>
           </div>
           <nav aria-label="Admin" className="flex gap-1 overflow-x-auto px-3 pb-3 lg:flex-col lg:pb-0">
@@ -113,7 +113,7 @@ function StaffLockScreen({ state, email, onDone }: { state: StaffLock; email: st
   async function run(fn: () => Promise<unknown>) { setBusy(true); setErr(""); try { await fn(); } catch (e: any) { setErr(e.message); } finally { setBusy(false); } }
   return (
     <div className="mx-auto max-w-md px-4 py-16">
-      <p className="font-display text-lg font-extrabold">TwoFold <span className="font-body text-sm font-semibold text-marigold">Admin</span></p>
+      <p className="font-display text-lg font-extrabold">Twofold <span className="font-body text-sm font-semibold text-marigold">Admin</span></p>
       {needSetup ? (
         <div className="panel mt-6 space-y-4 p-6">
           <h1 className="text-2xl font-extrabold">Turn on 2-step verification</h1>

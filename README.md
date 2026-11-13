@@ -1,4 +1,4 @@
-# TwoFold
+# Twofold
 
 An original dating platform built around **intent, explained compatibility and safety**. Working name — the brand lives in a handful of strings and Tailwind tokens, so it can be renamed later.
 

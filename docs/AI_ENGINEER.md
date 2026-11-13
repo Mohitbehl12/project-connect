@@ -1,6 +1,6 @@
 # AI engineer — runbook
 
-TwoFold runs an autonomous **detect → analyse → propose → test → approve → deploy → monitor → roll back** loop.
+Twofold runs an autonomous **detect → analyse → propose → test → approve → deploy → monitor → roll back** loop.
 Since 2026-11-12, at the owner's instruction, the AI engineer also **merges its own pull requests once every
 CI check has passed** (see "Automatic merging"). Since 2026-11-13, anything touching payments, sign-in,
 privacy, legal, moderation rules, migrations or deployment also waits for the owner's `owner-approved` label. No person reviews them first; CI, the independent

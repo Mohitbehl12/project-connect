@@ -108,11 +108,11 @@ export const BLOCKING_FLAGS: Flag[] = ["RISKY_LINK"];
 
 /** Friendly warning shown to the recipient next to a flagged message. */
 export function warningFor(flags: Flag[]): string | null {
-  if (flags.includes("MINOR")) return "TwoFold is only for adults. If you think this person may be under 18, stop the conversation and report them — our team checks every report like this first.";
+  if (flags.includes("MINOR")) return "Twofold is only for adults. If you think this person may be under 18, stop the conversation and report them — our team checks every report like this first.";
   if (flags.includes("THREAT")) return "This message may contain a threat. Your safety comes first: you can block and report, and our team reviews threats urgently.";
-  if (flags.includes("FINANCIAL_INFO")) return "Never share one-time codes, PINs, card, bank or ID details — not even with a match. TwoFold staff will never ask for them.";
+  if (flags.includes("FINANCIAL_INFO")) return "Never share one-time codes, PINs, card, bank or ID details — not even with a match. Twofold staff will never ask for them.";
   if (flags.includes("SLOW_BURN")) return "This chat has gone on for a while and now mentions money. Romance scams often build trust for weeks before asking for money, a loan or an \"investment\". Never send money to someone you haven't met — and talk to someone you trust first.";
-  if (flags.includes("SCAM")) return "This message mentions money or investments. People on TwoFold will never need you to send money.";
+  if (flags.includes("SCAM")) return "This message mentions money or investments. People on Twofold will never need you to send money.";
   if (flags.includes("ABUSE")) return "This message may be abusive. You can report or block this person from the menu.";
   if (flags.includes("OFF_PLATFORM")) return "Moving to another app early is a common scam tactic. Take your time.";
   if (flags.includes("LINK")) return "Be careful opening links from people you haven't met.";

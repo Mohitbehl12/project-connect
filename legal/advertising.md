@@ -1,6 +1,6 @@
 # Advertising Terms and Policy
 
-These terms apply to businesses that advertise on TwoFold ("you", the advertiser). They sit alongside our Terms of Service. {{company}} runs TwoFold. Questions: {{supportEmail}}.
+These terms apply to businesses that advertise on Twofold ("you", the advertiser). They sit alongside our Terms of Service. {{company}} runs Twofold. Questions: {{supportEmail}}.
 
 ## 1. Who can advertise
 
@@ -53,7 +53,7 @@ Finance, health, alcohol and dating or relationship services need extra checks: 
 
 ## 8. Your content
 
-You confirm you own or have permission to use everything in your ads (including images of people, who must have agreed), and that your ads are truthful and lawful. You give us a licence to show, resize and format them on TwoFold while your campaign runs.
+You confirm you own or have permission to use everything in your ads (including images of people, who must have agreed), and that your ads are truthful and lawful. You give us a licence to show, resize and format them on Twofold while your campaign runs.
 
 ## 9. Suspension
 

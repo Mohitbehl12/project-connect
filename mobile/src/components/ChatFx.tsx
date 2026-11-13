@@ -11,7 +11,7 @@ import { T } from "./Text";
 
 // ---- chat themes ------------------------------------------------------------------------------------
 export const CHAT_THEMES: { id: ChatThemeId; name: string; colors: readonly [string, string, ...string[]]; dots?: string; float?: string[] }[] = [
-  { id: "default", name: "TwoFold", colors: ["transparent", "transparent"] },
+  { id: "default", name: "Twofold", colors: ["transparent", "transparent"] },
   { id: "midnight", name: "Midnight 🌙", colors: ["#05050A", "#0E0B19"], dots: "#FFFFFF" },
   { id: "rose", name: "Rose 🌹", colors: ["#2A0714", "#5E1430", "#8E2A4E"] },
   { id: "passion", name: "Passion 🔥", colors: ["#0B0204", "#2A0509", "#140304"], float: ["🔥", "✨"] },

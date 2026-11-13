@@ -279,7 +279,7 @@ export async function receiptPdf(t: typeof schema.adTransactions.$inferSelect, a
   const rate = seller.gstRatePct ?? 18;
   const taxable = Math.round((t.amountMinor * 100) / (100 + rate));
   const money = (m: number) => `INR ${(m / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  text("TwoFold Ads", 50, 20, bold); y -= 18; text(t.provider === "TEST" ? "RECEIPT — TEST MODE (no money was taken)" : "TAX INVOICE / RECEIPT", 50, 11, bold, muted); y -= 30;
+  text("Twofold Ads", 50, 20, bold); y -= 18; text(t.provider === "TEST" ? "RECEIPT — TEST MODE (no money was taken)" : "TAX INVOICE / RECEIPT", 50, 11, bold, muted); y -= 30;
   text(seller.name, 50, 10, bold); text(`Receipt no. ${t.receiptNo}`, 340, 10, bold); y -= 14;
   text(seller.address, 50, 9, font, muted); text(`Date ${(t.paidAt ?? t.createdAt).toLocaleDateString("en-GB")}`, 340, 9, font, muted); y -= 14;
   if (seller.gstin) { text(`GSTIN ${seller.gstin}`, 50, 9, font, muted); y -= 14; }

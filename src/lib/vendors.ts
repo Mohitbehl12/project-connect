@@ -1,6 +1,6 @@
 import "server-only";
 
-// Inventory of every outside service TwoFold can use. `active` is worked out from the server's settings, so
+// Inventory of every outside service Twofold can use. `active` is worked out from the server's settings, so
 // the list shows what is really switched on. DPA (data processing agreement) status is tracked by staff in
 // Admin → Privacy & compliance. Keep this list and the public "Service providers" page in step.
 
@@ -14,17 +14,17 @@ const on = (...keys: string[]) => keys.every((k) => !!process.env[k]);
 export function vendors(): Vendor[] {
   return [
     { id: "render", name: "Render", purpose: "Cloud hosting (web server, app API, database disk, backups)", required: true, active: true,
-      data: "All data the service stores, on encrypted disks", why: "To run TwoFold", where: "Render region chosen for the service (check Render → Settings)",
-      security: "TLS for all traffic; messages and private fields are additionally encrypted by TwoFold (AES-256-GCM)", retention: "As set by TwoFold's retention policy; backups up to 30 days" },
+      data: "All data the service stores, on encrypted disks", why: "To run Twofold", where: "Render region chosen for the service (check Render → Settings)",
+      security: "TLS for all traffic; messages and private fields are additionally encrypted by Twofold (AES-256-GCM)", retention: "As set by Twofold's retention policy; backups up to 30 days" },
     { id: "r2", name: "Cloudflare R2 (or other S3-compatible storage)", purpose: "Photo and chat media storage", required: false, active: process.env.STORAGE_DRIVER === "s3",
       data: "Profile photos, chat photos and voice messages (location data removed)", why: "To store and serve media", where: "Provider region set in S3_REGION",
-      security: "Private bucket; files served only through TwoFold after permission checks", retention: "Deleted with the photo, chat or account" },
+      security: "Private bucket; files served only through Twofold after permission checks", retention: "Deleted with the photo, chat or account" },
     { id: "razorpay", name: "Razorpay", purpose: "Payments (India)", required: false, active: on("RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET"),
-      data: "Amount, order id, your email/phone for the payment page. Card/UPI details go straight to Razorpay — TwoFold never sees them", why: "To take payments",
-      where: "India", security: "PCI DSS certified provider; signed webhooks", retention: "Razorpay's own legal retention; TwoFold keeps payment records 8 years (tax)" },
+      data: "Amount, order id, your email/phone for the payment page. Card/UPI details go straight to Razorpay — Twofold never sees them", why: "To take payments",
+      where: "India", security: "PCI DSS certified provider; signed webhooks", retention: "Razorpay's own legal retention; Twofold keeps payment records 8 years (tax)" },
     { id: "cloudflare-turn", name: "Cloudflare Realtime TURN", purpose: "Relay for voice and video calls", required: false, active: on("CLOUDFLARE_TURN_KEY_ID", "CLOUDFLARE_TURN_API_TOKEN") || on("TURN_URLS"),
       data: "IP addresses and the encrypted call stream (DTLS-SRTP). The relay can't see or hear the call", why: "So calls connect without revealing your IP address to the other person",
-      where: "Cloudflare's global network", security: "Short-lived credentials per call", retention: "Not stored by TwoFold; Cloudflare keeps connection logs per its policy" },
+      where: "Cloudflare's global network", security: "Short-lived credentials per call", retention: "Not stored by Twofold; Cloudflare keeps connection logs per its policy" },
     { id: "webpush", name: "Apple, Google and Mozilla push services", purpose: "Notifications to browsers and the home-screen app", required: false, active: process.env.WEB_PUSH_ENABLED !== "false",
       data: "A push address for your device and an encrypted notification (they can't read it)", why: "To deliver notifications", where: "Provider's global network",
       security: "Payload encrypted end to end to your device (RFC 8291) and signed (VAPID)", retention: "Address deleted when you turn notifications off or it stops working" },

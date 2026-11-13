@@ -1,12 +1,12 @@
 # Privacy Policy
 
-This policy explains what personal data TwoFold collects, why, how it is used and protected, who can see it, how long we keep it, and the choices and rights you have. {{company}} is responsible for your data (the "data fiduciary" or "controller"). Contact: {{privacyEmail}}.
+This policy explains what personal data Twofold collects, why, how it is used and protected, who can see it, how long we keep it, and the choices and rights you have. {{company}} is responsible for your data (the "data fiduciary" or "controller"). Contact: {{privacyEmail}}.
 
 ## 1. The short version
 
-- We collect what we need to run a safe dating service, and no more. We do not sell your data. TwoFold shows a few clearly labelled **Sponsored** ads; advertisers never learn who you are (see section 5A).
+- We collect what we need to run a safe dating service, and no more. We do not sell your data. Twofold shows a few clearly labelled **Sponsored** ads; advertisers never learn who you are (see section 5A).
 - Other members see your profile — never your email, phone number, exact location or date of birth.
-- TwoFold uses your city, not GPS. Distances are rounded (for example "Within 10 km").
+- Twofold uses your city, not GPS. Distances are rounded (for example "Within 10 km").
 - Messages are encrypted on our servers, but they are **not end-to-end encrypted**: our safety team can read a conversation when it is reported.
 - You can download your data, change your settings and consents, pause your profile or delete your account at any time in Privacy Center.
 
@@ -40,12 +40,12 @@ We do not knowingly collect data about anyone under 18.
 
 ## 3. How we use your data
 
-- To run TwoFold: your account, profile, matching, chat, calls, notifications and payments.
+- To run Twofold: your account, profile, matching, chat, calls, notifications and payments.
 - To keep people safe: screening messages and photos, investigating reports, detecting fake accounts, scams and abuse, and enforcing our terms.
 - To secure accounts: detecting unusual sign-ins and protecting against fraud.
 - To communicate with you about your account, safety and changes to our terms. Marketing messages are sent only if you opted in, and you can opt out at any time.
 - To meet legal obligations, such as tax records and responding to lawful requests.
-- To improve TwoFold using aggregated statistics.
+- To improve Twofold using aggregated statistics.
 - To choose which sponsored ads to show you (see section 5A).
 
 ## 4. Automated decisions and AI
@@ -69,12 +69,12 @@ Compatibility scores and conversation suggestions are estimates, labelled as suc
 
 ## 5A. Advertising
 
-TwoFold shows a small number of ads, always labelled **Sponsored**. Ads never appear inside a conversation or during a call.
+Twofold shows a small number of ads, always labelled **Sponsored**. Ads never appear inside a conversation or during a call.
 
 - **What we use to pick an ad:** your city and country, your age band, your device type and app language. If **personalised ads** are on, we also use your gender and the interests on your profile. We never use who you want to date, your relationship intent, your messages, your calls, your matches or likes, your photos, or anything sensitive (such as religion, health, sexuality or caste).
 - **Personalised ads** are on by default where the law allows it, and off by default where your consent is needed first (for example the UK and EU). You can switch them off or on at any time in Privacy Center › Ads. With them off you still see ads, but they are less relevant.
-- **What advertisers get:** only totals, such as how many people saw or tapped an ad and in which broad areas, with small numbers rounded so nobody can be singled out. They never receive your name, photos, profile, email, phone number, location, messages, call history or dating activity, and they cannot contact you through TwoFold.
-- **When you tap an ad**, you leave TwoFold for the advertiser's website. We add a random click code to the link so the advertiser can tell us whether the visit led to a purchase or sign-up; the code does not identify you. What the advertiser's website collects is covered by its own privacy policy.
+- **What advertisers get:** only totals, such as how many people saw or tapped an ad and in which broad areas, with small numbers rounded so nobody can be singled out. They never receive your name, photos, profile, email, phone number, location, messages, call history or dating activity, and they cannot contact you through Twofold.
+- **When you tap an ad**, you leave Twofold for the advertiser's website. We add a random click code to the link so the advertiser can tell us whether the visit led to a purchase or sign-up; the code does not identify you. What the advertiser's website collects is covered by its own privacy policy.
 - **Your controls:** on any ad, tap ⋯ to hide it, report it, or see "Why am I seeing this?".
 
 ## 6. Service providers
@@ -112,7 +112,7 @@ We reply within {{grievanceReplyDays}} days, or sooner where the law requires.
 
 ## 11. Children
 
-TwoFold is for adults only. If you believe someone under 18 is using TwoFold, report the profile or write to {{safetyEmail}}. We act quickly and delete data we don't need to keep.
+Twofold is for adults only. If you believe someone under 18 is using Twofold, report the profile or write to {{safetyEmail}}. We act quickly and delete data we don't need to keep.
 
 ## 12. Changes to this policy
 

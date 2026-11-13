@@ -51,5 +51,5 @@ export function totpStep(secret: string, code: string, now = Date.now()): number
 }
 
 export function otpauthUrl(secret: string, account: string) {
-  return `otpauth://totp/${encodeURIComponent("TwoFold")}:${encodeURIComponent(account)}?secret=${secret}&issuer=${encodeURIComponent("TwoFold")}&digits=6&period=30`;
+  return `otpauth://totp/${encodeURIComponent("Twofold")}:${encodeURIComponent(account)}?secret=${secret}&issuer=${encodeURIComponent("Twofold")}&digits=6&period=30`;
 }

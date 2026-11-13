@@ -80,9 +80,9 @@ function build(s: Seed): Theme {
 }
 
 const SEEDS: Seed[] = [
-  // TwoFold Night (default): deep black-wine, rose, burgundy, dark purple and warm gold.
+  // Twofold Night (default): deep black-wine, rose, burgundy, dark purple and warm gold.
   // Light mode is ivory and pearl with champagne lines and charcoal type — rose and gold as accents only.
-  { id: "kinara-night", name: "TwoFold Night", brand: "#9B1B4A", brandDark: "#F48FB8", accent: "#E9C37A", accentInk: "#3B2608", bg: "#FAF6EF", text: "#231B1F", grad: ["#E8467C", "#7B2FB0"], night: "#0F0709", tint: "#C9A86A" },
+  { id: "kinara-night", name: "Twofold Night", brand: "#9B1B4A", brandDark: "#F48FB8", accent: "#E9C37A", accentInk: "#3B2608", bg: "#FAF6EF", text: "#231B1F", grad: ["#E8467C", "#7B2FB0"], night: "#0F0709", tint: "#C9A86A" },
   { id: "lilac-mint", name: "Lilac + mint", brand: "#7B48CC", brandDark: "#C3A6FF", accent: "#7FD8BE", accentInk: "#173B33", bg: "#F7F4FF", text: "#2B1F45", grad: ["#8E5BD8", "#7FD8BE"], night: "#16112A" },
   { id: "lavender-peach", name: "Lavender + peach", brand: "#7446D4", brandDark: "#C9B3FF", accent: "#FFC4A3", accentInk: "#4A2A14", bg: "#FAF6FF", text: "#2E2142", grad: ["#9B7BEA", "#FFB38A"], night: "#18122B" },
   { id: "pink-lavender", name: "Baby pink + lavender", brand: "#7E4FD0", brandDark: "#D5B8FF", accent: "#F9C9DC", accentInk: "#5A2440", bg: "#FFF8FB", text: "#3A2340", grad: ["#F4A9CC", "#A98BEA"], night: "#1C1222" },

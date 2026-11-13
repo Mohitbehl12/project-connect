@@ -8,9 +8,9 @@ import { T } from "./Text";
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 /** The brand symbol: two open curves. `closed` (0..1) pulls them together into a ring. */
-/** The TwoFold mark: a sun rising over two waves meeting the shore. Colours follow the theme. */
+/** The Twofold mark: a sun rising over two waves meeting the shore. Colours follow the theme. */
 export function ArcMark({ size = 48, left, right, stroke }: { size?: number; left?: string; right?: string; stroke?: number }) {
-  // The TwoFold mark: two rings that overlap, with the shared part filled. `left` colours the rings and
+  // The Twofold mark: two rings that overlap, with the shared part filled. `left` colours the rings and
   // `right` the overlap, so the welcome screen can draw it light on the dark background.
   const w = stroke ? (stroke / size) * 100 : 6;
   return (

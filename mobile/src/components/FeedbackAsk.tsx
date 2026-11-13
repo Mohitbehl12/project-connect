@@ -11,7 +11,7 @@ import { useTheme } from "@/theme/ThemeProvider";
 // Asks "How was this?" rarely (the server decides: at most once a week, once a month per moment).
 const CHOICES = [["LOVE", "❤️", "Love this"], ["GOOD", "🙂", "Good"], ["OKAY", "😐", "Okay"], ["NEEDS_WORK", "🙁", "Needs improvement"], ["PROBLEM", "🚨", "Report a problem"]] as const;
 
-export function FeedbackAsk({ context, question = "How is TwoFold working for you?", always = false }: { context: "APP" | "MATCH" | "CHAT" | "DATE" | "CHECKIN" | "PREMIUM" | "ONBOARDING"; question?: string; always?: boolean }) {
+export function FeedbackAsk({ context, question = "How is Twofold working for you?", always = false }: { context: "APP" | "MATCH" | "CHAT" | "DATE" | "CHECKIN" | "PREMIUM" | "ONBOARDING"; question?: string; always?: boolean }) {
   const { c } = useTheme();
   const q = useQuery({ queryKey: ["feedback-ask", context], queryFn: () => api<{ ask: boolean }>(`/api/feedback?context=${context}`), enabled: !always, staleTime: 3600_000 });
   const [rating, setRating] = useState<string | null>(null);

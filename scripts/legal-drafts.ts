@@ -1,4 +1,4 @@
-// Legal document drafts (legal/*.md). These are full first drafts written for TwoFold's real features, NOT
+// Legal document drafts (legal/*.md). These are full first drafts written for Twofold's real features, NOT
 // lawyer-reviewed text: every public page says "Draft for review" until staff record a lawyer review.
 // - seed.ts uses them as version 1 on a new database;
 // - on an existing database, `applyLegalDrafts` replaces any placeholder version with the draft (as a new
