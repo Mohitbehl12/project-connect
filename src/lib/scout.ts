@@ -31,7 +31,7 @@ export async function scoutFeatures(now = new Date()): Promise<string[]> {
     if (joined >= 20 && pct >= 25) drafts.push({
       signal: `onboarding:step${r.step}`, title: `Make the ${STEP_NAMES[r.step] ?? `step ${r.step}`} step of sign-up easier`,
       problem: `${pct}% of people who joined in the last month stopped at the ${STEP_NAMES[r.step] ?? `step ${r.step}`} step and never finished setting up.`,
-      benefit: "More people reach Discover and can match; fewer empty sign-ups.", evidence: { joined, stoppedHere: r.n, pct, window: "joined 2–30 days ago" },
+      benefit: "More people reach For you and can match; fewer empty sign-ups.", evidence: { joined, stoppedHere: r.n, pct, window: "joined 2–30 days ago" },
       changes: "Look at the step's required fields and copy; let optional parts be skipped and finished later; save progress per field; add a progress indicator if missing; a gentle reminder email after 24 hours (opt-out respected).",
       risk: "LOW", complexity: "M",
     });
@@ -43,7 +43,7 @@ export async function scoutFeatures(now = new Date()): Promise<string[]> {
   if (searches >= 50 && zero / searches >= 0.25) drafts.push({
     signal: "search:zero-results", title: "Help people when a search finds nobody",
     problem: `${Math.round((zero / searches) * 100)}% of filtered searches in the last 7 days returned no one (${zero} of ${searches}).`,
-    benefit: "Fewer dead ends in Discover; people find matches instead of giving up.", evidence: { searches, zeroResults: zero, window: "7 days" },
+    benefit: "Fewer dead ends in For you; people find matches instead of giving up.", evidence: { searches, zeroResults: zero, window: "7 days" },
     changes: "On an empty result, show which filter removed the most people and offer one tap to widen it (distance, age range); remember the widened choice only if the person keeps it.",
     risk: "LOW", complexity: "S",
   });

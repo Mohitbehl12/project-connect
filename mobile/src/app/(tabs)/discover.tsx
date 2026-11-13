@@ -131,7 +131,7 @@ export default function Discover() {
       <View style={{ flexDirection: "row", alignItems: "center", paddingHorizontal: 20, paddingTop: 4, gap: 10 }}>
         <ArcMark size={30} />
         <View style={{ flex: 1 }}>
-          <T v="title" style={{ fontSize: 24, lineHeight: 28 }}>Discover</T>
+          <T v="title" style={{ fontSize: 24, lineHeight: 28 }}>For you</T>
           <T v="caption" tone="muted" numberOfLines={1}>{q.data ? (remaining ? `${remaining} people you might click with` : "You're all caught up") : "Finding people you might click with"}</T>
         </View>
         <View>

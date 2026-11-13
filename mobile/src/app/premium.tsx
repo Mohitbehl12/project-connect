@@ -26,7 +26,7 @@ const BENEFITS: [IconName, string, string, boolean?][] = [
   ["star", "More Super Likes ⭐", "Lead with a note that lands at the top."],
   ["sliders", "Advanced filters", "Fine-tune who you see."],
   ["eye", "Incognito (Premium Plus)", "Only people you like can see you."],
-  ["sparkle", "Profile boosts 🚀", "Be seen first in Discover for 30 minutes. 1 a month on Premium, more on Premium Plus."],
+  ["sparkle", "Profile boosts 🚀", "Be seen first in For you for 30 minutes. 1 a month on Premium, more on Premium Plus."],
   ["pin", "Travel mode ✈️ (Premium Plus)", "Meet people in another city before you arrive."],
 ];
 

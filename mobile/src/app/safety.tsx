@@ -128,7 +128,7 @@ export default function Safety() {
 
         <View style={{ gap: 10 }}>
           <T v="headline">How to report or block</T>
-          <T tone="muted">Long-press any card in Discover, tap the shield on a profile, or tap the shield in a chat. Reporting always blocks them too.</T>
+          <T tone="muted">Long-press any card in For you, tap the shield on a profile, or tap the shield in a chat. Reporting always blocks them too.</T>
         </View>
 
         <View style={{ gap: 10 }}>

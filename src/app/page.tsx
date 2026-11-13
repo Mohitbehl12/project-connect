@@ -25,7 +25,7 @@ export default function Landing() {
             <h1 className="text-[42px] font-extrabold leading-[1.04] text-white sm:text-6xl md:text-[68px]">
               Meet someone who makes your heart skip a beat. <span aria-hidden>❤️</span>
             </h1>
-            <p className="mt-6 max-w-lg text-xl text-white/80">Discover. Connect. Flirt. Find your chemistry. <span aria-hidden>🔥</span></p>
+            <p className="mt-6 max-w-lg text-xl text-white/80">Meet. Connect. Flirt. Find your chemistry. <span aria-hidden>🔥</span></p>
             <div className="mt-9 flex flex-wrap gap-3">
               <Link href="/register" className="kn-glow rounded-full bg-gradient-to-r from-[#E8467C] to-[#7B2FB0] px-8 py-3.5 text-base font-bold text-white">Start Matching ❤️</Link>
               <Link href="/app" className="rounded-full border border-white/30 px-8 py-3.5 text-base font-bold text-white hover:bg-white/10">Explore Profiles 👀</Link>

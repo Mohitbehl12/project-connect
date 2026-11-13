@@ -139,7 +139,7 @@ async function completionReward(userId: string) {
   if (!u || u.completionRewardedAt) return;
   const minutes = await getConfig("rewards.completeProfileBoostMinutes");
   await db.update(schema.users).set({ completionRewardedAt: new Date(), boostUntil: minutes > 0 ? new Date(Date.now() + minutes * 60_000) : u.boostUntil }).where(eq(schema.users.id, userId));
-  if (minutes > 0) await notify(userId, "SUBSCRIPTION", "Your profile is 100% complete 🎉", `You've unlocked a ${minutes}-minute boost: more people will see you in Discover right now.`, "/discover");
+  if (minutes > 0) await notify(userId, "SUBSCRIPTION", "Your profile is 100% complete 🎉", `You've unlocked a ${minutes}-minute boost: more people will see you in For you right now.`, "/discover");
 }
 
 /**

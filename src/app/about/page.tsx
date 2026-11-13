@@ -5,7 +5,7 @@ export const metadata = { title: "How it works" };
 const STEPS = [
   ["Make a profile that sounds like you", "Your name, city and what you're looking for, plus a bio and up to three prompts. Interests and lifestyle help us find common ground."],
   ["Answer ten quick questions", "How you spend a free evening, how you handle a disagreement, how fast you like things to move. Your answers are private — only the compatibility they produce is shown."],
-  ["Discover with reasons", "Browse by best fit, nearby, shared interests or same goals. Each person shows a compatibility score and the specific things you have in common."],
+  ["Matches with reasons", "Browse by best fit, nearby, shared interests or same goals. Each person shows a compatibility score and the specific things you have in common."],
   ["Like, or like with a note", "A match happens only when you both say yes. Priority likes let you add a short note that lands at the top of their list."],
   ["Talk, then plan something public", "Chat with conversation starters drawn from what you share, then use the date planner to suggest a café, a walk or an activity."],
 ];

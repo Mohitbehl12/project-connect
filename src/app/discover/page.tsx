@@ -54,7 +54,7 @@ function Discover() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <PageHeader title="Discover" sub={data ? `${data.totalAvailable} people fit what you're looking for` : undefined}
+      <PageHeader title="For you" sub={data ? `${data.totalAvailable} people fit what you're looking for` : undefined}
         action={<Link href="/profile#preferences" className="btn-outline px-4 py-2 text-sm">Preferences</Link>} />
       <div className="no-scrollbar -mt-1 flex gap-2 overflow-x-auto px-4 pb-4 md:px-8" role="tablist" aria-label="Discovery mode">
         {MODES.map(([k, label]) => (

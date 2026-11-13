@@ -102,7 +102,7 @@ function SafetyArt() {
 }
 
 const SLIDES = [
-  { title: "Meet someone who makes your heart skip a beat. ❤️", body: "Discover. Connect. Flirt. Find your chemistry. 🔥" },
+  { title: "Meet someone who makes your heart skip a beat. ❤️", body: "Meet. Connect. Flirt. Find your chemistry. 🔥" },
   { title: "Chemistry, before you say hello. 👀", body: "See what you have in common, then break the ice with a wink, a Spark or a little help from Cupid." },
   { title: "Flirty, and safe by design.", body: "Verified profiles, calls only after you say yes, and privacy you control." },
 ];

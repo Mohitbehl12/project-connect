@@ -23,7 +23,7 @@ export const useMe = () => {
 };
 
 const NAV = [
-  { href: "/discover", label: "Discover", icon: "M12 3a9 9 0 100 18 9 9 0 000-18zm3.5 5.5l-2 5-5 2 2-5 5-2z" },
+  { href: "/discover", label: "For you", icon: "M12 3a9 9 0 100 18 9 9 0 000-18zm3.5 5.5l-2 5-5 2 2-5 5-2z" },
   { href: "/likes", label: "Likes", icon: "M12 20s-7-4.4-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.6-7 10-7 10z" },
   { href: "/matches", label: "Chats", icon: "M4 5h16v10H8l-4 4V5z" },
   { href: "/notifications", label: "Alerts", icon: "M6 16V11a6 6 0 1112 0v5l2 2H4l2-2zm4 4h4" },
