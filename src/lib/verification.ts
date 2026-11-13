@@ -113,6 +113,30 @@ export async function verificationQueue() {
   }));
 }
 
+/**
+ * The verified badge says "a person compared this member's selfie with these photos". Call this after a
+ * member removes a photo: if none of the photos that were live when staff approved the selfie remain, the
+ * badge no longer means anything, so it is removed and the member is asked to verify again.
+ * Returns true when the badge was removed.
+ */
+export async function recheckBadgeAfterPhotoChange(userId: string): Promise<boolean> {
+  const u = await db.query.users.findFirst({ where: eq(schema.users.id, userId), columns: { selfieStatus: true } });
+  if (u?.selfieStatus !== "VERIFIED") return false;
+  const approved = await db.query.verificationAttempts.findFirst({
+    where: and(eq(schema.verificationAttempts.userId, userId), eq(schema.verificationAttempts.state, "APPROVED")),
+    orderBy: desc(schema.verificationAttempts.decidedAt),
+  });
+  const live = await db.select({ createdAt: schema.photos.createdAt }).from(schema.photos)
+    .where(and(eq(schema.photos.userId, userId), eq(schema.photos.status, "LIVE")));
+  // Verified without a recorded attempt (set by staff directly): any remaining live photo keeps the badge.
+  const cutoff = approved?.decidedAt?.getTime() ?? Number.POSITIVE_INFINITY;
+  if (live.some((p) => p.createdAt.getTime() <= cutoff)) return false;
+  await db.update(schema.users).set({ selfieStatus: "NONE" }).where(eq(schema.users.id, userId));
+  await audit(null, "verify.badge_removed", "user", userId, { reason: "no photo from the verified set remains" });
+  await notify(userId, "VERIFICATION", "Please verify your photos again", "The photos we checked your selfie against are no longer on your profile, so the verified badge was removed. Take a new selfie to get it back.", "/settings");
+  return true;
+}
+
 /** Called when staff approve or reject: records the outcome and deletes the selfie image. */
 export async function closeVerification(userId: string, approved: boolean, staffId: string, reason: string) {
   const open = await db.select().from(schema.verificationAttempts).where(and(eq(schema.verificationAttempts.userId, userId), inArray(schema.verificationAttempts.state, ["PENDING", "CHALLENGE", "RETAKE"])));

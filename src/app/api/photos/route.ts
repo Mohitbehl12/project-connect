@@ -58,15 +58,18 @@ export const POST = route(async ({ req, user }) => {
     await audit(user.id, "photo.rejected_auto", "user", user.id, { reason: check.reason });
     throw new ApiError(422, "This photo can't be used because it looks explicit. Please choose a different one — see our Community Guidelines.", "photo_rejected");
   }
+  // A verified badge vouches for the photos staff compared with the selfie. A photo added afterwards was
+  // not part of that check, so it waits for a person even when automated screening passed it.
+  const status = user.selfieStatus === "VERIFIED" && check.status === "LIVE" ? "PENDING" : check.status;
   const key = `photos/${user.id}/${randomUUID()}.webp`;
   await storage().put(key, processed.data, "image/webp");
   const [row] = await db.insert(schema.photos).values({
     userId: user.id, storageKey: key, position: n, width: processed.width, height: processed.height,
-    blurhash: processed.blurhash, quality: processed.quality, status: check.status, dhash: processed.dhash,
+    blurhash: processed.blurhash, quality: processed.quality, status, dhash: processed.dhash,
   }).returning();
   await duplicatePhotoCheck(user.id, row.id, processed.dhash).catch(() => {}); // never blocks the upload
   const completeness = await refreshCompleteness(user.id);
-  await audit(user.id, "photo.upload", "photo", row.id, { quality: processed.quality, check: check.reason });
+  await audit(user.id, "photo.upload", "photo", row.id, { quality: processed.quality, check: check.reason, heldAfterVerification: status !== check.status });
   return ok({
     photo: { id: row.id, url: await storage().url(key), blurhash: row.blurhash, width: row.width, height: row.height, position: row.position, status: row.status, quality: row.quality, hint: row.status === "PENDING" ? PENDING_HINT : QUALITY_HINT[processed.quality] },
     completeness,

@@ -20,6 +20,12 @@ describe("Cupid suggestions", () => {
   it("never suggests anything our own safety screening would flag", () => {
     for (let s = 0; s < 30; s++) for (const i of all(s)) expect(screenMessage(i.text).filter((f) => f !== "LINK")).toEqual([]);
   });
+  it("never mentions a city when the other person's city is withheld", () => {
+    const hidden = { ...them, city: "" };
+    for (let s = 0; s < 20; s++) for (const i of openers(me, hidden, s)) expect(i.text + i.why).not.toMatch(/Pune|both in/i);
+    // Both withheld must not read as "the same city".
+    for (const i of openers({ ...me, city: "" }, hidden)) expect(i.text + i.why).not.toMatch(/both in/i);
+  });
   it("date ideas always say to meet somewhere public", () => {
     expect(dateIdeas(me, them).every((i) => /public/.test(i.why))).toBe(true);
   });

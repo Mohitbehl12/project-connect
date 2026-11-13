@@ -25,6 +25,8 @@ export type MatchPerson = {
   answers: Record<string, number>;
   completeness: number;
   verified: boolean;
+  /** True when the member chose to show only their country. Their city must never appear in a reason. */
+  hideCity?: boolean;
   prefs: {
     interestedIn: string[];
     ageMin: number;
@@ -186,7 +188,8 @@ export function scorePair(a: MatchPerson, b: MatchPerson, w: Weights = DEFAULT_W
     const names = ints.shared.slice(0, 3).map((k) => (INTERESTS[k] ?? k).toLowerCase());
     reasons.push(`You both enjoy ${names.join(", ").replace(/, ([^,]*)$/, " and $1")}`);
   }
-  if (a.city === b.city) reasons.push(`Both in ${a.city}`);
+  // A member who hides their city must not have it revealed (or confirmed) through a reason.
+  if (a.city === b.city && !a.hideCity && !b.hideCity) reasons.push(`Both in ${a.city}`);
   // At most one personality reason so concrete, checkable reasons aren't crowded out.
   const pk = pers.closest.find((k) => PERSONALITY_REASON[k]);
   if (pk) reasons.push(PERSONALITY_REASON[pk]);

@@ -70,6 +70,21 @@ describe("scorePair", () => {
   });
 });
 
+describe("hidden city", () => {
+  const cityLine = (r: { reasons: string[] }) => r.reasons.some((x) => /Delhi|Both in/.test(x));
+  it("says 'Both in <city>' when neither person hides their city", () => {
+    expect(cityLine(scorePair(base(), man(), DEFAULT_WEIGHTS))).toBe(true);
+  });
+  it("never reveals the city of someone who hides it, in either direction", () => {
+    expect(cityLine(scorePair(base(), man({ hideCity: true }), DEFAULT_WEIGHTS))).toBe(false);
+    expect(cityLine(scorePair(base({ hideCity: true }), man(), DEFAULT_WEIGHTS))).toBe(false);
+    expect(cityLine(compatibilityBreakdown(base(), man({ hideCity: true }), DEFAULT_WEIGHTS))).toBe(false);
+  });
+  it("hiding the city does not change the score", () => {
+    expect(scorePair(base(), man({ hideCity: true }), DEFAULT_WEIGHTS).score).toBe(scorePair(base(), man(), DEFAULT_WEIGHTS).score);
+  });
+});
+
 describe("helpers", () => {
   it("haversine is roughly right (Delhi → Mumbai ≈ 1150 km)", () => {
     const d = haversineKm(28.6139, 77.209, 19.076, 72.8777);

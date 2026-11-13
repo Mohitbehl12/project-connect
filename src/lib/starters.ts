@@ -33,7 +33,7 @@ export function conversationStarters(
     if (out.length >= 2) break;
   }
   if (b.prompts[0]) out.push({ tip: `${b.firstName}'s prompt: "${b.prompts[0].q}…"`, text: `"${b.prompts[0].a}" — tell me more about that!` });
-  if (a.city === b.city) out.push({ tip: `You're both in ${a.city}`, text: `What's a spot in ${a.city} locals love that tourists miss?` });
+  if (a.city && a.city === b.city) out.push({ tip: `You're both in ${a.city}`, text: `What's a spot in ${a.city} locals love that tourists miss?` });
   out.push({ tip: "An easy opener", text: "What made your week better than expected?" });
   return out.slice(0, 4);
 }

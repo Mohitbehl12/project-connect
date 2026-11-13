@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, isNotNull, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ApiError, ok, parseBody, route } from "@/lib/http";
 import { rateLimit } from "@/lib/ratelimit";
@@ -22,9 +22,14 @@ export const POST = route(async ({ req, user }) => {
     let destination = user.email;
     if (body.channel === "PHONE") {
       if (!body.phone) throw new ApiError(422, "phone: Enter your mobile number.", "validation");
-      const taken = await db.query.users.findFirst({ where: and(eq(schema.users.phone, body.phone), ne(schema.users.id, user.id)) });
+      // Only a number someone has PROVED they own blocks others. An unverified claim (a typo, or someone
+      // squatting on another person's number) is released, so the real owner can still verify it.
+      const taken = await db.query.users.findFirst({ where: and(eq(schema.users.phone, body.phone), ne(schema.users.id, user.id), eq(schema.users.phoneVerified, true)) });
       if (taken) throw new ApiError(409, "This number is linked to another account.", "phone_taken");
-      await db.update(schema.users).set({ phone: body.phone, phoneVerified: false }).where(eq(schema.users.id, user.id));
+      await db.update(schema.users).set({ phone: null }).where(and(eq(schema.users.phone, body.phone), ne(schema.users.id, user.id), eq(schema.users.phoneVerified, false)));
+      // Asking for a code for the number already verified on this account keeps it verified.
+      if (!(user.phone === body.phone && user.phoneVerified))
+        await db.update(schema.users).set({ phone: body.phone, phoneVerified: false }).where(eq(schema.users.id, user.id));
       destination = body.phone;
     }
     const devOtp = await issueOtp(user.id, body.channel, destination);
@@ -32,9 +37,14 @@ export const POST = route(async ({ req, user }) => {
   }
 
   await verifyOtp(user.id, body.channel, body.code);
-  await db.update(schema.users)
-    .set(body.channel === "EMAIL" ? { emailVerified: true } : { phoneVerified: true })
-    .where(eq(schema.users.id, user.id));
+  if (body.channel === "PHONE") {
+    // The number may have been released to someone else since the code was sent (see "send" above).
+    const done = await db.update(schema.users).set({ phoneVerified: true })
+      .where(and(eq(schema.users.id, user.id), isNotNull(schema.users.phone))).returning({ id: schema.users.id });
+    if (!done.length) throw new ApiError(409, "This number is no longer linked to your account. Enter it again to get a new code.", "phone_released");
+  } else {
+    await db.update(schema.users).set({ emailVerified: true }).where(eq(schema.users.id, user.id));
+  }
   await audit(user.id, `verify.${body.channel.toLowerCase()}`, "user", user.id);
   return ok({ verified: true });
 }, { allowSuspended: true });
