@@ -32,6 +32,14 @@ const REVISION_NOTES: Record<string, string> = {
 };
 const sha = (s: string) => createHash("sha256").update(String(s).trim()).digest("hex");
 
+/** Earlier names of the app. A published draft that differs from today's draft only by one of these names
+ *  is replaced with today's text as a non-material update, so live legal pages always show the current name. */
+const OLD_NAMES = ["Project Connect", "Kinara", "Discover", "TwoFold"];
+export function isRenameOnly(published: string, draft: string): boolean {
+  if (sha(published) === sha(draft)) return false;
+  return OLD_NAMES.some((n) => published.includes(n) && sha(published.split(n).join("Twofold")) === sha(draft));
+}
+
 const PLACEHOLDER = "Placeholder text for testing";
 
 export function draftBody(slug: string): string | null {
@@ -54,17 +62,20 @@ export async function applyLegalDrafts(db: Client) {
     }
     const cur = (await db.execute({ sql: "select id, version, body from legal_versions where document_id = ? and status = 'PUBLISHED' order by version desc limit 1", args: [doc.id] })).rows[0] as unknown as { id: string; version: number; body: string } | undefined;
     const revised = !!cur && (PRIOR_DRAFT_HASHES[slug] ?? []).includes(sha(String(cur.body))) && sha(String(cur.body)) !== sha(body);
-    if (cur && !String(cur.body).includes(PLACEHOLDER) && !revised) continue; // real text already published
+    const renamed = !!cur && !revised && isRenameOnly(String(cur.body), body);
+    if (cur && !String(cur.body).includes(PLACEHOLDER) && !revised && !renamed) continue; // real text already published
     const max = Number((await db.execute({ sql: "select coalesce(max(version), 0) as v from legal_versions where document_id = ?", args: [doc.id] })).rows[0]?.v ?? 0);
     const now = Date.now();
     if (cur) await db.execute({ sql: "update legal_versions set status = 'SUPERSEDED' where id = ?", args: [cur.id] });
     const vid = crypto.randomUUID();
     await db.execute({
-      sql: "insert into legal_versions (id, document_id, version, body, status, effective_at, published_at, created_at, change_summary, material) values (?, ?, ?, ?, 'PUBLISHED', ?, ?, ?, ?, 1)",
-      args: [vid, doc.id, max + 1, body, now, now, now, revised ? REVISION_NOTES[slug] ?? "Updated draft. Not yet reviewed by a lawyer." : "First full draft, replacing the placeholder. Not yet reviewed by a lawyer."],
+      sql: "insert into legal_versions (id, document_id, version, body, status, effective_at, published_at, created_at, change_summary, material) values (?, ?, ?, ?, 'PUBLISHED', ?, ?, ?, ?, ?)",
+      args: [vid, doc.id, max + 1, body, now, now, now,
+        renamed ? "The app's name is now Twofold. No other changes." : revised ? REVISION_NOTES[slug] ?? "Updated draft. Not yet reviewed by a lawyer." : "First full draft, replacing the placeholder. Not yet reviewed by a lawyer.",
+        renamed ? 0 : 1], // a name change alone doesn't ask members to accept the document again
     });
     changed++;
-    console.log(`[legal] ${slug}: published ${revised ? "revised " : ""}draft as v${max + 1}`);
+    console.log(`[legal] ${slug}: published ${renamed ? "renamed " : revised ? "revised " : ""}draft as v${max + 1}`);
   }
   return changed;
 }
