@@ -1,4 +1,4 @@
-// Shapes returned by the Discover API (see apps' server routes under src/app/api).
+// Shapes returned by the Twofold API (see apps' server routes under src/app/api).
 
 export type Photo = { id: string; url: string; blurhash: string; width: number; height: number };
 export type MyPhoto = Photo & { position: number; status: string; quality: "GOOD" | "DARK" | "BLURRY" | "SMALL"; hint: string };

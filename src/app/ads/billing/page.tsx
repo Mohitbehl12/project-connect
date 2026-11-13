@@ -29,7 +29,7 @@ function Billing() {
       }
       if (!window.Razorpay) throw new Error("The payment window didn't load. Check your connection and try again.");
       new window.Razorpay({
-        key: r.keyId, order_id: r.orderId, amount: r.amountMinor, currency: "INR", name: "Discover Ads", description: "Advertising balance", prefill: { email: r.email },
+        key: r.keyId, order_id: r.orderId, amount: r.amountMinor, currency: "INR", name: "Twofold Ads", description: "Advertising balance", prefill: { email: r.email },
         handler: async (p: { razorpay_payment_id: string; razorpay_signature: string }) => {
           try { await api(`/api/ads/topups/${r.id}`, { body: { paymentId: p.razorpay_payment_id, signature: p.razorpay_signature } }); done(`Payment received. ₹${amount} added to your balance.`); }
           catch (e: any) { setMsg({ tone: "error", text: e.message }); setBusy(false); }
@@ -57,7 +57,7 @@ function Billing() {
             {["1000", "5000", "10000"].map((a) => <button key={a} type="button" className="btn-outline px-3 py-2 text-sm" onClick={() => setAmount(a)}>₹{Number(a).toLocaleString("en-IN")}</button>)}
           </div>
           <button className="btn-primary mt-4 w-full" disabled={busy} onClick={topup}>{busy ? "Processing…" : `Pay ₹${Number(amount || 0).toLocaleString("en-IN")}`}</button>
-          <p className="mt-2 text-xs text-ink-faint">Paid securely through Razorpay (cards, UPI, net banking). Discover never sees or stores your card details. GST included where it applies; a receipt is issued for every payment.</p>
+          <p className="mt-2 text-xs text-ink-faint">Paid securely through Razorpay (cards, UPI, net banking). Twofold never sees or stores your card details. GST included where it applies; a receipt is issued for every payment.</p>
         </section>
         <section className="panel p-5">
           <h2 className="font-bold">Request a refund</h2>

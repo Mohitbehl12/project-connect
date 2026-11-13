@@ -13,8 +13,8 @@ function appUrl(link) {
 
 self.addEventListener("push", (event) => {
   let data = {};
-  try { data = event.data ? event.data.json() : {}; } catch { data = { title: "Discover", body: event.data && event.data.text() }; }
-  const title = data.title || "Discover";
+  try { data = event.data ? event.data.json() : {}; } catch { data = { title: "Twofold", body: event.data && event.data.text() }; }
+  const title = data.title || "Twofold";
   event.waitUntil(self.registration.showNotification(title, {
     body: data.body || "",
     icon: "/app/icons/icon-192.png",

@@ -27,6 +27,6 @@
 
 ## Legal notes (for the lawyer)
 
-- **Three-year erasure (DPDP Rules 2025, Third Schedule).** This applies only to social media intermediaries and e-commerce entities with at least 2 crore registered users in India. Discover is far below that, so it is not mandatory; the optional inactive-account setting covers it as good practice.
+- **Three-year erasure (DPDP Rules 2025, Third Schedule).** This applies only to social media intermediaries and e-commerce entities with at least 2 crore registered users in India. Twofold is far below that, so it is not mandatory; the optional inactive-account setting covers it as good practice.
 - **One-year log retention (DPDP Rules 2025 r.8(3)).** The rule requires keeping personal data, traffic data and logs of processing for at least one year. Sign-in history now defaults to 365 days (was 180). A value saved earlier in Admin → Settings overrides the default — check it says 365.
 - **Registration data (IT Rules 2021 r.3(1)(h)).** It must be kept 180 days after the account is closed. Anonymised accounts keep the minimum needed — the lawyer should confirm.

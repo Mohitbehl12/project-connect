@@ -1,7 +1,7 @@
 # Age Verification Policy (draft)
 
-**Discover is for adults only.** The minimum age is 18, or higher where a launch country's law sets it
-(Admin → Privacy & compliance → Country rules). We do not knowingly allow anyone under that age to use Discover.
+**Twofold is for adults only.** The minimum age is 18, or higher where a launch country's law sets it
+(Admin → Privacy & compliance → Country rules). We do not knowingly allow anyone under that age to use Twofold.
 
 ## Layers of age assurance
 
@@ -18,7 +18,7 @@ We do not rely on a date-of-birth box alone. Each layer is proportionate: we do 
    - Hindi ("main 16 saal ki hoon");
    - "not 18 yet".
 
-   Each match opens a **critical** child-safety report for a person. The member's message is still delivered, and the adult receiving it sees: "Discover is only for adults…".
+   Each match opens a **critical** child-safety report for a person. The member's message is still delivered, and the adult receiving it sees: "Twofold is only for adults…".
 5. **What members report.** "May be under 18" is a critical report category.
 6. **Two signals → hidden while we check.** Two independent signals restrict the account:
    - two different members; or

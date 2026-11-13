@@ -27,7 +27,7 @@ export default function RegisterAdvertiser() {
   return (
     <PublicShell>
       <div className="mx-auto max-w-xl px-4 py-12">
-        <p className="text-sm font-bold uppercase tracking-widest text-[#A5781F]">Discover Ads</p>
+        <p className="text-sm font-bold uppercase tracking-widest text-[#A5781F]">Twofold Ads</p>
         <h1 className="mt-1 text-4xl font-extrabold">Create a business account</h1>
         <p className="mt-2 text-ink-soft">This is separate from a dating profile. Use a work email. We verify your business before your ads go live.</p>
         <form onSubmit={submit} className="mt-8 space-y-5">

@@ -10,7 +10,7 @@ export const githubConfigured = () => !!(process.env.GITHUB_TOKEN && process.env
 async function gh<T = any>(path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   const res = await fetch(`https://api.github.com/repos/${process.env.GITHUB_REPO}${path}`, {
     method: init.method ?? "GET",
-    headers: { authorization: `Bearer ${process.env.GITHUB_TOKEN}`, accept: "application/vnd.github+json", "x-github-api-version": "2022-11-28", "user-agent": "discover-ops", ...(init.body ? { "content-type": "application/json" } : {}) },
+    headers: { authorization: `Bearer ${process.env.GITHUB_TOKEN}`, accept: "application/vnd.github+json", "x-github-api-version": "2022-11-28", "user-agent": "twofold-ops", ...(init.body ? { "content-type": "application/json" } : {}) },
     body: init.body ? JSON.stringify(init.body) : undefined,
     signal: AbortSignal.timeout(15_000),
   });
