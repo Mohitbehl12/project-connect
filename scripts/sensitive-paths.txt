@@ -14,6 +14,9 @@
 ^src/lib/(privacy|consent|compliance|legal|legalText|audit|backup|backupCore|nominee|grievances)\.ts$
 ^src/app/api/(privacy|consents|legal|grievances)/
 ^src/app/legal/
+^legal/
+^scripts/legal-drafts\.ts$
+^scripts/(seed|bootstrap|rename-brand)\.ts$
 # Moderation and safety rules
 ^src/lib/(moderation|moderationQuality|safety|appeals|photoScreen|photoReview|reportSla)\.ts$
 # Database migrations and schema
