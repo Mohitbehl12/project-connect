@@ -207,8 +207,8 @@ Voice/video calls, voice messages, image and GIF sharing in chat, typing indicat
 - **iPhone photos:** photos and selfies are converted to JPEG on the phone before upload. iPhone HEIC photos and photos over 10 MB used to fail.
 - Tests: 68 unit, 421 end-to-end, 8 two-server.
 
-## Discover (rename), membership v3, call requests, chat media
-- **Renamed to Discover**, with a new icon set. `npm run brand:rename -- "Old" "New"` renames it again.
+## Twofold (rename), membership v3, call requests, chat media
+- **Renamed to Twofold**, with a new icon set. `npm run brand:rename -- "Old" "New"` renames it again.
 - **Membership:**
   - Women and everyone not a man (India): every plan free for life.
   - Men: 15-day free trial, then ₹100/month (or ₹250 / ₹500 / ₹1,000 for 3, 6 or 12 months).
@@ -219,7 +219,7 @@ Voice/video calls, voice messages, image and GIF sharing in chat, typing indicat
   - Voice messages, hearts, and a "send anyway?" check before hurtful messages.
   - Media from reported chats is kept as evidence.
 - **Calls relay:** Cloudflare TURN built in. Paste `CLOUDFLARE_TURN_KEY_ID` and `CLOUDFLARE_TURN_API_TOKEN` to switch calls on.
-- **Clothing section removed (21 Oct 2026):** Discover Style was taken out at the owner's request. Migration 0012 drops its tables (including body measurements), and any TAILOR staff accounts become ordinary users.
+- **Clothing section removed (21 Oct 2026):** Twofold Style was taken out at the owner's request. Migration 0012 drops its tables (including body measurements), and any TAILOR staff accounts become ordinary users.
 - **Admin dashboard:** men and women, free trials, free-forever members, paid memberships, ₹100 subscriptions, payments, call requests (accepted / declined), calls.
 - **Tests:** 72 unit, 601+ end-to-end, 9 two-server.
 
@@ -254,7 +254,7 @@ Built to the 30-section "Privacy by Design / Safety by Design" brief. The full m
 - **Needs people, not code:** lawyer review, DPAs, an independent penetration test, a law-enforcement/CSAM process, a breach plan.
 
 ## Flirty premium redesign (21 October 2026)
-- **Look:** a new default "Discover Night" theme (deep black-wine, rose, burgundy, dark purple, warm gold), dark by default. All 11 themes pass the AA contrast check. New dark romantic hero on the website.
+- **Look:** a new default "Twofold Night" theme (deep black-wine, rose, burgundy, dark purple, warm gold), dark by default. All 11 themes pass the AA contrast check. New dark romantic hero on the website.
 - **Moments:**
   - Like: ❤️→💖→💕→✨ with flying hearts and a heartbeat
   - Super Like: ⭐→✨→❤️→🔥
@@ -329,7 +329,7 @@ After the fixes: 3,423 QA cases, 890 end-to-end, 66 security and 89 unit tests a
 ## 24×7 monitoring and audit round 1 (3 November 2026)
 
 - **Monitoring and AI engineer:** Admin → Engineering (overview, product health, feedback, incidents, releases, improvements, activity trail, settings). Runbook: `docs/AI_ENGINEER.md`; known fixes: `docs/AI_KNOWLEDGE.md`. A scheduled AI engineer runs every 6 hours and opens pull requests; a person merges.
-- **Audit:** product audit and P0–P3 roadmap kept as a shared doc (Discover — Product Audit & Roadmap).
+- **Audit:** product audit and P0–P3 roadmap kept as a shared doc (Twofold — Product Audit & Roadmap).
 - **Round 1 (live):** Next.js 15.5.28 / Zod 4.6.7 security patch; date check-in with a trusted contact; close a chat kindly; quiet hours and a like/match alert cap; in-app feedback; weekly product health report (north star: meaningful connection rate).
 - **Tests:** 966 unit, 1,002 end-to-end, 66 security, 1,176 QA API cases, on a database built from migrations.
 - **Dev database:** never `db:push` a database with data. Reset: delete `data/dev.db`, then `npx tsx scripts/migrate.ts && npm run db:seed && npx tsx scripts/sample-data.ts && npx tsx scripts/seed-photos.ts && npx tsx scripts/rotate-keys.ts && npx tsx scripts/bootstrap.ts`.

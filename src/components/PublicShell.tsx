@@ -7,7 +7,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 md:px-8">
         <Link href="/" className="flex items-center gap-2 font-display text-xl font-extrabold">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/kinara-mark.png" alt="" width={30} height={30} className="rounded-lg" />Discover
+          <img src="/twofold-mark.png" alt="" width={30} height={30} className="rounded-lg" />Twofold
         </Link>
         <nav aria-label="Site" className="flex items-center gap-1 sm:gap-2">
           <Link href="/safety" className="btn-ghost hidden px-3 sm:inline-flex">Safety</Link>
@@ -20,7 +20,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
       <footer className="mt-20 border-t border-mist">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-sm text-ink-soft sm:grid-cols-3 md:px-8">
           <div>
-            <p className="font-display text-lg font-extrabold text-ink">Discover</p>
+            <p className="font-display text-lg font-extrabold text-ink">Twofold</p>
             <p className="mt-1">Dating built around intent, compatibility and safety. 18+ only.</p>
           </div>
           <ul className="space-y-1.5">

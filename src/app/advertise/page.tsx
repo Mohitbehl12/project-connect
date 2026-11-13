@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { PublicShell } from "@/components/PublicShell";
 
-export const metadata: Metadata = { title: "Advertise on Discover", description: "Reach adults in your city with clearly labelled, reviewed ads. Advertisers only get aggregated results." };
+export const metadata: Metadata = { title: "Advertise on Twofold", description: "Reach adults in your city with clearly labelled, reviewed ads. Advertisers only get aggregated results." };
 
 const STEPS = [
   ["Create your advertisement", "Upload images or a short video, write a headline and choose a button like Shop now or Book now. See a live preview as you go."],
@@ -17,7 +17,7 @@ export default function Advertise() {
     <PublicShell>
       <section className="kn-hero text-white">
         <div className="mx-auto max-w-5xl px-4 pb-20 pt-14 md:px-8 md:pt-20">
-          <p className="text-sm font-bold uppercase tracking-widest text-[#E9C37A]">Discover Ads</p>
+          <p className="text-sm font-bold uppercase tracking-widest text-[#E9C37A]">Twofold Ads</p>
           <h1 className="mt-3 max-w-3xl text-[40px] font-extrabold leading-[1.05] text-white sm:text-6xl">Reach People Who Are Ready to Discover Something New.</h1>
           <p className="mt-6 max-w-2xl text-xl text-white/80">Restaurants, salons, fashion, travel, events and local businesses: put your brand in front of adults planning their next date — with ads that are premium, relevant and clearly labelled.</p>
           <div className="mt-9 flex flex-wrap gap-3">

@@ -13,7 +13,7 @@ import { ageFromDob } from "./matching";
 import { screenMessage } from "./moderation";
 import { storage } from "./storage";
 
-// Discover Ads. Principles (see legal/advertising.md):
+// Twofold Ads. Principles (see legal/advertising.md):
 //  • every ad is labelled "Sponsored" and looks different from member profiles;
 //  • advertisers only ever see aggregated numbers — never who saw or clicked an ad;
 //  • targeting uses location, age band and device; gender and interests only when personalised ads are on
@@ -183,7 +183,7 @@ export function whyText(businessName: string, t: Targeting, v: Pick<Viewer, "per
   if (t.ageMin > 18 || t.ageMax < 99) parts.push(`aged ${t.ageMin}–${t.ageMax}`);
   const shared = t.interests.filter((i) => v.interests.includes(i)).map((i) => INTERESTS[i]?.toLowerCase() ?? i);
   if (v.personalised && shared.length) parts.push(`interested in ${shared.slice(0, 2).join(" and ")}`);
-  return `${businessName} wants to reach ${parts.length ? parts.join(", ") : "people on Discover"}. Advertisers never see who you are.`;
+  return `${businessName} wants to reach ${parts.length ? parts.join(", ") : "people on Twofold"}. Advertisers never see who you are.`;
 }
 
 // ---- serving ------------------------------------------------------------------------------------------------

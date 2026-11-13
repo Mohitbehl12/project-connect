@@ -325,7 +325,7 @@ function ProposalsTab({ manage }: { manage: boolean }) {
   }
   return (
     <div className="space-y-4">
-      <Alert tone="info">Ideas come from how Discover is used (totals only — never one person's activity). Approving one opens a GitHub issue; the AI engineer builds it on a branch with tests and opens a pull request for you to review. Nothing ships without your merge.</Alert>
+      <Alert tone="info">Ideas come from how Twofold is used (totals only — never one person's activity). Approving one opens a GitHub issue; the AI engineer builds it on a branch with tests and opens a pull request for you to review. Nothing ships without your merge.</Alert>
       <div className="flex flex-wrap gap-2">
         <select className="input w-auto" aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="PROPOSED">Waiting for a decision</option><option value="APPROVED">Approved</option><option value="IN_PROGRESS">Being built</option><option value="SHIPPED">Shipped</option><option value="REJECTED">Rejected</option><option value="">All</option>

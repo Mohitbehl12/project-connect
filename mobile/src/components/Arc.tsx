@@ -8,15 +8,16 @@ import { T } from "./Text";
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 /** The brand symbol: two open curves. `closed` (0..1) pulls them together into a ring. */
-/** The Discover mark: a sun rising over two waves meeting the shore. Colours follow the theme. */
+/** The Twofold mark: a sun rising over two waves meeting the shore. Colours follow the theme. */
 export function ArcMark({ size = 48, left, right, stroke }: { size?: number; left?: string; right?: string; stroke?: number }) {
-  const { c } = useTheme();
-  const w = stroke ? (stroke / size) * 100 : 7;
+  // The Twofold mark: two rings that overlap, with the shared part filled. `left` colours the rings and
+  // `right` the overlap, so the welcome screen can draw it light on the dark background.
+  const w = stroke ? (stroke / size) * 100 : 6;
   return (
     <Svg width={size} height={size} viewBox="0 0 100 100" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <Path d="M14 62 C 28 50, 40 50, 50 60 C 60 50, 72 50, 86 62" stroke={right ?? c.accent} strokeWidth={w} strokeLinecap="round" fill="none" />
-      <Path d="M14 76 C 28 64, 40 64, 50 74 C 60 64, 72 64, 86 76" stroke={left ?? c.brand} strokeOpacity={0.6} strokeWidth={w * 0.72} strokeLinecap="round" fill="none" />
-      <Circle cx={50} cy={34} r={10} fill="#F2B544" />
+      <Path d="M50 31.56 A22 22 0 0 1 50 68.44 A22 22 0 0 1 50 31.56 Z" fill={right ?? "#D85A30"} />
+      <Circle cx={38} cy={50} r={22} stroke={left ?? "#993C1D"} strokeWidth={w} fill="none" />
+      <Circle cx={62} cy={50} r={22} stroke={left ?? "#993C1D"} strokeWidth={w} fill="none" />
     </Svg>
   );
 }

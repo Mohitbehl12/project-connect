@@ -1,4 +1,4 @@
-// Discover — core data model (Drizzle ORM, SQLite/libSQL dialect).
+// Twofold — core data model (Drizzle ORM, SQLite/libSQL dialect).
 // Enum-like columns are text; allowed values live in src/lib/constants.ts and are validated at the API edge.
 // Porting to Postgres: swap sqlite-core for pg-core; the shapes map 1:1.
 import { sqliteTable, text, integer, real, index, uniqueIndex } from "drizzle-orm/sqlite-core";
@@ -487,7 +487,7 @@ export type Preferences = typeof preferences.$inferSelect;
 /** Ordered, moderated profile photos. position 0 = primary. */
 /**
  * The person a member names to exercise their privacy rights if they die or can't act (DPDP Act 2023 s.14).
- * One per member. Contact details are encrypted; the nominee is never contacted by Discover unless they get in touch.
+ * One per member. Contact details are encrypted; the nominee is never contacted by Twofold unless they get in touch.
  */
 export const nominees = sqliteTable("nominees", {
   userId: text("user_id").primaryKey().references(() => users.id, { onDelete: "cascade" }),

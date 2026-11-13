@@ -3,7 +3,7 @@ import "./globals.css";
 import { ErrorReporter } from "@/components/ErrorReporter";
 
 export const metadata: Metadata = {
-  title: { default: "Discover", template: "%s · Discover" },
+  title: { default: "Twofold", template: "%s · Twofold" },
   description: "Dating built around intent, compatibility and safety.",
 };
 
