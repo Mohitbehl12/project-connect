@@ -74,6 +74,21 @@ function Settings() {
       </div>
 
       <section className="panel mt-6 p-5">
+        <h2 className="text-lg font-bold">Closed beta</h2>
+        <p className="mt-1 text-sm text-ink-soft">While invite-only is on, a new account needs one of the codes below or the personal invite code of an existing member. The member limit stops sign-ups once that many member accounts exist (0 means no limit).</p>
+        <label className="mt-3 flex items-center gap-3 text-[15px]">
+          <input type="checkbox" className="h-4 w-4 accent-ink" checked={!!cfg["beta.inviteOnly"]} onChange={(e) => setCfg({ ...cfg, "beta.inviteOnly": e.target.checked })} />
+          <span>Invite-only sign-up</span>
+        </label>
+        <label className="mt-3 block text-sm font-medium" htmlFor="beta-codes">Beta codes, one per line (4–20 letters and digits)</label>
+        <textarea id="beta-codes" className="input mt-1 max-w-md font-mono" rows={4} value={(cfg["beta.inviteCodes"] ?? []).join("\n")}
+          onChange={(e) => setCfg({ ...cfg, "beta.inviteCodes": e.target.value.split(/\s+/).map((x: string) => x.trim().toUpperCase()).filter(Boolean) })} />
+        <label className="mt-3 block text-sm font-medium" htmlFor="beta-max">Member limit</label>
+        <input id="beta-max" type="number" min={0} className="input mt-1 max-w-[12rem]" value={cfg["beta.maxMembers"] ?? 0} onChange={(e) => setCfg({ ...cfg, "beta.maxMembers": Math.max(0, Math.floor(Number(e.target.value) || 0)) })} />
+        <div><button className="btn-primary mt-4" disabled={!staff.permissions.includes("config.edit")} onClick={() => save({ config: { "beta.inviteOnly": !!cfg["beta.inviteOnly"], "beta.inviteCodes": cfg["beta.inviteCodes"] ?? [], "beta.maxMembers": cfg["beta.maxMembers"] ?? 0 } }, "Closed beta settings")}>Save closed beta settings</button></div>
+      </section>
+
+      <section className="panel mt-6 p-5">
         <h2 className="text-lg font-bold">Photo checks</h2>
         <p className="mt-1 text-sm text-ink-soft">How new photos are checked before others can see them. Automatic checking uses Sightengine once its keys are in the server settings; until then, photos wait in Admin → Photo review.</p>
         <select aria-label="Photo checks" className="input mt-3 max-w-md" value={cfg["moderation.photoScreening"] ?? "auto"} onChange={(e) => setCfg({ ...cfg, "moderation.photoScreening": e.target.value })}>

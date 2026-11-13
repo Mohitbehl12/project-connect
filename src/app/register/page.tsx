@@ -10,6 +10,7 @@ import { api } from "@/lib/client";
 export default function Register() {
   const router = useRouter();
   const [f, setF] = useState({ email: "", password: "", dob: "" });
+  const [invite, setInvite] = useState("");
   const [checks, setChecks] = useState({ confirmAdult: false, acceptLegal: false, safetyAcknowledged: false });
   const [marketing, setMarketing] = useState(false); // optional, never pre-ticked
   const [err, setErr] = useState("");
@@ -22,7 +23,7 @@ export default function Register() {
     if (!checks.confirmAdult || !checks.acceptLegal || !checks.safetyAcknowledged) return setErr("Tick all three boxes to continue.");
     setBusy(true);
     try {
-      await api("/api/auth/register", { body: { ...f, ...checks, marketing } });
+      await api("/api/auth/register", { body: { ...f, ...checks, marketing, referralCode: invite || undefined } });
       router.push("/onboarding");
     } catch (e: any) {
       setErr(e.message);
@@ -49,6 +50,9 @@ export default function Register() {
           </Field>
           <Field label="Date of birth" hint="You must be 18 or older. Your exact birthday is never shown — only your age.">
             {(id) => <DobInput id={id} onChange={(dob) => setF((s) => ({ ...s, dob }))} />}
+          </Field>
+          <Field label="Invite code (optional)" hint="From us or from a friend who's a member. Needed while Discover is invite-only.">
+            {(id) => <input id={id} className="input" autoCapitalize="characters" autoComplete="off" maxLength={20} value={invite} onChange={(e) => setInvite(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} />}
           </Field>
           <div className="space-y-3 rounded-xl bg-paper-sunk p-4">
             {box("confirmAdult", "I'm 18 or older.")}

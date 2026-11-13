@@ -743,6 +743,36 @@ async function main() {
     check("the owner keeps the number, verified", me2?.phoneVerified === true, me2);
   }
 
+  section("Closed beta: invite-only sign-up and a member limit");
+  {
+    const reg = (tag: string, referralCode?: string) => fetch(`${BASE}/api/auth/register`, {
+      method: "POST", headers: { "content-type": "application/json", "x-forwarded-for": `10.8.${tag.length}.${tag.charCodeAt(0) % 250}` },
+      body: JSON.stringify({ email: `beta-${tag}-${run}@e2e.test`, password: "Testing123", dob: "1996-04-04", acceptLegal: true, confirmAdult: true, safetyAcknowledged: true, referralCode }),
+    }).then(async (r) => ({ status: r.status, data: await r.json().catch(() => null) }));
+    const on = await admin.put("/api/admin/config", { config: { "beta.inviteOnly": true, "beta.inviteCodes": ["beta2026", "FOUNDERS"] } });
+    check("staff can switch invite-only on", on.status === 200, on.data);
+    try {
+      const none = await reg("none");
+      check("sign-up without a code is refused", none.status === 403 && none.data?.code === "invite_required", none.data);
+      const wrong = await reg("wrong", "NOTACODE1");
+      check("a made-up code is refused", wrong.status === 403 && wrong.data?.code === "invite_required", wrong.data);
+      // The first beta member signs up with a beta code, then invites a friend with their own code.
+      const first = new Client("BetaFirstMember");
+      const joined = await first.post("/api/auth/register", { email: `beta-first-${run}@e2e.test`, password: "Testing123", dob: "1996-04-04", acceptLegal: true, confirmAdult: true, safetyAcknowledged: true, referralCode: "Beta2026" });
+      check("a beta code works (any letter case)", joined.status === 201, joined.data);
+      const memberCode = (await first.get("/api/referrals")).data?.code as string;
+      const friend = await reg("friend", memberCode);
+      check("an existing member's invite code works", /^[A-Z0-9]{4,20}$/.test(memberCode ?? "") && friend.status === 201, { memberCode, friend });
+      await admin.put("/api/admin/config", { config: { "beta.maxMembers": 1 } });
+      const full = await reg("late", "FOUNDERS");
+      check("once the member limit is reached, even a valid code is refused", full.status === 403 && full.data?.code === "beta_full", full.data);
+      check("a bad code list is rejected", (await admin.put("/api/admin/config", { config: { "beta.inviteCodes": ["no spaces!"] } })).status >= 400);
+    } finally {
+      await admin.put("/api/admin/config", { config: { "beta.inviteOnly": false, "beta.inviteCodes": [], "beta.maxMembers": 0 } });
+    }
+    check("with invite-only off, anyone can sign up again", (await reg("open")).status === 201);
+  }
+
   section("Offers: no false urgency");
   const fake = await admin.post("/api/admin/billing/offers", { name: `Fake urgency ${run}`, kind: "DISCOUNT", headline: "Hurry — 20% off", badge: "Today only", planCode: "VIP", country: "IN", discountPct: 20, active: false });
   check("\"Today only\" without a real end date is refused", fake.status === 422 && fake.data?.code === "false_urgency", fake.data);
