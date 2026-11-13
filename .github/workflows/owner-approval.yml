@@ -1,0 +1,70 @@
+# Holds back pull requests that touch payments, sign-in and permissions, privacy, legal text, moderation rules,
+# database migrations or deployment settings until the owner approves them.
+# The paths are listed in scripts/sensitive-paths.txt. When a PR touches one:
+#   - it gets the `sensitive` label and a comment listing the files;
+#   - the "Owner approval" check fails until the owner adds the `owner-approved` label;
+#   - new commits remove `owner-approved`, so the owner approves the final code, not an earlier version.
+# The AI engineer only merges when every check is green (docs/AI_ENGINEER.md), so it cannot merge these.
+name: Owner approval
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled, ready_for_review]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: owner-approval-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  approval:
+    name: Owner approval for sensitive changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }} # the rules come from main, so a PR cannot edit its own way past them
+          sparse-checkout: scripts/sensitive-paths.txt
+          sparse-checkout-cone-mode: false
+      - name: Check changed files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          ACTION: ${{ github.event.action }}
+        run: |
+          set -euo pipefail
+          if [ ! -f scripts/sensitive-paths.txt ]; then # first introduction: main has no list yet, use the PR's
+            mkdir -p scripts
+            gh api "repos/$REPO/contents/scripts/sensitive-paths.txt?ref=${{ github.event.pull_request.head.sha }}" -q .content | base64 -d > scripts/sensitive-paths.txt
+          fi
+          grep -v '^\s*#' scripts/sensitive-paths.txt | grep -v '^\s*$' > /tmp/patterns
+          gh api --paginate "repos/$REPO/pulls/$PR/files" -q '.[].filename' > /tmp/changed
+          grep -E -f /tmp/patterns /tmp/changed > /tmp/hits || true
+          labels=$(gh api "repos/$REPO/issues/$PR/labels" -q '.[].name')
+          if [ ! -s /tmp/hits ]; then
+            echo "No sensitive files changed."
+            exit 0
+          fi
+          echo "Sensitive files changed:"; cat /tmp/hits
+          if [ "$ACTION" = "synchronize" ] && grep -qx owner-approved <<<"$labels"; then
+            gh api -X DELETE "repos/$REPO/issues/$PR/labels/owner-approved" >/dev/null || true
+            gh api "repos/$REPO/issues/$PR/comments" -f body="New commits arrived, so the earlier owner approval was removed. Please review the latest changes and add \`owner-approved\` again." >/dev/null
+            labels=$(grep -vx owner-approved <<<"$labels" || true)
+          fi
+          if ! grep -qx sensitive <<<"$labels"; then
+            gh api "repos/$REPO/issues/$PR/labels" -f "labels[]=sensitive" >/dev/null
+            { echo "This pull request changes sensitive files, so it needs the owner's approval before it can be merged:"; echo; sed 's/^/- `/; s/$/`/' /tmp/hits; echo; echo "Owner: review it, then add the \`owner-approved\` label. The AI engineer never adds that label and never merges while this check is red."; } > /tmp/body
+            gh api "repos/$REPO/issues/$PR/comments" -F body=@/tmp/body >/dev/null
+          fi
+          if grep -qx owner-approved <<<"$labels"; then
+            echo "Approved by the owner (owner-approved label present)."
+            exit 0
+          fi
+          echo "::error::Sensitive files changed. Waiting for the owner to add the owner-approved label."
+          exit 1

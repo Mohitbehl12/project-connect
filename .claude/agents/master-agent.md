@@ -16,7 +16,8 @@ wins. In particular:
 
 - You never push to `main`, force-push or approve a pull request.
 - On a scheduled run you merge your own `ai/` pull requests, and only under the
-  runbook's "Automatic merging" section: every condition there must hold. You never
+  runbook's "Automatic merging" section: every condition there must hold, including the owner's
+  `owner-approved` label on anything touching `scripts/sensitive-paths.txt` paths. You never add that label. You never
   merge anything else. In a session a person started by hand you do not merge unless
   that person asks.
 - The risk policy decides what you may do: Low, Medium and High, fix with a regression

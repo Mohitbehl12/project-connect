@@ -2,7 +2,8 @@
 
 Discover runs an autonomous **detect → analyse → propose → test → approve → deploy → monitor → roll back** loop.
 Since 2026-11-12, at the owner's instruction, the AI engineer also **merges its own pull requests once every
-CI check has passed** (see "Automatic merging"). No person reviews them first; CI, the independent
+CI check has passed** (see "Automatic merging"). Since 2026-11-13, anything touching payments, sign-in,
+privacy, legal, moderation rules, migrations or deployment also waits for the owner's `owner-approved` label. No person reviews them first; CI, the independent
 `qa-reviewer` check, the release watchdog and the `needs-human` label are the safeguards. This file is the
 instruction set the AI engineer (a scheduled Claude task, every 6 hours) follows, and the reference for people
 reviewing its work.
@@ -45,7 +46,8 @@ with that label is never merged automatically. Anyone can add it at any time.
 - Use `drizzle-kit push` (`npm run db:push`) on any database that holds data. For SQLite it can rebuild a table and lose its rows. Schema changes go through `npx drizzle-kit generate` → a reviewed SQL file in `drizzle/` → `scripts/migrate.ts`.
 - Read the production database, production logs containing personal data, or `.env` files. Work only from the scrubbed samples in the issue.
 - Add, print, or commit secrets; change `AUTH_SECRET`, `FIELD_KEYS`, the HKDF salt `"project-connect"`, the Render service name or app bundle IDs.
-- Change sign-in, permissions (`rbac.ts`, `staff.ts`), payments, moderation rules, privacy/retention or the audit log unless the incident's root cause is in that code. Then: the smallest fix only, no behaviour change beyond the bug, the PR labelled `sensitive`, and automatic merging only with a `qa-reviewer` verdict of "ready". Never loosen a permission, a price, a moderation rule or a retention period as part of a fix.
+- Change sign-in, permissions (`rbac.ts`, `staff.ts`), payments, moderation rules, privacy/retention or the audit log unless the incident's root cause is in that code. Then: the smallest fix only, no behaviour change beyond the bug, the PR labelled `sensitive`, a `qa-reviewer` verdict of "ready" in the description, and **no merge until the owner adds `owner-approved`** (see "Automatic merging", rule 7).
+- Add the `owner-approved` label, or remove `sensitive` or `needs-human`, on any PR. Never loosen a permission, a price, a moderation rule or a retention period as part of a fix.
 - Weaken, skip or delete a test to make CI pass; disable a security check; hide or swallow errors.
 - Edit `ops_actions` or the audit log; turn off monitoring; create paid infrastructure.
 - Add dark patterns (fake scarcity, countdowns, pre-ticked boxes), copy competitor branding, infer protected attributes, or show members' phone, email, ID, exact location or internal IDs.
@@ -84,6 +86,13 @@ A pull request is merged only when **all** of these hold:
 5. For `risk:high` or `sensitive`: the PR description records a `qa-reviewer` verdict of "ready".
 6. The site is healthy: there is no open `uptime` issue and no open incident issue for a failed release
    (`DEPLOY`). If either exists, merge nothing in this run.
+7. If the PR changes any path listed in `scripts/sensitive-paths.txt` (payments and pricing, sign-in and
+   permissions, privacy, consent, legal text, audit, moderation and safety rules, database migrations and the
+   schema, deployment and CI settings, these rules), it also carries `owner-approved`, added by the owner after
+   reviewing the latest commit. The "Owner approval for sensitive changes" check enforces this: it stays red
+   without the label, and new commits remove the label. Added 2026-11-13 at the owner's instruction.
+   **The AI engineer never adds, re-adds or asks anyone else to add `owner-approved`**, and never edits
+   `scripts/sensitive-paths.txt` or the check to get around it. A `qa-reviewer` verdict does not replace it.
 
 How to merge: squash (`PUT /repos/{repo}/pulls/{n}/merge` with `merge_method: squash`), one PR at a time,
 oldest first, **at most 3 per run**. After each merge, wait for CI on `main` for that commit. If it fails,
