@@ -15,7 +15,7 @@ export async function loadAnswers(userIds: string[]): Promise<Map<string, Record
   if (!userIds.length) return map;
   // chunk to keep SQL parameter count reasonable
   for (let i = 0; i < userIds.length; i += 400) {
-    const rows = await db.select().from(schema.personalityAnswers).where(inArray(schema.personalityAnswers.userId, userIds.slice(i, i + 400)));
+    const rows = await db.select({ userId: schema.personalityAnswers.userId, questionKey: schema.personalityAnswers.questionKey, value: schema.personalityAnswers.value }).from(schema.personalityAnswers).where(inArray(schema.personalityAnswers.userId, userIds.slice(i, i + 400)));
     for (const r of rows) {
       const m = map.get(r.userId) ?? {};
       m[r.questionKey] = r.value;

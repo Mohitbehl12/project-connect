@@ -9,6 +9,7 @@ import { ApiError } from "./http";
 import { alignedTraits, ageFromDob, eligibility, scorePair, searchBox } from "./matching";
 import { blockedIds, loadAnswers, loadPerson, publicCard, toMatchPerson } from "./people";
 import { photosFor } from "./photos";
+import { discoverGeneration } from "./discoverCache";
 
 // The discovery engine shared by Discover, Explore collections and search. Everyone returned has passed the
 // same privacy and safety rules (blocks, incognito, "verified only", paused or restricted accounts, the
@@ -58,18 +59,55 @@ export function filtersFrom(sp: URLSearchParams): Filters {
 /** How many prefiltered rows are scored in memory per request. */
 const CANDIDATE_LIMIT = 1000;
 
-/** Everyone the viewer may see, scored. */
+// Only the columns that filtering and scoring need are read for the up-to-1,000 candidate rows; the full
+// profile (bio, prompts, photos…) is read later for the few cards actually shown. Reading every column of
+// three tables for 1,000 rows was most of Discover's cost in the load test (docs/LOAD_TEST.md).
+const USER_COLS = { id: schema.users.id, selfieStatus: schema.users.selfieStatus, lastActiveAt: schema.users.lastActiveAt, createdAt: schema.users.createdAt, boostUntil: schema.users.boostUntil };
+const P = schema.profiles;
+const PROFILE_COLS = { userId: P.userId, dob: P.dob, gender: P.gender, country: P.country, city: P.city, lat: P.lat, lng: P.lng, education: P.education, profession: P.profession,
+  drinking: P.drinking, smoking: P.smoking, food: P.food, exercise: P.exercise, pets: P.pets, intent: P.intent, interests: P.interests, languages: P.languages, completeness: P.completeness };
+type Row = { user: typeof schema.users.$inferSelect; profile: typeof schema.profiles.$inferSelect; prefs: typeof schema.preferences.$inferSelect | null };
+
+/**
+ * Short-lived cache of each viewer's scored candidates (5 minutes), so paging, switching tabs and Explore don't
+ * re-read and re-score up to 1,000 rows every time. Safety is re-checked on every request: people the viewer
+ * has since liked, passed or blocked (or who blocked them) are removed, and the people actually shown are
+ * re-read with the same status rules (active, not paused or restricted, discoverable), so the only thing that
+ * can lag is a brand-new or newly-edited profile appearing, by up to 5 minutes. A change to the
+ * viewer's own preferences or location gives a new key. Bounded, in memory, per server process.
+ */
+const CACHE_MS = 5 * 60_000, CACHE_MAX = 500;
+type Cached = { at: number; gen: number; viewer: Awaited<ReturnType<typeof loadPerson>> extends infer T ? T extends { person: infer M } ? M : never : never; scored: Scored[] };
+const cache = new Map<string, Cached>();
+export function clearDiscoverCache(userId?: string) {
+  if (!userId) return cache.clear();
+  for (const k of cache.keys()) if (k.startsWith(`${userId}|`)) cache.delete(k);
+}
+
+/** Everyone the viewer may see, scored (cached briefly, with the safety exclusions always fresh). */
 async function candidates(user: User, f: Filters) {
   if (user.onboardingStep < 3) throw new ApiError(409, "Finish setting up your profile to start discovering people.", "onboarding");
   const me = await loadPerson(user.id);
   if (!me) throw new ApiError(409, "Finish setting up your profile to start discovering people.", "onboarding");
   const viewer = me.person;
-  const [acted, blocked, weights] = await Promise.all([
+  const [acted, blocked] = await Promise.all([
     db.select({ id: schema.likes.toId }).from(schema.likes).where(eq(schema.likes.fromId, user.id)),
     blockedIds(user.id),
-    getConfig("matching.weights"),
   ]);
-  const exclude = [user.id, ...acted.map((a) => a.id), ...blocked];
+  const gone = new Set([user.id, ...acted.map((a) => a.id), ...blocked]);
+  const key = `${user.id}|${JSON.stringify(f)}|${JSON.stringify([viewer.prefs, viewer.lat, viewer.lng, viewer.country, viewer.interests, viewer.intent, user.selfieStatus])}`;
+  const hit = cache.get(key);
+  if (hit && hit.gen === discoverGeneration() && Date.now() - hit.at < CACHE_MS) return { viewer, scored: hit.scored.filter((x) => !gone.has(x.r.user.id)) };
+  const gen = discoverGeneration();
+  const fresh = await scoreCandidates(user, viewer, f, [...gone]);
+  cache.delete(key);
+  cache.set(key, { at: Date.now(), gen, viewer, scored: fresh });
+  while (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value!);
+  return { viewer, scored: fresh };
+}
+
+async function scoreCandidates(user: User, viewer: NonNullable<Awaited<ReturnType<typeof loadPerson>>>["person"], f: Filters, exclude: string[]) {
+  const weights = await getConfig("matching.weights");
   // Search can only narrow the viewer's own age preferences, never widen them.
   const ageMin = Math.max(viewer.prefs.ageMin, f.ageMin ?? 18), ageMax = Math.min(viewer.prefs.ageMax, f.ageMax ?? 99);
   const where = [
@@ -97,7 +135,7 @@ async function candidates(user: User, f: Filters) {
     const inBox = and(between(schema.profiles.lat, box.lat[0], box.lat[1]), box.lng ? between(schema.profiles.lng, box.lng[0], box.lng[1]) : undefined);
     where.push(or(inBox, and(isNotNull(schema.preferences.travelCity), gte(schema.preferences.travelUntil, new Date())))!);
   }
-  const rows = await db.select({ user: schema.users, profile: schema.profiles, prefs: schema.preferences })
+  const rows = (await db.select({ user: USER_COLS, profile: f.q ? { ...PROFILE_COLS, bio: P.bio } : PROFILE_COLS, prefs: schema.preferences })
     .from(schema.users)
     .innerJoin(schema.profiles, eq(schema.profiles.userId, schema.users.id))
     .innerJoin(schema.preferences, eq(schema.preferences.userId, schema.users.id))
@@ -105,7 +143,7 @@ async function candidates(user: User, f: Filters) {
     // A stated order, so the window is the same from one request to the next and, when there are more
     // candidates than the limit, it holds the most recently active people rather than an arbitrary slice.
     .orderBy(desc(schema.users.lastActiveAt), asc(schema.users.id))
-    .limit(CANDIDATE_LIMIT);
+    .limit(CANDIDATE_LIMIT)) as unknown as Row[]; // narrow rows: only the columns above are read from them
   // Incognito people are only shown to people they have already liked.
   const incognitoIds = rows.filter((r) => r.prefs?.incognito).map((r) => r.user.id);
   const likedMe = incognitoIds.length
@@ -139,9 +177,9 @@ async function candidates(user: User, f: Filters) {
     .map((r) => ({ r, person: toMatchPerson(r, answers.get(r.user.id) ?? {}) }))
     .filter((x) => eligibility(viewer, x.person) === null)
     .map((x) => ({ ...x, s: scorePair(viewer, x.person, weights) }));
-  return { viewer, scored };
+  return scored;
 }
-type Scored = Awaited<ReturnType<typeof candidates>>["scored"][number];
+type Scored = { r: Row; person: ReturnType<typeof toMatchPerson>; s: ReturnType<typeof scorePair> };
 
 /** Likes (not passes) each candidate received recently — used for order only, never shown. */
 async function attention(ids: string[], days: number) {
@@ -197,10 +235,32 @@ export function chemistryLabel(score: number | undefined) {
   return score >= 85 ? "✨ Strong Chemistry" : score >= 70 ? "❤️ Great Match" : score >= 55 ? "Good Match" : null;
 }
 
-async function toCards(viewer: Awaited<ReturnType<typeof candidates>>["viewer"], page: Scored[]) {
-  const photoMap = await photosFor(page.map((x) => x.r.user.id));
-  return page.map((x) => ({
-    ...publicCard(viewer, x.r, { score: x.s.score, reasons: x.s.reasons, photos: photoMap.get(x.r.user.id) }),
+/**
+ * Cards for the people actually shown: their full profiles are read now, with the safety rules applied again,
+ * so someone paused, restricted, hidden or deleted since the candidates were scored never appears.
+ */
+async function toCards(viewer: Awaited<ReturnType<typeof candidates>>["viewer"], page: Scored[], viewerSelfie: string | null) {
+  const ids = page.map((x) => x.r.user.id);
+  if (!ids.length) return [];
+  const [full, photoMap] = await Promise.all([
+    db.select({ user: schema.users, profile: schema.profiles, prefs: schema.preferences }).from(schema.users)
+      .innerJoin(schema.profiles, eq(schema.profiles.userId, schema.users.id))
+      .innerJoin(schema.preferences, eq(schema.preferences.userId, schema.users.id))
+      .where(and(inArray(schema.users.id, ids), eq(schema.users.status, "ACTIVE"), eq(schema.users.role, "USER"), isNull(schema.users.deactivatedAt), isNull(schema.users.restrictedAt), isNull(schema.users.deletedAt), eq(schema.preferences.discoverable, true))),
+    photosFor(ids),
+  ]);
+  const byId = new Map(full.map((r) => [r.user.id, r]));
+  // Their latest settings decide, not the cached ones: if they've since changed who they want to meet, turned
+  // on incognito, or limited their profile to verified members, they drop out of this page straight away.
+  const stillOk = (x: Scored) => {
+    const r = byId.get(x.r.user.id);
+    if (!r) return false;
+    if (r.prefs.incognito && !x.r.prefs?.incognito) return false;
+    if (r.prefs.profileVisibility === "VERIFIED" && viewerSelfie !== "VERIFIED") return false;
+    return eligibility(viewer, toMatchPerson(r, {})) === null;
+  };
+  return page.filter(stillOk).map((x) => ({
+    ...publicCard(viewer, byId.get(x.r.user.id)!, { score: x.s.score, reasons: x.s.reasons, photos: photoMap.get(x.r.user.id) }),
     chemistry: chemistryLabel(x.s.score),
     trait: alignedTraits(viewer, x.person, 1)[0] ?? null,
   }));
@@ -217,7 +277,7 @@ export async function discover(user: User, opts: { mode?: Mode; cat?: string; fi
   const limit = opts.limit ?? (await getConfig("discovery.batchSize"));
   const searched = !!(f.q || f.interests?.length || f.city || f.languages?.length || f.intents?.length || f.education || f.profession || Object.keys(f.lifestyle ?? {}).length);
   if (searched && !cat) { recordUsage("search"); if (!sorted.length) recordUsage("search_zero"); }
-  return { mode, cards: await toCards(viewer, sorted.slice(0, limit)), totalAvailable: sorted.length };
+  return { mode, cards: await toCards(viewer, sorted.slice(0, limit), user.selfieStatus), totalAvailable: sorted.length };
 }
 
 /** Explore home: collection sizes, the viewer's interests with sizes, and a "Made For You" row. */
@@ -229,7 +289,7 @@ export async function exploreHome(user: User) {
     else counts[c.key] = (await applyMode(c.rule as Mode, scored, viewer)).length;
   }
   const interests = viewer.interests.map((k) => ({ key: k, label: INTERESTS[k] ?? k, count: scored.filter((x) => x.person.interests.includes(k)).length }));
-  const forYou = await toCards(viewer, (await applyMode("recommended", scored, viewer)).slice(0, 10));
+  const forYou = await toCards(viewer, (await applyMode("recommended", scored, viewer)).slice(0, 10), user.selfieStatus);
   return {
     total: scored.length,
     categories: EXPLORE_CATEGORIES.map((c) => ({ key: c.key, title: c.title, sub: c.sub, emoji: c.emoji, count: counts[c.key], label: peopleLabel(counts[c.key]) })),
