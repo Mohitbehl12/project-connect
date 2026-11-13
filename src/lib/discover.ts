@@ -1,12 +1,12 @@
 import "server-only";
-import { and, count, eq, gte, inArray, isNull, like, lte, ne, notInArray, or } from "drizzle-orm";
+import { and, asc, between, count, desc, eq, gte, inArray, isNotNull, isNull, like, lte, ne, notInArray, or } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { User } from "@/db/schema";
 import { getConfig } from "./config";
 import { recordUsage } from "./ops";
 import { CITIES, EXPLORE_CATEGORIES, INTENTS, INTERESTS, LANGUAGES, LIFESTYLE } from "./constants";
 import { ApiError } from "./http";
-import { alignedTraits, ageFromDob, eligibility, scorePair } from "./matching";
+import { alignedTraits, ageFromDob, eligibility, scorePair, searchBox } from "./matching";
 import { blockedIds, loadAnswers, loadPerson, publicCard, toMatchPerson } from "./people";
 import { photosFor } from "./photos";
 
@@ -55,6 +55,9 @@ export function filtersFrom(sp: URLSearchParams): Filters {
   };
 }
 
+/** How many prefiltered rows are scored in memory per request. */
+const CANDIDATE_LIMIT = 1000;
+
 /** Everyone the viewer may see, scored. */
 async function candidates(user: User, f: Filters) {
   if (user.onboardingStep < 3) throw new ApiError(409, "Finish setting up your profile to start discovering people.", "onboarding");
@@ -86,13 +89,23 @@ async function candidates(user: User, f: Filters) {
     const cities = Object.entries(CITIES).filter(([, c]) => c.country === viewer.country).map(([k]) => k);
     // Travellers visiting this country: quick-pick city keys, or world place keys, which start with the country code.
     where.push(or(eq(schema.profiles.country, viewer.country), and(or(inArray(schema.preferences.travelCity, cities.length ? cities : ["__none__"]), like(schema.preferences.travelCity, `${viewer.country}.%`)), gte(schema.preferences.travelUntil, new Date())))!);
+    // Narrow to people who could be within the viewer's distance BEFORE the row limit below. Without this,
+    // a country with more eligible people than the limit fills the window with far-away rows and nearby
+    // people never appear. The box is generous; `eligibility` still applies the exact distance.
+    // Someone in travel mode is somewhere other than their stored coordinates, so they bypass the box.
+    const box = searchBox(viewer.lat, viewer.lng, viewer.prefs.maxDistanceKm);
+    const inBox = and(between(schema.profiles.lat, box.lat[0], box.lat[1]), box.lng ? between(schema.profiles.lng, box.lng[0], box.lng[1]) : undefined);
+    where.push(or(inBox, and(isNotNull(schema.preferences.travelCity), gte(schema.preferences.travelUntil, new Date())))!);
   }
   const rows = await db.select({ user: schema.users, profile: schema.profiles, prefs: schema.preferences })
     .from(schema.users)
     .innerJoin(schema.profiles, eq(schema.profiles.userId, schema.users.id))
     .innerJoin(schema.preferences, eq(schema.preferences.userId, schema.users.id))
     .where(and(...where))
-    .limit(1000);
+    // A stated order, so the window is the same from one request to the next and, when there are more
+    // candidates than the limit, it holds the most recently active people rather than an arbitrary slice.
+    .orderBy(desc(schema.users.lastActiveAt), asc(schema.users.id))
+    .limit(CANDIDATE_LIMIT);
   // Incognito people are only shown to people they have already liked.
   const incognitoIds = rows.filter((r) => r.prefs?.incognito).map((r) => r.user.id);
   const likedMe = incognitoIds.length

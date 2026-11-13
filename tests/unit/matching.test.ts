@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ageFromDob, compatibilityBreakdown, distanceLabel, eligibility, haversineKm, mutualScore, profileCompleteness, scorePair, DEFAULT_WEIGHTS, type MatchPerson } from "../../src/lib/matching";
+import { ageFromDob, compatibilityBreakdown, distanceLabel, eligibility, haversineKm, mutualScore, profileCompleteness, scorePair, searchBox, DEFAULT_WEIGHTS, type MatchPerson } from "../../src/lib/matching";
 
 const base = (over: Partial<MatchPerson> = {}): MatchPerson => ({
   id: "a", gender: "WOMAN", age: 28, lat: 28.61, lng: 77.21, city: "Delhi", country: "IN", intent: "LONG_TERM",
@@ -105,5 +105,39 @@ describe("helpers", () => {
   it("profile completeness rewards a fuller profile", () => {
     expect(profileCompleteness({})).toBe(0);
     expect(profileCompleteness({ bio: "x".repeat(50), photos: ["a", "b", "c"], education: "x", profession: "y", heightCm: 170, drinking: "S", smoking: "N", food: "V", exercise: "O", pets: "H", interests: ["a", "b", "c"], prompts: [{}], answerCount: 10 })).toBe(100);
+  });
+});
+
+describe("searchBox (database prefilter for distance)", () => {
+  const inside = (b: ReturnType<typeof searchBox>, lat: number, lng: number) =>
+    lat >= b.lat[0] && lat <= b.lat[1] && (!b.lng || (lng >= b.lng[0] && lng <= b.lng[1]));
+  // Points at a given distance and bearing from an origin.
+  const move = (lat: number, lng: number, km: number, bearingDeg: number): [number, number] => {
+    const R = 6371, br = (bearingDeg * Math.PI) / 180, la = (lat * Math.PI) / 180, lo = (lng * Math.PI) / 180, d = km / R;
+    const la2 = Math.asin(Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(br));
+    const lo2 = lo + Math.atan2(Math.sin(br) * Math.sin(d) * Math.cos(la), Math.cos(d) - Math.sin(la) * Math.sin(la2));
+    return [(la2 * 180) / Math.PI, (lo2 * 180) / Math.PI];
+  };
+  it("never excludes anyone within the distance, at any bearing and latitude", () => {
+    for (const [lat, lng] of [[28.61, 77.21], [12.97, 77.59], [59.9, 10.7], [-33.9, 151.2], [0, 0], [64.1, -21.9]])
+      for (const km of [2, 30, 100, 500]) {
+        const b = searchBox(lat, lng, km);
+        for (let bearing = 0; bearing < 360; bearing += 15) {
+          const [la, lo] = move(lat, lng, km, bearing);
+          expect(haversineKm(lat, lng, la, lo)).toBeCloseTo(km, 0);
+          expect(inside(b, la, lo)).toBe(true);
+        }
+      }
+  });
+  it("excludes people who are clearly too far", () => {
+    const b = searchBox(28.61, 77.21, 30); // Delhi, 30 km
+    expect(inside(b, 19.07, 72.87)).toBe(false); // Mumbai
+    expect(inside(b, 28.45, 77.03)).toBe(true); // Gurugram
+    expect(inside(b, 26.91, 75.79)).toBe(false); // Jaipur
+  });
+  it("falls back to latitude only where a longitude range can't express the area", () => {
+    expect(searchBox(10, 179.9, 100).lng).toBeNull(); // crosses the antimeridian
+    expect(searchBox(88.5, 0, 200).lng).toBeNull(); // near a pole
+    expect(searchBox(28.61, 77.21, 30).lng).not.toBeNull();
   });
 });

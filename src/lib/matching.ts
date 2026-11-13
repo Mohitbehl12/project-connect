@@ -54,6 +54,23 @@ export function haversineKm(aLat: number, aLng: number, bLat: number, bLng: numb
 }
 
 /**
+ * A latitude/longitude box that contains every point within `km` of (lat, lng), plus a margin. It is a
+ * cheap database prefilter only: it lets through some points that are further away (the corners), and the
+ * exact distance check in `eligibility` still decides. `lng` is null when the box would cross the
+ * antimeridian or a pole, where a simple range can't express it; callers then filter on latitude alone.
+ */
+export function searchBox(lat: number, lng: number, km: number, marginKm = 10): { lat: [number, number]; lng: [number, number] | null } {
+  const r = Math.max(0, km) + marginKm;
+  const dLat = r / 111.0; // one degree of latitude is about 111 km everywhere
+  const latMin = lat - dLat, latMax = lat + dLat;
+  const cos = Math.cos((Math.max(Math.abs(latMin), Math.abs(latMax)) * Math.PI) / 180);
+  if (latMin <= -89 || latMax >= 89 || cos <= 0.01) return { lat: [Math.max(-90, latMin), Math.min(90, latMax)], lng: null };
+  const dLng = r / (111.32 * cos);
+  if (lng - dLng < -180 || lng + dLng > 180) return { lat: [latMin, latMax], lng: null };
+  return { lat: [latMin, latMax], lng: [lng - dLng, lng + dLng] };
+}
+
+/**
  * Coarse, privacy-preserving distance label. Buckets are wide on purpose: with 1-km steps someone could
  * move around and triangulate a person's home. Coordinates are also stored rounded to ~1 km.
  */
