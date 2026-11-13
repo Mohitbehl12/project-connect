@@ -89,7 +89,7 @@ export default function SignUp() {
               <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" textContentType="emailAddress" />
               <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" textContentType="newPassword"
                 hint="At least 8 characters with a letter and a number." error={password && !pwOk ? "Add a letter and a number, 8 characters or more." : undefined} />
-              <Field label="Invite code (optional)" value={referral} onChangeText={(t) => setReferral(t.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12))} autoCapitalize="characters" hint="From a friend? Add their code — they'll get Premium days once you're verified." />
+              <Field label="Invite code (optional)" value={referral} onChangeText={(t) => setReferral(t.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 20))} autoCapitalize="characters" hint="From us or from a friend. A friend's code gives them Premium days once you're verified." />
             </>
           )}
           {step === 1 && (

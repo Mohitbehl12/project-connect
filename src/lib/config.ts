@@ -61,6 +61,12 @@ export const CONFIG_DEFAULTS = {
   "retention.automatedDecisionDays": 730,
   "retention.auditLogDays": 1095, // security and admin audit trail (3 years)
   "retention.inactiveAccountMonths": 0, // 0 = off. When set, accounts unused this long are warned, then deleted 30 days later
+  // Closed beta. With inviteOnly on, a new account needs either one of the beta codes below or the personal
+  // invite code of an existing active member. maxMembers (0 = no limit) stops sign-ups once that many member
+  // accounts exist. Admin → Settings → Closed beta.
+  "beta.inviteOnly": false,
+  "beta.inviteCodes": [] as string[],
+  "beta.maxMembers": 0,
   // Photo checks before anyone else sees a photo: "auto" (scanner, else staff review) | "review" | "off" (testing).
   "moderation.photoScreening": "auto" as "auto" | "review" | "off",
   // Last database backup (written by the backup job, shown in Admin → Settings).

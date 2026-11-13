@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { createSession, hashPassword, issueTokens, passwordOk, PASSWORD_RULES } from "@/lib/auth";
 import { ApiError, clientIp, ok, parseBody, publicRoute } from "@/lib/http";
@@ -12,6 +12,7 @@ import { audit } from "@/lib/audit";
 import { attachReferral } from "@/lib/referrals";
 import { signupRiskChecks } from "@/lib/fraud";
 import { recordConsent } from "@/lib/consent";
+import { getConfig } from "@/lib/config";
 
 const Body = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
@@ -41,6 +42,21 @@ export const POST = publicRoute(async ({ req }) => {
   const exists = await db.query.users.findFirst({ where: eq(schema.users.email, body.email) });
   // Same message either way would be ideal against enumeration, but signup UX needs a clear path to log in.
   if (exists) throw new ApiError(409, "An account with this email already exists. Log in instead.", "email_taken");
+
+  // Closed beta: sign-up needs a beta code or an existing member's invite code, and can be capped.
+  const maxMembers = await getConfig("beta.maxMembers");
+  if (maxMembers > 0) {
+    const [{ n }] = await db.select({ n: count() }).from(schema.users).where(eq(schema.users.role, "USER"));
+    if (n >= maxMembers) throw new ApiError(403, "Discover is full for now. We're letting people in gradually, so please try again soon.", "beta_full");
+  }
+  if (await getConfig("beta.inviteOnly")) {
+    const code = body.referralCode?.toUpperCase() ?? "";
+    const betaCode = code.length > 0 && (await getConfig("beta.inviteCodes")).includes(code);
+    const member = !betaCode && code.length > 0
+      ? await db.query.users.findFirst({ where: and(eq(schema.users.referralCode, code), eq(schema.users.status, "ACTIVE")), columns: { id: true } })
+      : null;
+    if (!betaCode && !member) throw new ApiError(403, "Discover is invite-only right now. Enter an invite code from us or from a member.", "invite_required");
+  }
 
   const installId = req.headers.get("x-install-id")?.slice(0, 64) ?? null;
   const [user] = await db.insert(schema.users).values({

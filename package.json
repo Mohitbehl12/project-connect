@@ -17,6 +17,7 @@
     "db:seed-photos": "tsx scripts/seed-photos.ts",
     "keys:rotate": "tsx scripts/rotate-keys.ts",
     "db:remove-samples": "tsx scripts/remove-samples.ts",
+    "test:load": "tsx tests/load.ts",
     "build:all": "npm --prefix mobile ci && npm run build:app-web && next build",
     "start:server": "sh scripts/start.sh",
     "db:migrate": "tsx scripts/migrate.ts",
