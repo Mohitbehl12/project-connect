@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.base.sha }} # the rules come from main, so a PR cannot edit its own way past them
           sparse-checkout: scripts/sensitive-paths.txt
@@ -40,6 +40,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ ! -f scripts/sensitive-paths.txt ]; then # first introduction: main has no list yet, use the PR's
+            mkdir -p scripts
             gh api "repos/$REPO/contents/scripts/sensitive-paths.txt?ref=${{ github.event.pull_request.head.sha }}" -q .content | base64 -d > scripts/sensitive-paths.txt
           fi
           grep -v '^\s*#' scripts/sensitive-paths.txt | grep -v '^\s*$' > /tmp/patterns
