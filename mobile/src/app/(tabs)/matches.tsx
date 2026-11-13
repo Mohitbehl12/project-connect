@@ -39,7 +39,7 @@ function LikesStrip() {
         </View>
         <View style={{ flex: 1 }}>
           <T v="headline" tone={total ? "white" : undefined}>{total ? `${total} ${total === 1 ? "person likes" : "people like"} you` : "Likes you"}</T>
-          <T v="caption" tone={total ? "white" : "muted"} style={{ opacity: total ? 0.92 : 1 }}>{total ? (q.data.canSeeAll ? "Tap to see who" : "Like them back in Discover — or see who with Premium") : "When someone likes you, they'll show up here."}</T>
+          <T v="caption" tone={total ? "white" : "muted"} style={{ opacity: total ? 0.92 : 1 }}>{total ? (q.data.canSeeAll ? "Tap to see who" : "Like them back in For you — or see who with Premium") : "When someone likes you, they'll show up here."}</T>
         </View>
         {total ? <Icon name="forward" color="#FFF" /> : null}
       </LinearGradient>

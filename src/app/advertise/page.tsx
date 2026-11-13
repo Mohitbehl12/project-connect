@@ -44,7 +44,7 @@ export default function Advertise() {
         <div className="mx-auto grid max-w-5xl gap-10 px-4 py-16 md:grid-cols-3 md:px-8">
           <div>
             <h2 className="text-2xl font-extrabold">Where ads appear</h2>
-            <p className="mt-2 text-ink-soft">A sponsored card in Discover and Explore, full-screen stories, small banners, sponsored recommendations and the website homepage. Never inside a conversation, and never during a call.</p>
+            <p className="mt-2 text-ink-soft">A sponsored card in For you and Explore, full-screen stories, small banners, sponsored recommendations and the website homepage. Never inside a conversation, and never during a call.</p>
           </div>
           <div>
             <h2 className="text-2xl font-extrabold">Privacy first</h2>

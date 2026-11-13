@@ -30,7 +30,7 @@ export const CTAS = {
   VISIT: "Visit website", GET_OFFER: "Get offer", SIGN_UP: "Sign up",
 } as const;
 export const PLACEMENTS = {
-  DISCOVER: "Discover — a sponsored card between profiles",
+  DISCOVER: "For you — a sponsored card between profiles",
   FEED: "Explore feed — a sponsored card",
   STORY: "Story — full-screen vertical ad in Explore",
   BANNER: "Banner — small banner on Matches and Likes (never in chats)",

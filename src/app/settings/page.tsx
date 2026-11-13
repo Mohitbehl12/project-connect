@@ -90,7 +90,7 @@ function Settings() {
 
         <Section title="Privacy">
           <div className="divide-y divide-mist">
-            <Toggle label="Show me in Discover" description="Turn off to pause. Your matches can still message you." checked={prefs.discoverable !== false} onChange={(v) => setPref("discoverable", v)} />
+            <Toggle label="Show me in For you" description="Turn off to pause. Your matches can still message you." checked={prefs.discoverable !== false} onChange={(v) => setPref("discoverable", v)} />
             <Toggle label="Show when I'm active" checked={prefs.showOnline !== false} onChange={(v) => setPref("showOnline", v)} />
             <Toggle label="Send read receipts" checked={prefs.readReceipts !== false} onChange={(v) => setPref("readReceipts", v)} />
             <AdsToggle />

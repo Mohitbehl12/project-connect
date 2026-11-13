@@ -104,7 +104,7 @@ export default function PrivacyCenter() {
         {msg && <Banner tone={msg.tone}>{msg.text}</Banner>}
         {me?.user.paused && <Banner tone="info">Your profile is paused. Turn it back on below whenever you're ready.</Banner>}
         <Group title="Who can see me">
-          <Toggle label="Show me in Discover" sub="Turn off to take a break. Your matches can still message you." value={p?.discoverable !== false} onChange={(v) => set("discoverable", v)} />
+          <Toggle label="Show me in For you" sub="Turn off to take a break. Your matches can still message you." value={p?.discoverable !== false} onChange={(v) => set("discoverable", v)} />
           <Toggle label="Incognito" sub={me?.features.incognito ? "Only people you've liked can see you." : "Only people you've liked can see you. Part of Premium Plus."} value={!!p?.incognito} disabled={!me?.features.incognito} onChange={(v) => set("incognito", v)} />
           <View style={{ paddingVertical: 12, gap: 8 }}>
             <T v="headline" style={{ fontFamily: "Figtree_600SemiBold" }}>Who can like me</T>
@@ -112,7 +112,7 @@ export default function PrivacyCenter() {
               <Chip label="Everyone" selected={(p?.likesFrom ?? "EVERYONE") === "EVERYONE"} onPress={() => set("likesFrom", "EVERYONE")} />
               <Chip label="Verified people only" selected={p?.likesFrom === "VERIFIED"} onPress={() => set("likesFrom", "VERIFIED")} />
             </View>
-            <T v="caption" tone="muted">With “verified only”, people without the verified badge won't see you in Discover.</T>
+            <T v="caption" tone="muted">With “verified only”, people without the verified badge won't see you in For you.</T>
           </View>
           <View style={{ paddingVertical: 12, gap: 8 }}>
             <T v="headline" style={{ fontFamily: "Figtree_600SemiBold" }}>Who can see my profile</T>
@@ -174,7 +174,7 @@ export default function PrivacyCenter() {
         ))}
       </BottomSheet>
       <BottomSheet open={sheet === "pause"} onClose={() => setSheet(null)} title="Pause your profile?">
-        <T tone="muted">You'll disappear from Discover and Likes. Nobody can like you, start a chat or ask to call. Your matches, chats and settings stay as they are, and you can turn your profile back on any time.</T>
+        <T tone="muted">You'll disappear from For you and Likes. Nobody can like you, start a chat or ask to call. Your matches, chats and settings stay as they are, and you can turn your profile back on any time.</T>
         <Button title="Pause my profile" full loading={busy} onPress={() => pause(true)} />
       </BottomSheet>
       <BottomSheet open={sheet === "consents"} onClose={() => setSheet(null)} title="Your consents">

@@ -12,7 +12,7 @@ function SafetyCenter() {
       <PageHeader title="Safety Center" sub="Tools and advice for meeting people safely." />
       <div className="space-y-10 px-4 md:px-8">
         <section className="grid gap-3 sm:grid-cols-3">
-          <div className="panel p-5"><p className="font-bold">Report or block</p><p className="mt-1 text-sm text-ink-soft">Use the ⋯ menu in any chat, or “Report” under a profile in Discover.</p></div>
+          <div className="panel p-5"><p className="font-bold">Report or block</p><p className="mt-1 text-sm text-ink-soft">Use the ⋯ menu in any chat, or “Report” under a profile in For you.</p></div>
           <Link href="/settings" className="panel p-5 hover:border-ink-faint"><p className="font-bold">Privacy controls</p><p className="mt-1 text-sm text-ink-soft">Pause discovery, hide activity status and read receipts.</p></Link>
           <Link href="/settings#verification" className="panel p-5 hover:border-ink-faint"><p className="font-bold">Get verified</p><p className="mt-1 text-sm text-ink-soft">A verified badge shows people you're real.</p></Link>
         </section>

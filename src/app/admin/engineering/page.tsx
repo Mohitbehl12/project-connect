@@ -477,7 +477,7 @@ function FeedbackTab() {
 
 type OpsCfg = { "ops.thresholds": Record<string, number>; "ops.autoRollback": boolean; "ops.alertMinSeverity": string; "ops.issueMinSeverity": string };
 const LABELS: Record<string, string> = {
-  errorRatePct: "Server error rate that raises an incident (%)", minRequests: "…once there are at least this many requests in 15 min", p95Ms: "Slow-route budget (ms, 95% of requests)", p95SlowMs: "Budget for heavy routes like Discover (ms)",
+  errorRatePct: "Server error rate that raises an incident (%)", minRequests: "…once there are at least this many requests in 15 min", p95Ms: "Slow-route budget (ms, 95% of requests)", p95SlowMs: "Budget for heavy routes like For you (ms)",
   memoryPct: "Memory alarm (% of limit)", dbMs: "Database ping alarm (ms)", diskFreePct: "Disk-space alarm (% free)", failedLogins15m: "Failed sign-ins in 15 min (all)", failedLoginsPerIp15m: "Failed sign-ins in 15 min (one address)", signalFailPct: "Integration failure rate (%)",
 };
 function SettingsTab({ canEdit }: { canEdit: boolean }) {

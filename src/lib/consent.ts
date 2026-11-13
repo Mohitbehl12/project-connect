@@ -20,7 +20,7 @@ export const CONSENT_KINDS = {
   MICROPHONE: { label: "Microphone for voice messages and calls", required: false, withdrawable: true },
   VIDEO_CALLS: { label: "Take part in voice and video calls (only after you accept a request)", required: false, withdrawable: true },
   PUSH: { label: "Notifications on this device", required: false, withdrawable: true },
-  PROFILE_VISIBLE: { label: "Show my profile in Discover", required: false, withdrawable: true },
+  PROFILE_VISIBLE: { label: "Show my profile in For you", required: false, withdrawable: true },
   PERSONALISED_ADS: { label: "Personalised ads (use my gender and interests to choose sponsored ads; advertisers never see who I am)", required: false, withdrawable: true },
 } as const;
 export type ConsentKind = keyof typeof CONSENT_KINDS;

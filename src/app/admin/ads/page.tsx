@@ -195,7 +195,7 @@ function PricingSettings({ canEdit }: { canEdit: boolean }) {
       <div className="flex flex-wrap gap-4">
         {num("ads.frequencyPerCampaignPerDay", "Same ad per member per day", "Spec example: 3")}
         {num("ads.maxPerMemberPerDay", "All ads per member per day", "Keeps ads light")}
-        {num("ads.discoverEvery", "Discover: one ad every … profiles", "At least 4")}
+        {num("ads.discoverEvery", "For you: one ad every … profiles", "At least 4")}
         {num("ads.minDailyBudgetMinor", "Minimum daily budget (₹)", "", true)}
         {num("ads.minTopupMinor", "Minimum top-up (₹)", "", true)}
       </div>
