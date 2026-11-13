@@ -1,4 +1,4 @@
-// Cupid ❤️ — Twofold's suggestion helper. It is RULE-BASED (no AI model, nothing sent to an outside service):
+// Cupid ❤️ — TwoFold's suggestion helper. It is RULE-BASED (no AI model, nothing sent to an outside service):
 // it only uses what is already on the two public profiles and, for reply ideas, the last message in the chat
 // the member is looking at. Suggestions are respectful and never explicit, and nothing is ever sent for the
 // member — they tap a suggestion to put it in the message box, then edit or send it themselves.

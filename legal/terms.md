@@ -1,11 +1,11 @@
 # Terms of Service
 
-These terms are an agreement between you and {{company}} ("Twofold", "we", "us") about your use of the Twofold website and apps. Please read them. They include rules about your safety and other people's, what happens if those rules are broken, payments, and how disputes are handled.
+These terms are an agreement between you and {{company}} ("TwoFold", "we", "us") about your use of the TwoFold website and apps. Please read them. They include rules about your safety and other people's, what happens if those rules are broken, payments, and how disputes are handled.
 
-## 1. Who can use Twofold
+## 1. Who can use TwoFold
 
 - You must be at least 18 years old, or older if the law where you live sets a higher age for dating services. We ask for your date of birth when you sign up and refuse anyone under the minimum age.
-- You must be legally able to agree to these terms, and not barred from using Twofold by law or by an earlier ban from us.
+- You must be legally able to agree to these terms, and not barred from using TwoFold by law or by an earlier ban from us.
 - You must not have been convicted of a sexual offence or a violent crime, and you must not be required to register as a sex offender anywhere.
 - You may have only one account.
 - If we learn that someone is under the minimum age, we close the account and delete the data we don't need to keep.
@@ -23,7 +23,7 @@ You agree to treat people with respect, to meet people safely (our Safety Policy
 
 ## 4. What is not allowed
 
-You must not use Twofold to:
+You must not use TwoFold to:
 
 - harass, bully, stalk, intimidate or threaten anyone, or keep contacting someone who has said no or blocked you;
 - send sexual content to someone who hasn't asked for it, or share anyone's intimate images or videos without their consent;
@@ -34,12 +34,12 @@ You must not use Twofold to:
 - send spam, advertise, sell, or recruit for other services;
 - break the law, or encourage anyone else to;
 - misuse calls, voice messages or photos in chat, record calls without the other person's consent, or use calls to pressure anyone;
-- get round our safety tools — for example by making a new account after a block or ban, using automated tools or bots, scraping data, or interfering with how Twofold works;
+- get round our safety tools — for example by making a new account after a block or ban, using automated tools or bots, scraping data, or interfering with how TwoFold works;
 - upload content you don't have the right to share.
 
 ## 5. Calls between members
 
-Nobody on Twofold can call you unless you accept a call request first. Calls connect through Twofold, so your phone number is never shared. You can decline, block or report at any time, and you can turn call requests off in Settings.
+Nobody on TwoFold can call you unless you accept a call request first. Calls connect through TwoFold, so your phone number is never shared. You can decline, block or report at any time, and you can turn call requests off in Settings.
 
 ## 6. Reports, investigations and what we may do
 
@@ -53,17 +53,17 @@ If you think we got a decision wrong, you can appeal from Safety in the app or a
 
 ## 8. Ending your account
 
-You can delete your account at any time. We may end or suspend your account as described in section 6, or if we stop offering Twofold where you live. If we end your account for reasons other than your breaking these terms, we refund any unused paid period.
+You can delete your account at any time. We may end or suspend your account as described in section 6, or if we stop offering TwoFold where you live. If we end your account for reasons other than your breaking these terms, we refund any unused paid period.
 
 ## 9. Content you share
 
-- You keep ownership of the photos and words you post. You give us a worldwide, non-exclusive, royalty-free licence to host, store, copy, display and adapt (for example resize) them only to run and improve Twofold and show them to other members as your settings allow. This licence ends when you delete the content or your account, except for copies we must keep (see the Privacy Policy) and content others already received in chat.
+- You keep ownership of the photos and words you post. You give us a worldwide, non-exclusive, royalty-free licence to host, store, copy, display and adapt (for example resize) them only to run and improve TwoFold and show them to other members as your settings allow. This licence ends when you delete the content or your account, except for copies we must keep (see the Privacy Policy) and content others already received in chat.
 - By uploading content, you confirm you own it or have permission to use it, and that it doesn't break these terms or anyone's rights.
 - We may remove content that breaks these terms or the law.
 
 ## 10. Our intellectual property
 
-Twofold's name, logo, design, software and content belong to us or our licensors. You may use the service as intended, but you may not copy, modify or reverse-engineer it except where the law allows.
+TwoFold's name, logo, design, software and content belong to us or our licensors. You may use the service as intended, but you may not copy, modify or reverse-engineer it except where the law allows.
 
 ## 11. Payments, subscriptions and refunds
 
@@ -71,7 +71,7 @@ Membership prices, free periods and how renewals work are explained in the Subsc
 
 ## 12. Safety disclaimer
 
-We work hard to keep Twofold safe, but we cannot check everyone's identity or background, and we cannot control what people do off Twofold. A verified badge means a person passed our selfie check against their profile photos at that time — it does not prove who they are or that they are safe. Use your judgement and follow our Safety Policy.
+We work hard to keep TwoFold safe, but we cannot check everyone's identity or background, and we cannot control what people do off TwoFold. A verified badge means a person passed our selfie check against their profile photos at that time — it does not prove who they are or that they are safe. Use your judgement and follow our Safety Policy.
 
 ## 13. Limitation of liability
 

@@ -1,5 +1,5 @@
 // Single source of truth for enum-like values, option labels and the personality question bank.
-// Everything here is product copy written for Twofold — not copied from any other app.
+// Everything here is product copy written for TwoFold — not copied from any other app.
 
 export const ROLES = ["USER", "MODERATOR", "SUPPORT", "FINANCE", "SECURITY", "COMPLIANCE", "TECHNICAL", "ADVERTISER", "ADMIN", "SUPER_ADMIN"] as const;
 export type Role = (typeof ROLES)[number];
@@ -135,7 +135,7 @@ export const REPORT_HELP: Partial<Record<ReportCategory, string>> = {
   SAFETY: "If you're in immediate danger, contact local emergency services first — 112 in India, 911 in the US, 999 in the UK.",
   UNDERAGE: "If a child is in danger, contact local emergency services first — 112 in India, 911 in the US, 999 in the UK.",
   THREATS: "If you're in immediate danger, contact local emergency services first — 112 in India, 911 in the US, 999 in the UK.",
-  IMAGE_ABUSE: "We act on these first and remove the images on Twofold. In India you can also report at cybercrime.gov.in or call 1930. StopNCII.org can help stop intimate images being shared on other sites.",
+  IMAGE_ABUSE: "We act on these first and remove the images on TwoFold. In India you can also report at cybercrime.gov.in or call 1930. StopNCII.org can help stop intimate images being shared on other sites.",
 };
 
 export const DATE_KINDS = { COFFEE: "Coffee", MEAL: "A meal", WALK: "A walk", ACTIVITY: "An activity", OTHER: "Something else" } as const;

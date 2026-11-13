@@ -1,6 +1,6 @@
 # Community Guidelines
 
-Twofold is for adults looking for real connection. These guidelines apply to profiles, photos, messages, voice messages, calls and anything else you share. Breaking them can lead to removed content, paused features, suspension or a ban. They are part of our Terms of Service.
+TwoFold is for adults looking for real connection. These guidelines apply to profiles, photos, messages, voice messages, calls and anything else you share. Breaking them can lead to removed content, paused features, suspension or a ban. They are part of our Terms of Service.
 
 ## Be yourself
 
@@ -24,7 +24,7 @@ Twofold is for adults looking for real connection. These guidelines apply to pro
 
 ## Adults only — zero tolerance
 
-Twofold is for people 18 and over. Any content that sexualises minors, any attempt to contact or groom a minor, or any sexual exploitation leads to an immediate ban and a report to the authorities. If you think someone is under 18, report them.
+TwoFold is for people 18 and over. Any content that sexualises minors, any attempt to contact or groom a minor, or any sexual exploitation leads to an immediate ban and a report to the authorities. If you think someone is under 18, report them.
 
 ## Photos
 

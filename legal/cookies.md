@@ -2,7 +2,7 @@
 
 ## What we use
 
-Twofold's website uses only cookies that are strictly necessary:
+TwoFold's website uses only cookies that are strictly necessary:
 
 - **Sign-in cookie** (pc_session): keeps you signed in. It is secure, not readable by scripts, and lasts up to 14 days or until you sign out.
 - **Security**: protection against cross-site request forgery and abuse, using the same sign-in cookie and request checks.

@@ -244,7 +244,7 @@ async function sendAlerts() {
     const app = process.env.APP_URL ?? "";
     const line = `${r.code} · ${r.severity} · risk ${r.risk} (${riskBand(r.risk)}) · ${r.title} · ${r.count}× · ${r.usersAffected} people`;
     for (const s of staff) await notify(s.id, "SECURITY", `${r.status === "REGRESSED" ? "Came back" : "New incident"}: ${r.code} (${r.severity.toLowerCase()})`, r.title, `/admin/engineering?incident=${r.code}`);
-    for (const to of emails) await sendEmail(to, `[Twofold ${r.severity}] ${r.code}: ${r.title}`.slice(0, 180), `${line}\n\n${app}/admin/engineering?incident=${r.code}`, `<p>${esc(line)}</p><p><a href="${esc(app)}/admin/engineering?incident=${r.code}">Open in Admin → Engineering</a></p>`);
+    for (const to of emails) await sendEmail(to, `[TwoFold ${r.severity}] ${r.code}: ${r.title}`.slice(0, 180), `${line}\n\n${app}/admin/engineering?incident=${r.code}`, `<p>${esc(line)}</p><p><a href="${esc(app)}/admin/engineering?incident=${r.code}">Open in Admin → Engineering</a></p>`);
     for (const url of [process.env.OPS_SLACK_WEBHOOK_URL, process.env.OPS_TEAMS_WEBHOOK_URL].filter((u): u is string => !!u && /^https:\/\/(hooks\.slack\.com|[\w.-]+\.webhook\.office\.com|[\w.-]+\.logic\.azure\.com)\//.test(u)))
       await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ text: `:rotating_light: ${line}\n${app}/admin/engineering?incident=${r.code}` }), signal: AbortSignal.timeout(8000) }).catch(() => {});
     const next = r.notifiedCount === 0 ? 1 : [10, 100, 1000].find((m) => r.count >= m && r.notifiedCount < m) ?? r.notifiedCount + 1;
@@ -262,7 +262,7 @@ async function sendWeeklyReport(r: Awaited<ReturnType<typeof maybeWeeklyReport>>
     `New incidents: ${r.newBugs.length}. Ideas waiting for a decision: ${r.nextUp.length}.`,
   ];
   for (const to of (process.env.OPS_ALERT_EMAIL ?? "").split(",").map((x) => x.trim()).filter(Boolean))
-    await sendEmail(to, `[Twofold] Product health, week of ${r.week}`, `${lines.join("\n\n")}\n\n${app}/admin/engineering?tab=health`, lines.map((l) => `<p>${esc(l)}</p>`).join("") + `<p><a href="${esc(app)}/admin/engineering?tab=health">Open the full report</a></p>`);
+    await sendEmail(to, `[TwoFold] Product health, week of ${r.week}`, `${lines.join("\n\n")}\n\n${app}/admin/engineering?tab=health`, lines.map((l) => `<p>${esc(l)}</p>`).join("") + `<p><a href="${esc(app)}/admin/engineering?tab=health">Open the full report</a></p>`);
 }
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
@@ -284,7 +284,7 @@ export async function githubSync() {
       `**Policy:** ${policy}`, "", "### Latest occurrence (scrubbed — no personal data)", "```json", JSON.stringify(JSON.parse(r.sample), null, 2).slice(0, 6000), "```",
       events.length ? `\n### Recent occurrences\n${events.map((e) => `- ${e.at.toISOString()} · release \`${e.release}\``).join("\n")}` : "",
       similar.length ? `\n### Similar problems fixed before\n${similar.map((s) => `- ${s.code}: ${s.title}${s.prUrl ? ` — ${s.prUrl}` : ""}${s.diagnosis ? `\n  > ${s.diagnosis.slice(0, 300)}` : ""}`).join("\n")}` : "",
-      "", "---", `Branch for a fix: \`ai/bug-fix/${r.code}\` · see docs/AI_ENGINEER.md. Opened automatically by the Twofold monitor.`,
+      "", "---", `Branch for a fix: \`ai/bug-fix/${r.code}\` · see docs/AI_ENGINEER.md. Opened automatically by the TwoFold monitor.`,
     ].join("\n");
     try {
       const issue = await createIssue(`${r.code}: ${r.title}`, body, ["ai-engineer", "bug", `severity:${r.severity.toLowerCase()}`, `risk:${band.toLowerCase()}`, ...(band === "Critical" || band === "High" ? ["needs-human"] : [])]);

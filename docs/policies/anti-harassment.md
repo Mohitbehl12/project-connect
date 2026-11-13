@@ -1,6 +1,6 @@
 # Anti-Harassment Policy (draft)
 
-Twofold does not tolerate harassment, threats, stalking, impersonation, unwanted sexual content or intimate-image abuse.
+TwoFold does not tolerate harassment, threats, stalking, impersonation, unwanted sexual content or intimate-image abuse.
 
 ## What counts
 
@@ -27,7 +27,7 @@ The IT Act 2000 covers:
 - privacy violation (s.66E);
 - obscene and sexually explicit material (ss.67, 67A).
 
-Members are pointed to the police and cybercrime.gov.in / 1930. We never decide guilt under criminal law; we decide whether someone may keep using Twofold.
+Members are pointed to the police and cybercrime.gov.in / 1930. We never decide guilt under criminal law; we decide whether someone may keep using TwoFold.
 
 ## What members can do (without confronting anyone)
 
@@ -49,4 +49,4 @@ Members are pointed to the police and cybercrime.gov.in / 1930. We never decide 
 | High | Harassment, impersonation | Suspension or ban |
 | Medium | Unwanted contact, inappropriate content | Warning, content removed, then suspension if repeated |
 
-Intimate images are removed from Twofold within 24 hours of a complaint (IT Rules 2021 r.3(2)(b)); our internal target is 12 hours.
+Intimate images are removed from TwoFold within 24 hours of a complaint (IT Rules 2021 r.3(2)(b)); our internal target is 12 hours.

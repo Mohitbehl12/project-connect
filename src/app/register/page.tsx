@@ -51,7 +51,7 @@ export default function Register() {
           <Field label="Date of birth" hint="You must be 18 or older. Your exact birthday is never shown — only your age.">
             {(id) => <DobInput id={id} onChange={(dob) => setF((s) => ({ ...s, dob }))} />}
           </Field>
-          <Field label="Invite code (optional)" hint="From us or from a friend who's a member. Needed while Twofold is invite-only.">
+          <Field label="Invite code (optional)" hint="From us or from a friend who's a member. Needed while TwoFold is invite-only.">
             {(id) => <input id={id} className="input" autoCapitalize="characters" autoComplete="off" maxLength={20} value={invite} onChange={(e) => setInvite(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))} />}
           </Field>
           <div className="space-y-3 rounded-xl bg-paper-sunk p-4">

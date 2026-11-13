@@ -82,7 +82,7 @@ describe("message screening", () => {
     "Shall we meet at the café near Khan Market on Saturday?", "I'm reading a book about the history of Delhi.", "That's hilarious 😂", "What kind of music do you like?",
     "I work in design, mostly apps.", "Haha yes, I have a dog named Mango.", "Ek din pakka chalenge trekking pe!", "I'm investing a lot of time in my guitar lessons",
     "Good morning! Hope your presentation goes well 🙂", "We should try that new dosa place", "I just got back from the gym", "Sunday plans: sleep in, then pancakes",
-    "My favourite film is Dil Chahta Hai", "Do you like board games?", "I'm a bit nervous about first dates honestly", "Let's video call on Twofold first?"];
+    "My favourite film is Dil Chahta Hai", "Do you like board games?", "I'm a bit nervous about first dates honestly", "Let's video call on TwoFold first?"];
   const variants = (s: string) => [s, s.toLowerCase(), s + " 🙂", "Hi! " + s];
   benign.flatMap(variants).slice(0, 60).forEach((t, i) => it(`friendly message ${i + 1} isn't flagged as a scam or threat`, () => {
     const f = screenMessage(t);

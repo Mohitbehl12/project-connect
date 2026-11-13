@@ -16,7 +16,7 @@ const COLOR_KEY = "pc.colorTheme"; // which colour theme
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const system = useColorScheme();
-  // Twofold is designed dark-first (night romance); people can switch to light or follow the phone.
+  // TwoFold is designed dark-first (night romance); people can switch to light or follow the phone.
   const [pref, setPrefState] = useState<ThemePref>("DARK");
   const [themeId, setThemeState] = useState(DEFAULT_THEME);
   useEffect(() => {

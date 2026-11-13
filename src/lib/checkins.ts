@@ -67,7 +67,7 @@ export async function createCheckin(userId: string, b: CheckinInput) {
   const { tz, firstName } = await tzFor(userId);
   if (b.tellContactNow) {
     const e = simpleEmail(`${firstName} added you as their safety contact`, [
-      `Hi ${b.contactName}, ${firstName} is meeting someone from Twofold at ${b.place}, ${when(startsAt, tz)}.`,
+      `Hi ${b.contactName}, ${firstName} is meeting someone from TwoFold at ${b.place}, ${when(startsAt, tz)}.`,
       `They plan to check in by ${when(checkInAt, tz)}. If they don't, we'll email you so you can reach out to them.`,
       "You don't need to do anything now. We don't share who they are meeting, and we'll delete your email address a week after the date.",
     ]);
@@ -79,7 +79,7 @@ export async function createCheckin(userId: string, b: CheckinInput) {
 
 /** What the member can paste into WhatsApp/SMS themselves (we never send texts on their behalf). */
 export function shareText(firstName: string, place: string, startsAt: Date, checkInAt: Date, tz: string) {
-  return `Hi! I'm on a date at ${place}, ${when(startsAt, tz)}. I'll check in on Twofold by ${when(checkInAt, tz)} — if you hear from Twofold that I haven't, please call me. — ${firstName}`;
+  return `Hi! I'm on a date at ${place}, ${when(startsAt, tz)}. I'll check in on TwoFold by ${when(checkInAt, tz)} — if you hear from TwoFold that I haven't, please call me. — ${firstName}`;
 }
 
 export function view(c: typeof schema.dateCheckins.$inferSelect) {
@@ -100,7 +100,7 @@ export async function actOnCheckin(userId: string, id: string, action: "safe" | 
   if (action === "safe") {
     await db.update(schema.dateCheckins).set({ status: "SAFE", safeAt: new Date() }).where(eq(schema.dateCheckins.id, c.id));
     if (c.status === "ALERTED" && contact) {
-      const e = simpleEmail(`${firstName} has checked in`, [`Good news, ${c.contactName}: ${firstName} has just checked in on Twofold and says they're safe.`]);
+      const e = simpleEmail(`${firstName} has checked in`, [`Good news, ${c.contactName}: ${firstName} has just checked in on TwoFold and says they're safe.`]);
       await sendEmail(contact, `${firstName} has checked in safely`, e.text, e.html);
     }
   } else if (action === "extend") {
@@ -111,7 +111,7 @@ export async function actOnCheckin(userId: string, id: string, action: "safe" | 
   } else {
     await db.update(schema.dateCheckins).set({ status: "CANCELLED" }).where(eq(schema.dateCheckins.id, c.id));
     if (c.status === "ALERTED" && contact) {
-      const e = simpleEmail(`${firstName} has checked in`, [`${c.contactName}, ${firstName} has closed their date check-in on Twofold, so they're able to use the app.`]);
+      const e = simpleEmail(`${firstName} has checked in`, [`${c.contactName}, ${firstName} has closed their date check-in on TwoFold, so they're able to use the app.`]);
       await sendEmail(contact, `Update from ${firstName}`, e.text, e.html);
     }
   }
@@ -135,9 +135,9 @@ export async function runDateSafety(now = new Date()) {
     if (!done.length) continue;
     const { tz, firstName } = await tzFor(c.userId);
     const e = simpleEmail(`${firstName} hasn't checked in`, [
-      `Hi ${c.contactName}, ${firstName} planned to check in on Twofold by ${when(c.checkInAt, tz)} after meeting someone at ${c.place} (${when(c.startsAt, tz)}).`,
+      `Hi ${c.contactName}, ${firstName} planned to check in on TwoFold by ${when(c.checkInAt, tz)} after meeting someone at ${c.place} (${when(c.startsAt, tz)}).`,
       "They haven't answered yet. They may simply have forgotten — please try calling or messaging them.",
-      "If you can't reach them and you're worried, contact local emergency services yourself (112 in India). Twofold does not contact them for you.",
+      "If you can't reach them and you're worried, contact local emergency services yourself (112 in India). TwoFold does not contact them for you.",
     ]);
     const sent = await sendEmail(open(c.contactEmail, `checkin:${c.userId}`), `${firstName} hasn't checked in after their date`, e.text, e.html);
     await notify(c.userId, "SAFETY", "We've told your safety contact", `You didn't check in, so we emailed ${c.contactName}. Tap "I'm safe" to let them know you're OK.`, `/checkin/${c.id}`);

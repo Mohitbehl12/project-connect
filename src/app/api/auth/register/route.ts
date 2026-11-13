@@ -36,7 +36,7 @@ export const POST = publicRoute(async ({ req }) => {
   const dobDate = new Date(body.dob + "T00:00:00Z");
   if (isNaN(dobDate.getTime()) || dobDate > new Date()) throw new ApiError(422, "dob: Enter a real date of birth.", "validation");
   const age = ageFromDob(body.dob);
-  if (age < MIN_AGE) throw new ApiError(403, "Twofold is only for people aged 18 and over.", "underage");
+  if (age < MIN_AGE) throw new ApiError(403, "TwoFold is only for people aged 18 and over.", "underage");
   if (age > 100) throw new ApiError(422, "dob: Check your date of birth.", "validation");
 
   const exists = await db.query.users.findFirst({ where: eq(schema.users.email, body.email) });
@@ -47,7 +47,7 @@ export const POST = publicRoute(async ({ req }) => {
   const maxMembers = await getConfig("beta.maxMembers");
   if (maxMembers > 0) {
     const [{ n }] = await db.select({ n: count() }).from(schema.users).where(eq(schema.users.role, "USER"));
-    if (n >= maxMembers) throw new ApiError(403, "Twofold is full for now. We're letting people in gradually, so please try again soon.", "beta_full");
+    if (n >= maxMembers) throw new ApiError(403, "TwoFold is full for now. We're letting people in gradually, so please try again soon.", "beta_full");
   }
   if (await getConfig("beta.inviteOnly")) {
     const code = body.referralCode?.toUpperCase() ?? "";
@@ -55,7 +55,7 @@ export const POST = publicRoute(async ({ req }) => {
     const member = !betaCode && code.length > 0
       ? await db.query.users.findFirst({ where: and(eq(schema.users.referralCode, code), eq(schema.users.status, "ACTIVE")), columns: { id: true } })
       : null;
-    if (!betaCode && !member) throw new ApiError(403, "Twofold is invite-only right now. Enter an invite code from us or from a member.", "invite_required");
+    if (!betaCode && !member) throw new ApiError(403, "TwoFold is invite-only right now. Enter an invite code from us or from a member.", "invite_required");
   }
 
   const installId = req.headers.get("x-install-id")?.slice(0, 64) ?? null;

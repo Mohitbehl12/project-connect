@@ -4,7 +4,7 @@ import { db, schema } from "@/db";
 import { openSafe, seal } from "./crypto";
 
 // DPDP Act 2023 s.14: a member may name someone to exercise their privacy rights (access, correction, erasure,
-// complaints) if they die or can no longer act. Twofold never contacts the nominee; the nominee contacts the
+// complaints) if they die or can no longer act. TwoFold never contacts the nominee; the nominee contacts the
 // Grievance Officer with proof, and a person handles the request.
 
 export const RELATIONSHIPS = ["Partner or spouse", "Parent", "Child", "Sibling", "Friend", "Other"] as const;

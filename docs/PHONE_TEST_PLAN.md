@@ -2,7 +2,7 @@
 
 Everything below has passed in browsers and simulators. This plan is for the things only a real phone can show: touch feel, camera, microphone, sound, vibration, notifications, calls and performance. Use one iPhone and one Android if you can.
 
-**Set-up:** Phone A signs in as `aanya@demo.local` and phone B as `rohan@demo.local` (password `Demo!2026`). On iPhone, open the site in Safari, then Share › Add to Home Screen, and open Twofold from the icon. On Android, use the Expo Go build or Chrome's "Install app".
+**Set-up:** Phone A signs in as `aanya@demo.local` and phone B as `rohan@demo.local` (password `Demo!2026`). On iPhone, open the site in Safari, then Share › Add to Home Screen, and open TwoFold from the icon. On Android, use the Expo Go build or Chrome's "Install app".
 
 Write ✅ or ❌ and a few words next to each line. Screenshots of anything odd help most.
 

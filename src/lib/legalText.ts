@@ -6,7 +6,7 @@ import { vendors } from "./vendors";
 
 const missing = (what: string) => `[${what} — to be added]`;
 
-/** Fills {{placeholders}} in legal documents with live settings, so the text always matches how Twofold is configured. */
+/** Fills {{placeholders}} in legal documents with live settings, so the text always matches how TwoFold is configured. */
 export async function fillLegal(body: string) {
   if (!body.includes("{{")) return body;
   const c = await getConfig("legal.contacts");

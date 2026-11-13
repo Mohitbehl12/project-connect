@@ -61,8 +61,8 @@ async function saveProfile(user: User, b: ProfileInput) {
   const cityLabel = keep ? existingProfile!.city : place!.label;
   // Country rules (Admin → Privacy & compliance): minimum age and whether we've launched there.
   const rules = await countryRules(c.country);
-  if (!rules.launchEnabled) throw new ApiError(403, "Twofold isn't available in this country yet.", "country_unavailable");
-  if (ageFromDob(user.dob) < rules.minAge) throw new ApiError(403, `Twofold is only for people aged ${rules.minAge} and over in this country.`, "underage");
+  if (!rules.launchEnabled) throw new ApiError(403, "TwoFold isn't available in this country yet.", "country_unavailable");
+  if (ageFromDob(user.dob) < rules.minAge) throw new ApiError(403, `TwoFold is only for people aged ${rules.minAge} and over in this country.`, "underage");
   const existing = await db.query.profiles.findFirst({ where: eq(schema.profiles.userId, user.id) });
   // People may update their gender at any time. Because prices differ by gender in some countries, a change
   // after sign-up is noted for the risk review — it never blocks the change or the person.
@@ -91,7 +91,7 @@ async function saveProfile(user: User, b: ProfileInput) {
   if (genderChanged) await grantStartingMembership(user.id).catch(() => {}); // free forever applies (or stops) with the new gender
   if (saysMinor) {
     const report = await fileAutomatedReport({ reportedId: user.id, category: "UNDERAGE", details: "Automated screening: the profile text suggests the person may be under 18." });
-    await logAutomatedDecision({ userId: user.id, kind: "PROFILE_FLAG", decision: "SENT_FOR_HUMAN_REVIEW", reason: "Your profile suggests you may be under 18. Twofold is only for adults, so a person will check. Nothing happens to the account automatically.", system: "rules:child-safety-v2", refId: report.id });
+    await logAutomatedDecision({ userId: user.id, kind: "PROFILE_FLAG", decision: "SENT_FOR_HUMAN_REVIEW", reason: "Your profile suggests you may be under 18. TwoFold is only for adults, so a person will check. Nothing happens to the account automatically.", system: "rules:child-safety-v2", refId: report.id });
     await underageCheck(user.id);
   }
   return refreshCompleteness(user.id);

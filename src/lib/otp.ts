@@ -35,8 +35,8 @@ async function deliver(channel: string, destination: string, code: string) {
 
 async function sendEmailOtp(to: string, code: string) {
   if (!emailConfigured()) { if (process.env.NODE_ENV === "production") console.warn("[otp] email not configured; code not sent"); return false; }
-  const m = simpleEmail(`Your Twofold code: ${code}`, [`Use ${code} to confirm your email. It expires in 10 minutes.`, "If you didn't ask for this, you can ignore this email. Never share this code with anyone."]);
-  return sendEmail(to, `${code} is your Twofold code`, m.text, m.html);
+  const m = simpleEmail(`Your TwoFold code: ${code}`, [`Use ${code} to confirm your email. It expires in 10 minutes.`, "If you didn't ask for this, you can ignore this email. Never share this code with anyone."]);
+  return sendEmail(to, `${code} is your TwoFold code`, m.text, m.html);
 }
 
 /** MSG91 OTP API (India). The template must be DLT-registered and contain the OTP variable. Untested against a live account. */

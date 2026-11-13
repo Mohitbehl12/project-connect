@@ -85,7 +85,7 @@ export default function Search() {
           </Section>
           <Section id="location" icon="location" title="Location" value={f.city || "Anywhere you can already see"} active={active.location} open={open} setOpen={setOpen}>
             <Chips>{cities.map((k) => <Chip key={k} small label={k} selected={f.city === k} onPress={() => set("city", f.city === k ? "" : k)} />)}</Chips>
-            <T v="caption" tone="faint">City only — Twofold never uses exact locations.</T>
+            <T v="caption" tone="faint">City only — TwoFold never uses exact locations.</T>
           </Section>
           <Section id="interests" icon="interests" title="Interests" value={f.interests.length ? f.interests.map((k) => INTERESTS[k]).slice(0, 3).join(", ") + (f.interests.length > 3 ? "…" : "") : "Any"} active={active.interests} open={open} setOpen={setOpen}>
             <InterestPicker value={f.interests} onChange={(v) => set("interests", v)} max={8} />

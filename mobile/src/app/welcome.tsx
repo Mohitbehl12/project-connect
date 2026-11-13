@@ -102,7 +102,7 @@ function SafetyArt() {
 }
 
 const SLIDES = [
-  { title: "Meet someone who makes your heart skip a beat. ❤️", body: "Meet. Connect. Flirt. Find your chemistry. 🔥" },
+  { title: "Meet someone who makes your heart skip a beat. ❤️", body: "Two hearts. One story. Find where you overlap. 💞" },
   { title: "Chemistry, before you say hello. 👀", body: "See what you have in common, then break the ice with a wink, a Spark or a little help from Cupid." },
   { title: "Flirty, and safe by design.", body: "Verified profiles, calls only after you say yes, and privacy you control." },
 ];
@@ -123,7 +123,7 @@ export default function Welcome() {
       <SafeAreaView style={{ flex: 1 }} edges={["top", "bottom"]}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 24, paddingTop: 8 }}>
           <ArcMark size={28} left={g.onNight} right={g.spark} />
-          <T v="headline" tone="white" style={{ fontFamily: "BricolageGrotesque_800ExtraBold" }}>Twofold</T>
+          <T v="headline" tone="white" style={{ fontFamily: "BricolageGrotesque_800ExtraBold" }}>TwoFold</T>
         </View>
         <FlatList
           ref={list}

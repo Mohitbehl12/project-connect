@@ -3,8 +3,8 @@ import "./globals.css";
 import { ErrorReporter } from "@/components/ErrorReporter";
 
 export const metadata: Metadata = {
-  title: { default: "Twofold", template: "%s · Twofold" },
-  description: "Dating built around intent, compatibility and safety.",
+  title: { default: "TwoFold", template: "%s · TwoFold" },
+  description: "Two hearts. One story. TwoFold is dating built around intent, compatibility and safety.",
 };
 
 export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#7B48CC" };

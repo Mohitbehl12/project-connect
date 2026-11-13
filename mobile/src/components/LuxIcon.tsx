@@ -4,7 +4,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSequence, withSpring, w
 import { useFx } from "@/lib/fx";
 import { useTheme } from "@/theme/ThemeProvider";
 
-// Twofold luxury icon set. Original drawings on a 24 pt grid: thin rounded lines (1.5 pt), a soft
+// TwoFold luxury icon set. Original drawings on a 24 pt grid: thin rounded lines (1.5 pt), a soft
 // under-stroke for depth, and a rose-to-gold gradient when active. One style for every icon —
 // navigation, filters and all interests — so nothing looks borrowed or mismatched.
 

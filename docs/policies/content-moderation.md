@@ -41,7 +41,7 @@ Legal backstops in India (IT Rules 2021):
 
 ## Emergencies
 
-- Twofold does not contact emergency services automatically.
+- TwoFold does not contact emergency services automatically.
 - Members are told to call 112 (India), 911 (US) or 999 (UK) first.
 - If a moderator sees a credible, imminent threat to life:
   - the case goes to the named safety lead;

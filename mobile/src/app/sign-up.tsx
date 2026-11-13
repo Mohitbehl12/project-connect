@@ -98,7 +98,7 @@ export default function SignUp() {
               <T tone="muted">We show your age, never your birthday. You must be 18 or older.</T>
               <DobFields value={{ day: dd, month: mm, year: yyyy }} onChange={(v) => { setDd(v.day); setMm(v.month); setYyyy(v.year); }} />
               {dob && "invalid" in dob && <Banner tone="alert">That date doesn't exist. Check the day and month.</Banner>}
-              {dob && !("invalid" in dob) && dob.age < 18 && <Banner tone="alert">Twofold is only for people aged 18 and over.</Banner>}
+              {dob && !("invalid" in dob) && dob.age < 18 && <Banner tone="alert">TwoFold is only for people aged 18 and over.</Banner>}
               {dob && !("invalid" in dob) && dob.age >= 18 && <T v="headline" tone="trust">You're {dob.age}. </T>}
             </>
           )}

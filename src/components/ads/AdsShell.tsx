@@ -51,7 +51,7 @@ export function AdsShell({ children }: { children: ReactNode }) {
           <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3 px-4 py-3 md:px-8">
             <Link href="/ads" className="flex items-center gap-2 font-display text-lg font-extrabold">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/twofold-mark.png" alt="" width={26} height={26} className="rounded-md" />Twofold <span className="font-body text-sm font-semibold text-[#A5781F]">Ads</span>
+              <img src="/twofold-mark.png" alt="" width={26} height={26} className="rounded-md" />TwoFold <span className="font-body text-sm font-semibold text-[#A5781F]">Ads</span>
             </Link>
             <nav aria-label="Advertiser" className="flex flex-1 flex-wrap gap-1">
               {NAV.map(([href, label]) => (

@@ -1,6 +1,6 @@
 # Subscription & Payment Terms
 
-These terms explain Twofold memberships: what they cost, free periods, renewal, cancellation and taxes. They are part of our Terms of Service. The Refund Policy explains refunds.
+These terms explain TwoFold memberships: what they cost, free periods, renewal, cancellation and taxes. They are part of our Terms of Service. The Refund Policy explains refunds.
 
 ## 1. What you see before you pay
 
@@ -30,7 +30,7 @@ Prices in India include GST. Elsewhere, the checkout shows whether taxes are inc
 
 ## 6. Payment processing
 
-Payments are handled by our payment provider (for example Razorpay). Your card, UPI or bank details go directly to them; Twofold never receives or stores them. Payment records are kept for 8 years because tax law requires it.
+Payments are handled by our payment provider (for example Razorpay). Your card, UPI or bank details go directly to them; TwoFold never receives or stores them. Payment records are kept for 8 years because tax law requires it.
 
 ## 7. Offers and coupons
 
