@@ -70,6 +70,29 @@ describe("scorePair", () => {
   });
 });
 
+describe("helpers", () => {
+  it("haversine is roughly right (Delhi → Mumbai ≈ 1150 km)", () => {
+    const d = haversineKm(28.6139, 77.209, 19.076, 72.8777);
+    expect(d).toBeGreaterThan(1100);
+    expect(d).toBeLessThan(1200);
+  });
+  it("distance labels are coarse", () => {
+    expect(distanceLabel(1.2, true)).toBe("Within 5 km");
+    expect(distanceLabel(7.9, false)).toBe("Within 10 km");
+    expect(distanceLabel(23, false)).toBe("About 20 km away");
+    expect(distanceLabel(1149, false)).toBe("1150+ km away");
+  });
+  it("computes age correctly around birthdays", () => {
+    const today = new Date("2026-10-08T00:00:00Z");
+    expect(ageFromDob("2008-10-08", today)).toBe(18);
+    expect(ageFromDob("2008-10-09", today)).toBe(17);
+  });
+  it("profile completeness rewards a fuller profile", () => {
+    expect(profileCompleteness({})).toBe(0);
+    expect(profileCompleteness({ bio: "x".repeat(50), photos: ["a", "b", "c"], education: "x", profession: "y", heightCm: 170, drinking: "S", smoking: "N", food: "V", exercise: "O", pets: "H", interests: ["a", "b", "c"], prompts: [{}], answerCount: 10 })).toBe(100);
+  });
+});
+
 describe("searchBox (database prefilter for distance)", () => {
   const inside = (b: ReturnType<typeof searchBox>, lat: number, lng: number) =>
     lat >= b.lat[0] && lat <= b.lat[1] && (!b.lng || (lng >= b.lng[0] && lng <= b.lng[1]));
@@ -101,28 +124,5 @@ describe("searchBox (database prefilter for distance)", () => {
     expect(searchBox(10, 179.9, 100).lng).toBeNull(); // crosses the antimeridian
     expect(searchBox(88.5, 0, 200).lng).toBeNull(); // near a pole
     expect(searchBox(28.61, 77.21, 30).lng).not.toBeNull();
-  });
-});
-
-describe("helpers", () => {
-  it("haversine is roughly right (Delhi → Mumbai ≈ 1150 km)", () => {
-    const d = haversineKm(28.6139, 77.209, 19.076, 72.8777);
-    expect(d).toBeGreaterThan(1100);
-    expect(d).toBeLessThan(1200);
-  });
-  it("distance labels are coarse", () => {
-    expect(distanceLabel(1.2, true)).toBe("Within 5 km");
-    expect(distanceLabel(7.9, false)).toBe("Within 10 km");
-    expect(distanceLabel(23, false)).toBe("About 20 km away");
-    expect(distanceLabel(1149, false)).toBe("1150+ km away");
-  });
-  it("computes age correctly around birthdays", () => {
-    const today = new Date("2026-10-08T00:00:00Z");
-    expect(ageFromDob("2008-10-08", today)).toBe(18);
-    expect(ageFromDob("2008-10-09", today)).toBe(17);
-  });
-  it("profile completeness rewards a fuller profile", () => {
-    expect(profileCompleteness({})).toBe(0);
-    expect(profileCompleteness({ bio: "x".repeat(50), photos: ["a", "b", "c"], education: "x", profession: "y", heightCm: 170, drinking: "S", smoking: "N", food: "V", exercise: "O", pets: "H", interests: ["a", "b", "c"], prompts: [{}], answerCount: 10 })).toBe(100);
   });
 });
